@@ -9,7 +9,7 @@ build:
   before_script: 
     - apk update
     - apk add openssh bash cmake sqlite sqlite-dev openssl openssl-dev
-    - apk add bsd-compat-headers add gcc g++ make
+    - apk add bsd-compat-headers gcc g++ make
     
   script:
     - mkdir -p ./build
