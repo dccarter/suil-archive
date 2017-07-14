@@ -1,0 +1,30 @@
+Full list of copyright holders:
+
+Alex Cornejo <acornejo@gmail.com>
+Amit Saha <amitsaha.in@gmail.com>
+Anton Mescheryakov <anton@mescher.pro> *
+Bent Cardan <bent@nothingsatisfies.com> *
+Chris Grieger <chris@scolp.de>
+Chris Miller <chris@cmiller.me>
+Constantine Tarasenkov <constantine@protonmail.com> *
+Danny Thomas <d.thomas@its.uq.edu.au>
+Jean-Francois Smigielski <jf.smigielski@gmail.com>
+Jim Jagielski <jimjag@gmail.com> *
+Jim Schimpf <jim.schimpf@gmail.com>
+John E. Haque <j.e.haque@gmail.com> *
+Luca Barbato <luca.barbato@gmail.com>
+Martin Lucina <martin@lucina.net>
+Martin Sustrik <sustrik@250bpm.com>
+Michael Gehring <mg@ebfe.org> *
+Nick Desaulniers <nick@mozilla.com>
+Nir Soffer <nsoffer@redhat.com> *
+Paul Banks <banks@banksdesigns.co.uk>
+Paulo Faria <paulo@zewo.io>
+Tai Chi Minh Ralph Eastwood <tcmreastwood@gmail.com>
+Yue Xu <red_angelx@qq.com>
+
+* Future patches by this author are submitted under MIT/X11 license
+
+Coprights for DNS resolution library in dns subdirectory are held by:
+
+William Ahern <william@25thandClement.com>

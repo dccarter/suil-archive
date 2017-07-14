@@ -1,0 +1,29 @@
+_suil
+_name
+_worker
+_id
+_pid
+
+# Memory information
+memory:
+_allocs
+_frees
+_alloc_miss
+_pools
+_entries
+
+# Server statistics
+_tx_bytes
+_rx_bytes
+_total_requests
+_open_requests
+
+# Version
+_vsoftware
+_vmajor
+_vminor
+_vpatch
+_vbuild
+_vtag
+_vdate
+_vtime
