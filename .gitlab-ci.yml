@@ -22,7 +22,6 @@ build:
     - make clean
     - make -j2 install
     - cd ..
-    - ./sut
     
   artifacts:
     paths:
