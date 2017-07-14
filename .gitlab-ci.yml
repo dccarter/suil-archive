@@ -6,6 +6,8 @@ image: alpine:latest
 
 build:
   stage: build
+  tags:
+    - build02
   # Install all the required dependecies before proceeding to build
   before_script: 
     - apk update
