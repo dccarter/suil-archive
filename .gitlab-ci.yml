@@ -1,7 +1,4 @@
-# This file is a template, and might need editing before it works on your project.
-# use the official gcc image, based on debian
-# can use verions as well, like gcc:5.2
-# see https://hub.docker.com/_/gcc/
+# Build Pipeline for Suil Project
 image: alpine:latest
 
 build:
@@ -12,20 +9,18 @@ build:
   before_script: 
     - apk update
     - apk add openssh bash cmake sqlite sqlite-dev openssl openssl-dev
-    - apk add bsd-compat-headers
-    - apk add gcc g++ make
+    - apk add bsd-compat-headers add gcc g++ make
     
   script:
     - mkdir -p ./build
     - cd ./build
     - cmake ..
-    - make clean
-    - make -j2 install
+    - make clean && make -j2 package
     - cd ..
-    
-  artifacts:
+  cache:
     paths:
       - build/sut
-      - build/suil*tar.gz
       - build/suil*tar.deb
-    
+  artifacts:
+    paths:
+      - build/suil*tar.gz
