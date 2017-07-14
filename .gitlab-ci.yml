@@ -5,9 +5,9 @@
 image: alpine:latest
 
 build:
-  stage: build
+  stage: Build
   tags:
-    - build02
+    - alpine
   # Install all the required dependecies before proceeding to build
   before_script: 
     - apk update
@@ -20,10 +20,13 @@ build:
     - cd ./build
     - cmake ..
     - make clean
-    - make -j2
+    - make -j2 install
     - cd ..
+    - ./sut
+    
   artifacts:
     paths:
       - build/sut
       - build/suil*tar.gz
       - build/suil*tar.deb
+    
