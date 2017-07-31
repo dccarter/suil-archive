@@ -19,21 +19,12 @@ namespace suil {
         struct base_server : LOGGER(dtag(HTTP_SERVER)) {
             typedef base_server<__H, __B, __Mws...> server_t;
 
-            typedef decltype(iod::D(
-                    prop(pid, uint32_t),
-                    prop(rx_bytes, uint64_t),
-                    prop(tx_bytes, uint64_t),
-                    prop(total_requests, uint64_t),
-                    prop(open_requests, uint64_t)
-            )) server_stats_t;
-
             struct socket_handler {
                 void operator()(sock_adaptor &sock, server_t *s) {
                     connection<__H, __Mws...> conn(
-                            sock, s->config, s->handler, &s->mws);
+                            sock, s->config, s->handler, &s->mws, s->stats);
 
                     conn.start();
-
                 }
             };
 

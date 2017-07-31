@@ -501,7 +501,7 @@ namespace suil {
         // loop until the worker terminates
         int status = 0;
 
-        lnotice(WLOG, "ipc receive loop starting");
+        ltrace(WLOG, "ipc receive loop starting");
         while (wrk.active) {
             status = recv_ipc_msg(wrk, -1);
             if (status == EINVAL) {
@@ -509,7 +509,7 @@ namespace suil {
                 break;
             }
         }
-        lnotice(WLOG, "ipc receive loop exiting %d, %d", status, wrk.active);
+        ltrace(WLOG, "ipc receive loop exiting %d, %d", status, wrk.active);
     }
 
     int recv_ipc_msg(__worker& wrk, int64_t dd) {
@@ -656,7 +656,8 @@ namespace suil {
     }
 
 
-    coroutine void ipc_handle(msg_handler_t h, uint8_t src, void *data, size_t len) {
+    coroutine void ipc_handle(msg_handler_t h, uint8_t src, void *data, size_t len)
+    {
         try {
             h(src, data, len);
         } catch(std::exception& ex) {

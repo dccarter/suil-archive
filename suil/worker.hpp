@@ -83,14 +83,18 @@ namespace suil {
         SYSTEM = 64
     };
 
-    struct icp_ping_hdr {
-        async_t<bool>       *async;
-        int64_t             timeout;
-        size_t              nbytes;
-        uint8_t             data[0];
+    struct ipc_gather {
+        uint8_t         reserved[16];
+        size_t          nbytes;
+        uint8_t         data[0];
     } __attribute((packed));
 
-    #define icp_msg(msg)  suil::sys_msg_t::SYSTEM + msg
+    struct ipc_gather_hdr {
+        async_t<bool>   *handle;
+        int64_t         dd;
+    } __attribute((packed));
+
+    #define ipc_msg(msg)  suil::sys_msg_t::SYSTEM + msg
 
     using msg_handler_t = std::function<void(uint8_t, const void*, size_t)>;
     using work_t = std::function<int(void)>;
@@ -144,6 +148,7 @@ namespace suil {
         static void ipcunreg(uint8_t);
 
         static void spinlock(const uint8_t idx);
+
         static void spinunlock(const uint8_t idx);
     };
 

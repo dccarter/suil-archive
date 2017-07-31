@@ -27,8 +27,8 @@ namespace suil {
         int             port{1080};
         int             accept_backlog{127};
         int64_t         accept_timeout{-1};
-        int8_t          request_limit{0};
-        uint8_t         nworkers{4};
+        uint64_t        request_limit{40};
+        uint8_t         nworkers{2};
     };
 
     template <class __H = server_handler, class __A = tcp_ss, class __C = void>

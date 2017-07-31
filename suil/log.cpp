@@ -12,6 +12,14 @@ namespace suil {
     static log::logger<> SYS_LOGGER;
     log::logger<>& __log = SYS_LOGGER;
 
+    void cvprintf(uint8_t color, const char *fmt, va_list args) {
+        if (color > 0 && color <= printf_colors::CYAN)
+            printf("\033[1;3%dm", color);
+        (void) vprintf(fmt, args);
+        if (color > 0 && color <= printf_colors::CYAN)
+            printf("\033[0m");
+    }
+
     namespace log {
 
         size_t default_formatter::operator()(
@@ -47,10 +55,25 @@ namespace suil {
         }
 
         void default_handler::operator()(const char *log, size_t sz, level l) {
-            if (l <= level::NOTICE)
-                ::write(STDOUT_FILENO, log, sz);
-            else
-                ::write(STDERR_FILENO, log, sz);
+            printf_colors c = printf_colors::DEFAULT;
+            switch (l) {
+                case level::CRITICAL:
+                case level::ERROR:
+                    c = printf_colors::RED; break;
+                case level::WARNING:
+                    c = printf_colors::YELLOW; break;
+                case level::DEBUG:
+                    c = printf_colors::MAGENTA; break;
+                case level::INFO:
+                    c = printf_colors::WHITE;
+                    break;
+                case level::NOTICE:
+                    c = printf_colors::GREEN; break;
+                default:
+                    c = printf_colors::DEFAULT;
+                    break;
+            }
+            cprintf(c, log);
         }
     }
 }

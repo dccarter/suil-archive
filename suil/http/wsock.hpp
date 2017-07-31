@@ -69,8 +69,8 @@ namespace suil {
             uint8_t         payload[0];
         } __attribute((packed));
 
-        #define IPC_WSOCK_BCAST icp_msg(1)
-        #define IPC_WSOCK_CONN  icp_msg(2)
+        #define IPC_WSOCK_BCAST ipc_msg(1)
+        #define IPC_WSOCK_CONN  ipc_msg(2)
 
         /**
          * The web socket connection message. This message is sent to other

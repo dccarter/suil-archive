@@ -210,7 +210,6 @@ namespace suil {
 #ifndef HTTP_RX_BUFFER_SZ
 #define HTTP_RX_BUFFER_SZ   2048
 #endif
-
         define_log_tag(HTTP_CONN);
         template <typename __H, typename... __Mws>
         struct connection : LOGGER(dtag(HTTP_CONN)) {
@@ -219,12 +218,16 @@ namespace suil {
             connection(sock_adaptor& sock,
                        http_config_t& config,
                        __H& handler,
-                       middlewares_t* mws)
+                       middlewares_t* mws,
+                       server_stats_t& stats)
                 : mws(mws),
                   config(config),
                   sock(sock),
-                  handler(handler)
+                  handler(handler),
+                  stats(stats)
             {
+                stats.total_requests++;
+                stats.open_requests++;
                 trace("(%p) %s - creating connection", this, sock.id());
             }
 
@@ -236,7 +239,7 @@ namespace suil {
                 trace("%s - starting connection handler", sock.id());
                 do {
                     // receive request headers
-                    status = req.receive_headers();
+                    status = req.receive_headers(stats);
                     if (status != status_t::OK) {
                         if (status != status_t::REQUEST_TIMEOUT) {
                             // receiving headers failed, send back failure
@@ -251,7 +254,7 @@ namespace suil {
                     }
 
                     // receive request body
-                    status = req.receive_body();
+                    status = req.receive_body(stats);
                     if (status != status_t::OK) {
                         // receiving body failed, send back error
                         response res(status);
@@ -310,6 +313,10 @@ namespace suil {
                 } while (!close_);
 
                 trace("%p - done handling connection, %d", this, close_);
+            }
+
+            ~connection() {
+                stats.open_requests--;
             }
 
         private:
@@ -436,6 +443,9 @@ namespace suil {
                             nsent += chunk;
                         } while (nsent < b.len);
                     }
+
+                    // update server statistics
+                    stats.tx_bytes += b.len;
                 }
 
                 sock.flush(config.connection_timeout);
@@ -457,6 +467,7 @@ namespace suil {
             http_config_t&      config;
             sock_adaptor&       sock;
             __H&                handler;
+            server_stats_t&     stats;
             bool                close_{false};
         };
     }

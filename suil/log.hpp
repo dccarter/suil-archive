@@ -15,8 +15,27 @@
 
 namespace suil {
 
-    namespace log {
+    enum printf_colors : uint8_t {
+        WHITE = 0,
+        RED,
+        GREEN,
+        YELLOW,
+        BLUE,
+        MAGENTA,
+        CYAN,
+        DEFAULT
+    };
 
+    void cvprintf(uint8_t color, const char *fmt, va_list args);
+
+    inline void cprintf(uint8_t color, const char *fmt, ...) {
+        va_list    args;
+        va_start(args, fmt);
+        cvprintf(color, fmt, args);
+        va_end(args);
+    }
+
+    namespace log {
         enum struct level : unsigned char {
             TRACE,
             DEBUG,

@@ -101,8 +101,8 @@ namespace suil {
             status_t process_headers();
             virtual int handle_body_part(const char *at, size_t length);
             bool parse_cookies();
-            status_t receive_headers();
-            status_t receive_body();
+            status_t receive_headers(server_stats_t& stats);
+            status_t receive_body(server_stats_t& stats);
 
             zcstr_map_t<upfile_t>    files;
             bool                     filed{false};

@@ -58,7 +58,7 @@ namespace suil {
             }
         }
 
-        status_t request::receive_headers() {
+        status_t request::receive_headers(server_stats_t& stats) {
             status_t  status = status_t::OK;
             stage.reserve(1023);
 
@@ -73,7 +73,7 @@ namespace suil {
                              status_t::REQUEST_TIMEOUT : status_t::INTERNAL_ERROR;
                     break;
                 }
-
+                stats.rx_bytes += len;
                 // parse the chunk of received headers
                 if (!feed(ptr, len)) {
                     trace("%s - parsing headers failed: %s",
@@ -123,7 +123,7 @@ namespace suil {
             return status_t::OK;
         }
 
-        status_t request::receive_body() {
+        status_t request::receive_body(server_stats_t& stats) {
             status_t status = status_t::OK;
             if (!has_body || body_complete) {
                 return status;
@@ -141,6 +141,8 @@ namespace suil {
                              status_t::INTERNAL_ERROR;
                     break;
                 }
+                stats.rx_bytes += len;
+
                 // parse header line
                 if (!feed(stage, len)) {
                     trace("%s - parsing failed: %s",

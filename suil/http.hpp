@@ -522,6 +522,14 @@ namespace suil {
             off_t   offset;
             size_t  len;
         };
+
+        typedef decltype(iod::D(
+                prop(pid, uint32_t),
+                prop(rx_bytes, uint64_t),
+                prop(tx_bytes, uint64_t),
+                prop(total_requests, uint64_t),
+                prop(open_requests, uint64_t)
+        )) server_stats_t;
     }
 }
 
