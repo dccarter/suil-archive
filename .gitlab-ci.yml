@@ -9,7 +9,7 @@ build:
   before_script: 
     - apk update
     - apk add openssh bash cmake sqlite sqlite-dev
-    - apk openssl libressl-dev postgresql-dev
+    - apk add openssl libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make
     
   script:
