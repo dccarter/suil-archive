@@ -6,7 +6,7 @@
 #define SUIL_PGSQL_HPP
 
 
-#include <postgresql/libpq-fe.h>
+#include <libpq-fe.h>
 //#include <catalog/pg_type.h>
 #include <netinet/in.h>
 #include <deque>

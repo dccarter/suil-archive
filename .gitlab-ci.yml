@@ -8,7 +8,8 @@ build:
   # Install all the required dependecies before proceeding to build
   before_script: 
     - apk update
-    - apk add openssh bash cmake sqlite sqlite-dev openssl 	libressl-dev postgresql-dev
+    - apk add openssh bash cmake sqlite sqlite-dev
+    - apk openssl libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make
     
   script:
