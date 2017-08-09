@@ -50,7 +50,8 @@ static int mill_next_chan_id = 1;
 static struct mill_list mill_all_chans = {0};
 
 void mill_panic(const char *text) {
-    fprintf(stderr, "panic: %s\n", text);
+    fprintf(stderr, "\npanic: %s\n", text);
+    goredump();
     abort();
 }
 

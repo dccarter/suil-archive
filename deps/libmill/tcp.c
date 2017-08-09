@@ -538,10 +538,14 @@ size_t mill_tcpread_(struct mill_tcpsock_ *s, void *buf, size_t len,
 
 
 void mill_tcpshutdown_(struct mill_tcpsock_ *s, int how) {
-    mill_assert(s->type == MILL_TCPCONN);
-    struct mill_tcpconn *c = (struct mill_tcpconn*)s;
-    int rc = shutdown(c->fd, how);
-    mill_assert(rc == 0 || errno == ENOTCONN);
+    if(s->type == MILL_TCPLISTENER) {
+        struct mill_tcplistener *l = (struct mill_tcplistener*)s;
+        shutdown(l->fd, how);
+    } else {
+        struct mill_tcpconn *c = (struct mill_tcpconn *) s;
+        int rc = shutdown(c->fd, how);
+        mill_assert(rc == 0 || errno == ENOTCONN);
+    }
 }
 
 void mill_tcpclose_(struct mill_tcpsock_ *s) {

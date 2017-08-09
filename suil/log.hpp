@@ -75,7 +75,7 @@ namespace suil {
             }
 
             logger()
-                : logger(level::INFO)
+                : logger(level::DEBUG)
             {}
 
             void log(level l, const char *fmt, ...) const {

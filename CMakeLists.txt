@@ -84,9 +84,12 @@ add_custom_target(gensyms
         COMMENT "Generating IOD symbols used by suil")
 add_dependencies(gensyms iodsyms)
 
-include_directories(suil)
+find_package(PostgreSQL ${PGSQL_VERSION} REQUIRED)
+
+include_directories(suil ${PostgreSQL_INCLUDE_DIRS})
+
 file(GLOB_RECURSE SUIL_SOURCES suil/*.cpp suil/*.c)
-set(SUIL_LIBRARIES mill sqlite3)
+set(SUIL_LIBRARIES mill sqlite3  ${PostgreSQL_LIBRARIES})
 add_library(suil ${SUIL_SOURCES})
 add_dependencies(suil gensyms)
 install(TARGETS suil

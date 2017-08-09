@@ -313,7 +313,7 @@ namespace suil {
                               magic::CallHelper<Func, magic::S<request, Args...>>::value,
                               "Handler type is mismatched with URL parameters");
                 static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value,
-                              "Handler function cannot have void return type; valid return types: string, int, resposne, json::wvalue");
+                              "Handler function cannot have void return type; valid return types: string, int, resposne, json object");
 
                 handler_ = [f = std::move(f)](const request &, response &res, Args ... args) {
                     res = response(f(args...));

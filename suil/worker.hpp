@@ -16,13 +16,15 @@ namespace suil {
         volatile    uint64_t serving{0};
         volatile    uint64_t next{0};
         uint8_t     on;
+        uint32_t    id;
     } __attribute((packed));
 
     struct lock {
-        static void reset(__lock_t& lk) {
+        static void reset(__lock_t& lk, uint32_t id) {
             lk.serving = 0;
             lk.next  = 0;
             lk.on    = 0x0A;
+            lk.id    = id;
         }
 
         static void cancel(__lock_t& lk) {
@@ -34,32 +36,46 @@ namespace suil {
         {
             spin_lock(lk);
 
-            strace("(%ld) lock %p acquired by suil-%hhu",
-                   mnow(), &lk, spid);
+            strace("{%ld} lock-%u acquired by suil-%hhu",
+                   mnow(), lk.id, spid);
         }
 
         ~lock() {
             unlock(lk);
-            strace("(%ld) lock %p released by suil-%hhu",
-                   mnow(), &lk, spid);
+            strace("{%ld} lock-%d released by suil-%hhu",
+                   mnow(), lk.id, spid);
         }
 
     private:
 
         friend struct worker;
-        static inline void spin_lock(__lock_t& l) {
+        static inline bool spin_lock(__lock_t& l, int64_t tout = -1) {
+            bool status{true};
+            /* request lock ticket */
             int ticket = __sync_fetch_and_add(&l.next, 1);
-            // while our ticket is not being served we yield
-            // otherwise we continue
-            while (l.on && !__sync_bool_compare_and_swap(&l.serving, ticket, ticket)) {
-                strace("lock (%ld) %p ticket %d,  next %d serving %d",
-                       mnow(), &l, ticket, l.next, l.serving);
 
-                yield();
-
-                strace("lock (%ld) %p ticket %d,  next %d serving %d",
-                       mnow(), &l, ticket, l.next, l.serving);
+            strace("{%ld} lock-%d request (ticket %d,  next %d serving %d)",
+                   mnow(), l.id, ticket, l.next, l.serving);
+            if (tout > 0) {
+                /* compute the time at which we should giveup */
+                tout += mnow();
             }
+
+            while (l.on && !__sync_bool_compare_and_swap(&l.serving, ticket, ticket))\
+            {
+                if (tout > 0 && tout < mnow()) {
+                    status = false;
+                    break;
+                }
+
+                /*yield the CPU giving other tasks a chance to run*/
+                yield();
+            }
+
+            strace("{%ld} lock %d issued (ticket %d,  next %d serving %d)",
+                   mnow(), l.id, ticket, l.next, l.serving);
+
+            return status;
         }
 
         static inline void unlock(__lock_t& l) {
@@ -78,28 +94,36 @@ namespace suil {
     } __attribute((packed));
 
     enum sys_msg_t : uint8_t {
-        PING        = 0,
-        PONG_REPLY,
-        SYSTEM = 64
+        MSG_SYS_PING = 0,
+#define SYS_PING                0
+        MSG_GET_RESPONSE,
+#define GET_RESPONSE            1
+        MSG_GET_STATS,
+#define GET_STATS               2
+        MSG_GET_MEMORY_INFO,
+#define GET_MEMORY_INFO         3
+        MSG_SYSTEM = 64
+#define SYSTEM                  64
     };
 
-    struct ipc_gather {
-        uint8_t         reserved[16];
-        size_t          nbytes;
+    using ipc_get_handle = async_t<void*, 16>;
+    struct ipc_get_payload {
+        ipc_get_handle  *handle;
+        int64_t         deadline;
+        size_t          size;
         uint8_t         data[0];
     } __attribute((packed));
 
-    struct ipc_gather_hdr {
-        async_t<bool>   *handle;
-        int64_t         dd;
-    } __attribute((packed));
+    using ipc_get_handler_t = std::function<void(const void*, uint8_t)>;
 
-    #define ipc_msg(msg)  suil::sys_msg_t::SYSTEM + msg
+    #define ipc_msg(msg)  suil::sys_msg_t::MSG_SYSTEM + msg
 
-    using msg_handler_t = std::function<void(uint8_t, const void*, size_t)>;
+    using msg_handler_t = std::function<bool(uint8_t, void*, size_t)>;
     using work_t = std::function<int(void)>;
 
     using post_spawn_t = std::function<int(uint8_t)>;
+
+    using cleanup_handler_t = std::function<void(void)>;
 
     struct worker {
 
@@ -147,17 +171,29 @@ namespace suil {
 
         static void ipcunreg(uint8_t);
 
-        static void spinlock(const uint8_t idx);
+        static void register_cleaner(cleanup_handler_t);
+
+        static bool spinlock(const uint8_t idx, int64_t tout = -1);
 
         static void spinunlock(const uint8_t idx);
+
+        static network_buffer get(uint8_t msg, uint8_t w, int64_t tout = -1);
+
+        static std::vector<network_buffer> gather(uint8_t msg, int64_t tout = -1);
+
+        static void send_get_response(const void *token, uint8_t to, const void *data, size_t len);
+
+        static void on_get(uint8_t msg, ipc_get_handler_t&& hdlr);
     };
 
     enum {
-        SHM_LOCK_ACCEPT = 0,
+        SHM_ACCEPT_LOCK = 0,
+        SHM_GET_LOCK,
+        SHM_GATHER_LOCK
     };
 
     using app = std::function<void(void)>;
-    extern int launch(app a, int argc, char *argv[]);
+    extern int launch(app a);
 }
 
 #endif //SUIL_WORKER_HPP

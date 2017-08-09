@@ -16,6 +16,7 @@
 
 #include "boost/utility/string_view.hpp"
 #include "iod/json.hh"
+#include "iod/parse_command_line.hh"
 #include "libmill/libmill.h"
 
 #define errno_s strerror(errno)
@@ -124,6 +125,8 @@ namespace suil {
      */
     extern __Void Void;
 
+    struct null_t {};
+
     /**
      * string view as defined by
      * @see http://www.boost.org/doc/libs/1_62_0/boost/utility/string_view.hpp
@@ -178,6 +181,10 @@ namespace suil {
      */
     struct buffer_t {
         buffer_t(uint32_t init_size);
+        buffer_t()
+            : buffer_t(0)
+        {}
+
         buffer_t(buffer_t&&);
         buffer_t&operator=(buffer_t&& other);
         ~buffer_t();
@@ -582,6 +589,85 @@ namespace suil {
         }
     };
 
+    struct network_buffer {
+        using destory_t = std::function<void(void*)>;
+
+        network_buffer&operator=(const network_buffer&) = delete;
+        network_buffer(const network_buffer&) = delete;
+
+        network_buffer(void *d, size_t size, size_t off = 0, destory_t dctor = nullptr)
+            : data(d),
+              offset(off),
+              len(size),
+              dctor(dctor)
+        {}
+
+        network_buffer()
+            : network_buffer(nullptr, 0)
+        {}
+
+        network_buffer(network_buffer&& other)
+            : data(other.data),
+              offset(other.offset),
+              len(other.len),
+              dctor(other.dctor)
+        {
+            other.data = nullptr;
+            other.offset = other.len = 0;
+            other.dctor = nullptr;
+        }
+
+        network_buffer&operator=(network_buffer&& other)
+        {
+            data = other.data;
+            offset = other.offset;
+            len = other.len = 0;
+            dctor = std::move(other.dctor);
+
+            other.data = nullptr;
+            other.offset = other.len = 0;
+            other.dctor = nullptr;
+        }
+
+        inline size_t size() const {
+            return len;
+        }
+
+        inline void* get() const {
+            return ((char *)data + offset);
+        }
+
+        inline operator void*() const {
+            return get();
+        }
+
+        operator bool() const {
+            return data != nullptr;
+        }
+
+        void destory() {
+            if (data != nullptr) {
+                if (dctor) {
+                    dctor(data);
+                }
+                else {
+                    memory::free(data);
+                }
+                data = nullptr;
+            }
+        }
+
+        inline ~network_buffer() {
+            destory();
+        }
+
+    private:
+        void     *data{nullptr};
+        size_t   offset{0};
+        size_t   len{0};
+        destory_t dctor{nullptr};
+    };
+
     struct base64 {
         static zcstr<> encode(const uint8_t *, size_t);
 
@@ -659,7 +745,8 @@ namespace suil {
         template<typename... __Args>
         async_t(__Args... args)
                 : ch(chmake(__R, __N)),
-                  term(args...) {}
+                  term(args...)
+        {}
 
         /**
          * Creates an empty channel, basically a null and
@@ -771,10 +858,15 @@ namespace suil {
             }
 
             while (ch && (rxd < 0 || rxd > 0)) {
-                __R res = chrx(dd);
-                if (res == term) {
-                    return true;
+                __R res;
+                if (!chrx(dd, res)) {
+                    return false;
                 }
+
+                if (res == term) {
+                    return false;
+                }
+
                 f(true, res);
                 rxd--;
             }
@@ -801,8 +893,8 @@ namespace suil {
             int64_t  dd = ddline;
             ddline = -1;
             if (ch) {
-                res = chrx(dd);
-                return res != term;
+                bool rc = chrx(dd, res);
+                return (rc && res != term);
             }
             return false;
         }
@@ -862,8 +954,8 @@ namespace suil {
 
     private:
 
-        inline __R chrx(int64_t dd) {
-            __R res;
+        inline bool chrx(int64_t dd, __R& res) {
+            bool rc = true;
             if (dd <= 0) {
                 res = chr(ch, __R);
             }
@@ -873,10 +965,11 @@ namespace suil {
                             res = tmp;
                         deadline(dd):
                             res = term;
+                            rc  = false;
                     chend
                 }
             }
-            return res;
+            return rc;
         }
         chan ch;
         __R term;
@@ -1019,6 +1112,7 @@ namespace iod {
 }
 
 #define var(v) s::_##v
+#define sym(v) var(v)
 #define opt(o, v) var(o) = v
 #define on(ev) s::_on_##ev
 

@@ -27,3 +27,28 @@ _vbuild
 _vtag
 _vdate
 _vtime
+
+# Configuration
+_allow_caching
+_allow_compress
+_root
+_route
+_nworkers
+_port
+_accept_timeout
+_expires
+
+# SQL
+_AUTO_INCREMENT
+_READ_ONLY
+_PRIMARY_KEY
+_SYNCHRONOUS
+_TIMEOUT
+_EXPIRES
+_ASYNC
+
+# TEST SQL
+_ids
+_username
+_email
+_age

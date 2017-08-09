@@ -114,6 +114,10 @@ namespace suil {
                 body.append(str.data(), str.size());
             }
 
+            inline void append(const void *data, size_t len) {
+                body.append(data, (uint32_t)len);
+            }
+
             inline void append(const char *cstr) {
                 body.append(cstr);
             }

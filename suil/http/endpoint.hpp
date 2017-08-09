@@ -47,6 +47,8 @@ namespace suil {
                     // add web socket ipc apis
                     websock_api::setup_ipc();
 
+                    setup_ipc();
+
                     return EXIT_SUCCESS;
                 });
             }
@@ -58,6 +60,27 @@ namespace suil {
                 stats.tx_bytes = 0;
                 stats.total_requests = 0;
                 stats.open_requests  = 0;
+            }
+
+            void setup_ipc() {
+
+                worker::ipcreg(GET_STATS,
+                [&](uint8_t src, const void *data, size_t len) {
+                    trace("GET_STATS src %hhu, data %p, len %lu", src, data, len);
+
+                    auto jstats = iod::json_encode(stats);
+                    worker::send_get_response(data, src, jstats.data(), jstats.size());
+                    return false;
+                });
+
+                worker::ipcreg(GET_MEMORY_INFO,
+                [&](uint8_t src, const void *data, size_t len) {
+                    trace("GET_MEMORY_INFO src %hhu, data %p, len %lu", src, data, len);
+
+                    auto jinfo = iod::json_encode(memory::get_usage());
+                    worker::send_get_response(data, src, jinfo.data(), jinfo.size());
+                    return false;
+                });
             }
 
             raw_server_t        backend;
@@ -83,22 +106,81 @@ namespace suil {
             {}
 
             int start() {
+                eproute((*this), "/admin/stats/<uint>")
+                ("GET"_method)
+                ([this](const request& /*req*/, response& resp, uint32_t w) {
+                    if ((w > this->config.nworkers) || (w == 0)) {
+                        /* invalid worker */
+                        throw  error::not_found();
+                    }
+
+                    if (w != spid) {
+                        auto nb = std::move(worker::get(GET_STATS, (uint8_t) w, this->config.connection_timeout));
+                        if (nb) {
+                            /* network buffer valid */
+                            resp.append(nb.get(), nb.size());
+                            resp.set_content_type("application/json");
+                        } else {
+                            throw error::bad_request();
+                        }
+                    } else {
+                        resp.append(iod::json_encode(this->stats));
+                        resp.set_content_type("application/json");
+                    }
+                });
+
                 eproute((*this), "/admin/stats")
                 ("GET"_method)
-                ([this](){
-                    return this->stats;
+                ([this](const request& /*req*/, response& resp) {
+                    if (this->config.nworkers) {
+                        resp.append("[");
+                    }
+
+                    resp.append(iod::json_encode(this->stats));
+
+                    if (this->config.nworkers) {
+                        std::vector<network_buffer> netbufs =
+                                std::move(worker::gather(GET_STATS, this->config.connection_timeout));
+                        for (auto &nb : netbufs) {
+                            /* append buffer */
+                            resp.append(",", 1);
+                            resp.append(nb.get(), nb.size());
+                        }
+
+                        resp.append("]");
+                    }
+
+                    resp.set_content_type("application/json");
                 });
 
                 eproute((*this), "/admin/memory/info")
                 ("GET"_method)
-                ([this](){
-                    return memory::get_usage();
+                ([this](const request& /*req*/, response& resp){
+                    if (this->config.nworkers) {
+                        resp.append("[");
+                    }
+
+                    resp.append(iod::json_encode(memory::get_usage()));
+
+                    if (this->config.nworkers) {
+                        std::vector<network_buffer> netbufs =
+                                std::move(worker::gather(GET_MEMORY_INFO, this->config.connection_timeout));
+                        for (auto &nb : netbufs) {
+                            /* append buffer */
+                            resp.append(",", 1);
+                            resp.append(nb.get(), nb.size());
+                        }
+
+                        resp.append("]");
+                    }
+
+                    resp.set_content_type("application/json");
                 });
 
                 eproute((*this), "/api/v1")
                 ("GET"_method)
                 ([this](){
-                    return SUIL_VERSION_STRING;
+                    return SUIL_SOFTWARE_NAME " " SUIL_VERSION_STRING;
                 });
 
                 eproute((*this), "/api/v2")

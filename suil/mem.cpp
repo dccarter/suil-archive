@@ -210,7 +210,7 @@ namespace suil {
             }
 
             if (idx > (MEM_BLOCKS - 1))
-                scritical("kore_malloc: idx too high");
+                scritical("memblock::index idx %lu too high, len %lu", idx, len);
 
             return (idx);
         }

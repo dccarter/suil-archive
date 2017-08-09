@@ -464,6 +464,7 @@ namespace suil {
                     api.nsocks--;
 
                 strace("updated web sockets from %hhu to %hhu", msg->conn, api.nsocks);
+                return false;
             });
 
             worker::ipcreg(IPC_WSOCK_BCAST,
@@ -473,6 +474,8 @@ namespace suil {
                 wsock_bcast_msg *msg = (wsock_bcast_msg *) data;
                 websock_api& api = apis.find(msg->api_id)->second;
                 api.broadcast(true, nullptr, data, len);
+
+                return false;
             });
         }
     }

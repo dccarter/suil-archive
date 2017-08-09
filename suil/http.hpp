@@ -531,6 +531,21 @@ namespace suil {
                 prop(open_requests, uint64_t)
         )) server_stats_t;
     }
+
+    static auto parse_cmd(int argc, const char *argv[]) {
+        return iod::parse_command_line(argc, argv,
+            iod::cl::description(
+                   "Suil " SUIL_VERSION_STRING "\n",
+                   opt(nworkers, "Number of parallel workers."),
+                   opt(port, "The TCP number to listen on."),
+                   opt(root, "Root directory for serving static files"),
+                   opt(route, "The route prefix to use when serving static files")),
+            opt(nworkers, int(0)),
+            opt(port, int(1080)),
+            opt(root, std::string("./www/")),
+            opt(route, std::string("/www/"))
+        );
+    }
 }
 
 constexpr suil::http::method_t operator "" _method(const char* str, size_t /*len*/) {

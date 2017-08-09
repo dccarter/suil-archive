@@ -394,6 +394,7 @@ namespace suil {
         virtual bool listen(ipaddr, int) = 0;
         virtual bool accept(__S&, int64_t timeout = -1) = 0;
         virtual void close() = 0;
+        virtual void shutdown() = 0;
     };
 
     struct ssl_ss_config {
@@ -446,6 +447,9 @@ namespace suil {
             }
         }
 
+        virtual void shutdown()
+        {}
+
     private:
         sslsock         raw{nullptr};
         ssl_ss_config& config;
@@ -494,6 +498,12 @@ namespace suil {
             if (raw) {
                 tcpclose(raw);
                 raw = nullptr;
+            }
+        }
+
+        virtual void shutdown() {
+            if (raw) {
+                tcpshutdown(raw, 2);
             }
         }
 

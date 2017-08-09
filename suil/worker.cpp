@@ -48,6 +48,7 @@ namespace suil {
 
     struct __ipc {
         uint8_t     nworkers;
+        uint8_t     nactive;
         __lock_t    locks[WORKER_SHM_LOCKS];
         __worker    workers[0];
     } __attribute((packed));
@@ -58,7 +59,9 @@ namespace suil {
     struct __worker_logger : public LOGGER(dtag(WORKER)) {} __wlog;
     static __worker_logger* WLOG = &__wlog;
 
-    static  msg_handler_t ipc_handlers[1<<sizeof(uint8_t)];
+    static  msg_handler_t ipc_handlers[256] = {nullptr};
+
+    static std::vector<cleanup_handler_t> cleaners;
 
     static inline void setnon_blocking(int fd) {
         int opt = fcntl(fd, F_GETFL, 0);
@@ -69,40 +72,48 @@ namespace suil {
     }
 
     static inline bool has_msg_handler(uint8_t w, uint8_t m) {
-        if (w > ipc->nworkers)
-            return false;
         __worker& wrk   = ipc->workers[w];
-        uint8_t idx   = (uint8_t) floor(m/64);
-        uint64_t mask = (uint64_t) 1 << (m%64);
-        uint64_t val  = __sync_add_and_fetch(&wrk.mask[idx], 0);
-        return (val&mask) == mask;
+        if(w <= ipc->nworkers && wrk.active) {
+            uint8_t idx = (uint8_t) floor(m / 64);
+            uint64_t mask = (uint64_t) 1 << (m % 64);
+            uint64_t val = __sync_add_and_fetch(&wrk.mask[idx], 0);
+            return (val & mask) == mask;
+        }
+
+        return false;
     }
 
     static inline void set_msg_handler(uint8_t w, uint8_t m, bool en) {
-        if (w > ipc->nworkers)
-            return;
-        __worker& wrk   = ipc->workers[w];
-        uint8_t idx   = (uint8_t)  floor(m/64);
-        uint64_t mask = (uint64_t) 1 << (m%64);
-        if (en) {
-            __sync_fetch_and_or(&wrk.mask[idx], mask);
-        } else {
-            __sync_fetch_and_and(&wrk.mask[idx], ~mask);
+        if (w <= ipc->nworkers) {
+            __worker &wrk = ipc->workers[w];
+            uint8_t idx = (uint8_t) floor(m / 64);
+            uint64_t mask = (uint64_t) 1 << (m % 64);
+            if (en) {
+                __sync_fetch_and_or(&wrk.mask[idx], mask);
+            } else {
+                __sync_fetch_and_and(&wrk.mask[idx], ~mask);
+            }
         }
     }
 
     static volatile sig_atomic_t sig_recv;
     static void __on_signal(int sig) {
-        ltrace(WLOG, "received signal... %d", sig);
         sig_recv = sig;
 
-        if (spid != 0)
-            throw std::runtime_error("received termination signal");
+        if (spid != 0 || ipc->nworkers == 0) {
+            lnotice(WLOG, "worker suil/%hhu cleanup", spid);
+            for (auto& cleaner : cleaners) {
+                /* call cleaners */
+                cleaner();
+            }
+        }
     }
 
     static coroutine void ipc_async_receive(__worker& wrk);
 
     static int recv_ipc_msg(__worker& wrk, int64_t dd);
+
+    static void ipc_reg_get_resp();
 
     static int worker_wait(bool last);
 
@@ -178,6 +189,7 @@ namespace suil {
         wrk.active = true;
 
         if (spid != SPID_PARENT) {
+            __sync_fetch_and_add(&ipc->nactive, 1);
             // start receiving messages
             go(ipc_async_receive(wrk));
         }
@@ -220,13 +232,15 @@ namespace suil {
         memset(ipc, 0, len);
         // initialize accept lock
         for (uint8_t i = 0; i < WORKER_SHM_LOCKS; i++)
-            lock::reset(ipc->locks[i]);
+            lock::reset(ipc->locks[i], 256+i);
 
         // initialize worker memory and pipe descriptors
         ipc->nworkers = n;
+        ipc->nactive = 0;
+
         for (uint8_t w = 0; w <= n; w++) {
             __worker& wrk = ipc->workers[w];
-            lock::reset(wrk.lock);
+            lock::reset(wrk.lock, w);
             wrk.id = w;
             wrk.cpu = cpu;
 
@@ -237,7 +251,7 @@ namespace suil {
                 goto ipc_detach;
             }
             if (n)
-                cpu = (uint8_t) (cpu +1) % n;
+                cpu = (uint8_t) ((cpu +1) % ncpus);
         }
 
         // spawn worker process
@@ -266,6 +280,7 @@ namespace suil {
                 // run post spawn delegate
                 try {
                     quit = ps(spid);
+                    ipc_reg_get_resp();
                 }
                 catch(...) {
                     lerror(WLOG, "unhandled exception in post spawn delegate");
@@ -277,13 +292,16 @@ namespace suil {
                 try {
                     quit = work();
                 }
-                catch (const std::exception& ex) {
+                catch (const std::exception &ex) {
                     if (sig_recv == 0)
                         lerror(WLOG, "unhandled error in work: %s", ex.what());
                     break;
                 }
             }
+
+
             lnotice(WLOG, "worker suil/%hhu exiting - %d %d", spid, sig_recv, quit);
+            __sync_fetch_and_sub(&ipc->nactive, 1);
 
             // force worker to exit
             __started = false;
@@ -314,21 +332,22 @@ namespace suil {
                         // pass signal through to worker processes
                         __worker& tmp = ipc->workers[w];
                         if (kill(tmp.pid, SIGABRT) == -1) {
-                            ldebug(WLOG, "kill suild/%hhu failed: %s", tmp.pid, errno_s);
+                            ldebug(WLOG, "kill suil/%hhu failed: %s", tmp.pid, errno_s);
                         }
                     }
 
                     uint8_t done = 0;
-                    while (done != ipc->nworkers) {
+                    while (done < ipc->nworkers) {
                         // wait for workers to shutdown
                         for (uint8_t w = 1; w <= n; w++) {
                             // pass signal through to worker processes
                             __worker &tmp = ipc->workers[w];
                             if (tmp.active) {
-                                if (worker_wait(true) == ECHILD) break;
-                            }
-                            else
+                                if (worker_wait(true) == ECHILD) {
+                                    break;
+                                }
                                 done++;
+                            }
                         }
                     }
                     sig_recv = 0;
@@ -372,11 +391,11 @@ namespace suil {
             return -1;
         }
 
-        ipc_msg_hdr hdr;
+        ipc_msg_hdr hdr{};
         hdr.len = len;
-        hdr.id  = msg;
+        hdr.id = msg;
         hdr.src = spid;
-        __worker& wrk = ipc->workers[dst];
+        __worker &wrk = ipc->workers[dst];
 
         // acquire send lock of destination
         lock l(wrk.lock);
@@ -405,8 +424,8 @@ namespace suil {
         ltrace(WLOG, "sending data of size %lu to worker %hhu", len, dst);
         ssize_t nsent = 0, tsent = 0;
         do {
-            size_t chunk = MIN(len-tsent, PIPE_BUF);
-            nsent = write(wrk.fd[1], ((char *)data)+tsent, chunk);
+            size_t chunk = MIN(len - tsent, PIPE_BUF);
+            nsent = write(wrk.fd[1], ((char *) data) + tsent, chunk);
             if (nsent <= 0) {
                 int ws = 0;
                 if (errno == EAGAIN || errno == -EWOULDBLOCK) {
@@ -506,7 +525,7 @@ namespace suil {
             status = recv_ipc_msg(wrk, -1);
             if (status == EINVAL) {
                 lwarn(WLOG, "receiving message failed, aborting");
-                break;
+                yield();
             }
         }
         ltrace(WLOG, "ipc receive loop exiting %d, %d", status, wrk.active);
@@ -526,7 +545,7 @@ namespace suil {
         while (true) {
             nread = read(fd, &hdr, sizeof(hdr));
             if (nread <= 0) {
-                int ws = 0;
+                int ws = errno;
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     // ltrace(WLOG, "going to wait for ipc message hdr");
                     ws = ipc_wait_read(fd, dd);
@@ -547,7 +566,7 @@ namespace suil {
         }
 
         // header received, ensure that the message is supported
-        if (!ipc_msg_check(wrk, hdr.id)) {
+        if (!has_msg_handler(wrk.id, hdr.id)) {
             ltrace(WLOG, "received unsupported ipc message %hhu", hdr.id);
             return 0;
         }
@@ -563,18 +582,21 @@ namespace suil {
             nread = read(fd, ((char *)ptr + tread), len);
 
             if (nread <= 0) {
-                int ws = 0;
+                int ws = -errno;
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     ltrace(WLOG, "going to wait for ipc message hdr");
                     ws = ipc_wait_read(fd, dd);
                     if (ws == ETIMEDOUT) {
                         // it's ok to timeout
                         return ETIMEDOUT;
+                    } else if (ws == 0) {
+                        /* received read event */
+                        continue;
                     }
                 }
 
                 if (ws < 0 || errno == ECONNRESET || errno == EPIPE || nread == 0) {
-                    ltrace(WLOG, "waiting for ipc header failed");
+                    ltrace(WLOG, "waiting for ipc header failed: %s", errno_s);
                     return EINVAL;
                 }
             }
@@ -582,11 +604,11 @@ namespace suil {
             tread += nread;
         } while (tread < hdr.len);
 
-        ltrace(WLOG, "received data from %hhu of size %lu", hdr.src, hdr.len);
+        ltrace(WLOG, "received data [msg:%02X|src:%02X|len:%08X]", hdr.id, hdr.src, hdr.len);
 
         if (tread != hdr.len) {
-            ldebug(WLOG, "reading message [%02X|%02X|%08X] failed",
-                   hdr.id, hdr.src, hdr.len);
+            ldebug(WLOG, "reading message [msg:%02X|src:%02X|len:%08X] tread:%lu failed",
+                   hdr.id, hdr.src, hdr.len, tread);
             return EINVAL;
         }
 
@@ -610,7 +632,7 @@ namespace suil {
             pid = waitpid(WAIT_ANY, &status, WNOHANG);
 
         if (pid == -1) {
-            ldebug(WLOG, "waitpid() failed: %s", errno_s);
+            ltrace(WLOG, "waitpid() failed: %s", errno_s);
             return ECHILD;
         }
 
@@ -629,7 +651,7 @@ namespace suil {
     }
 
     void worker::ipcreg(uint8_t msg, msg_handler_t h) {
-        if (msg >= (1<<sizeof(msg))) {
+        if (msg <= (1<<8)) {
             ipc_handlers[msg] = h;
             set_msg_handler(spid, msg, true);
         }
@@ -646,44 +668,201 @@ namespace suil {
             lerror(WLOG, "un-registering a message handler for out of bound message");
     }
 
-    void worker::spinlock(const uint8_t idx) {
+    bool worker::spinlock(const uint8_t idx, int64_t tout) {
         assert(idx < WORKER_SHM_LOCKS);
-        lock::spin_lock(ipc->locks[idx]);
+        return lock::spin_lock(ipc->locks[idx], tout);
     }
+
     void worker::spinunlock(const uint8_t idx) {
         assert(idx < WORKER_SHM_LOCKS);
         return lock::unlock(ipc->locks[idx]);
     }
 
+    void worker::register_cleaner(cleanup_handler_t cleaner) {
+        cleaners.insert(cleaners.begin(), cleaner);
+    }
+
+    network_buffer worker::get(uint8_t msg, uint8_t w, int64_t tout){
+        if (w == SPID_PARENT || w == spid) {
+            lerror(WLOG, "executing get to (%hhu) parent or current worker not supported",
+                   w);
+            return network_buffer();
+        }
+
+        ipc_get_handle async(nullptr);
+        ipc_get_payload payload{};
+
+        payload.handle = &async;
+        payload.deadline = mnow() + tout;
+        payload.size = 0;
+        worker::send(w, msg, &payload, sizeof(payload));
+
+        // receive the response
+        void *data;
+        ltrace(WLOG, "sent get request waiting for 1 response in %ld ms", tout);
+        bool status = async[tout] >> data;
+
+        network_buffer netbuf;
+        if (status && data != nullptr) {
+            /* successfully received data from worker */
+            auto *resp = (ipc_get_payload *) data;
+            ltrace(WLOG, "got response: data %p, size %lu", data, resp->size);
+            return std::move(network_buffer(resp, resp->size, sizeof(ipc_get_payload)));
+        } else {
+            lerror(WLOG, "get from worker %hhu failed, msg %hhu", w, msg);
+        }
+
+        return netbuf;
+    }
+
+    std::vector<network_buffer> worker::gather(uint8_t msg, int64_t tout) {
+        if (ipc->nworkers == 0) {
+            lwarn(WLOG, "executing get %hhu not supported when no workers", msg);
+            return std::vector<network_buffer>();
+        }
+
+        if (worker::spinlock(SHM_GATHER_LOCK, tout)) {
+            /* buffered channel of up to 16 entries */
+            ipc_get_handle async(nullptr);
+            ipc_get_payload payload{};
+
+            payload.handle = &async;
+            payload.deadline = mnow() + tout;
+            payload.size = 0;
+            worker::broadcast(msg, &payload, sizeof(payload));
+
+            // receive the response
+            std::vector<network_buffer> all;
+            ltrace(WLOG, "sent gather request waiting for %hhu responses in %ld ms",
+                   ipc->nactive-1, tout);
+
+            bool status = async[tout](ipc->nactive-1) |
+            [&](bool /* unsused */, void *data) {
+                auto *resp = (ipc_get_payload *) data;
+                network_buffer res(resp, resp->size, sizeof(ipc_get_payload));
+                all.push_back(std::move(res));
+            };
+
+            if (!status) {
+                lwarn(WLOG, "gather failed, msg %hhu", msg);
+            }
+
+            worker::spinunlock(SHM_GATHER_LOCK);
+            /* return gathered results */
+            return std::move(all);
+        } else {
+            lwarn(WLOG, "acquiring SHM_GET_LOCK timed out");
+            return std::vector<network_buffer>();
+        }
+
+    }
+
+    void worker::send_get_response(const void *token, uint8_t to, const void *data, size_t len) {
+        ltrace(WLOG, "token %p, to %hhu, data %p, len %lu", token, to, data, len);
+        if (token == nullptr) {
+            lerror(WLOG, "invalid token %p", token);
+            return;
+        }
+
+        void *resp;
+        bool allocd{false};
+        size_t tlen = len + sizeof(ipc_get_payload);
+        if (len < 256) {
+            static char SEND_BUF[256+(sizeof(ipc_get_payload))];
+            resp = SEND_BUF;
+        }
+        else {
+            allocd = true;
+            resp = memory::alloc(tlen);
+        }
+
+        auto *payload = (ipc_get_payload *)resp;
+        memcpy(resp, token, sizeof(ipc_get_payload));
+        payload->size = len;
+        memcpy(payload->data, data, len);
+        worker::send(to, GET_RESPONSE, resp, tlen);
+
+        if (allocd) {
+            /* free buffer if it was allocated */
+            memory::free(resp);
+        }
+    }
+
+    void worker::on_get(uint8_t msg, ipc_get_handler_t&& hdlr) {
+        if (hdlr == nullptr) {
+            lcritical(WLOG, "cannot register a null handler");
+            return;
+        }
+
+        worker::ipcreg(msg,
+        [&](uint8_t src, void *data, size_t/*len*/) {
+            /* invoke the handler with the buffer as the token */
+            hdlr(data, src);
+
+            return false;
+        });
+    }
+
+    void ipc_reg_get_resp() {
+        worker::ipcreg(GET_RESPONSE,
+        [&](uint8_t src, void *data, size_t /* len */) {
+            auto *payload = (ipc_get_payload *) data;
+            /* go 500 ms ahead in time */
+            int64_t tmp = mnow() + 500;
+            if (payload->deadline > tmp) {
+                ltrace(WLOG, "got response in time deadline:%ld now:%ld",
+                       payload->deadline, tmp);
+                /*we haven't timed out waiting for response */
+                ipc_get_handle *async = payload->handle;
+                (*async) << data;
+
+                return true;
+            }
+            else {
+                lwarn(WLOG, "got response from %hhu after timeout dd %ld now %ld",
+                      src, payload->deadline, tmp);
+                return false;
+            }
+        });
+    }
 
     coroutine void ipc_handle(msg_handler_t h, uint8_t src, void *data, size_t len)
     {
+        bool kept{false};
         try {
-            h(src, data, len);
+            kept = h(src, data, len);
         } catch(std::exception& ex) {
             lwarn(WLOG, "un-handled exception in msg handler: %s", ex.what());
         }
 
-        // the memory was released to the coroutine, free
-        memory::free(data);
+        if (!kept) {
+            /* memory released back to coroutine free */
+            memory::free(data);
+        }
     }
 
-    int launch(app a, int argc, char *argv[]) {
-        memory::init();
+    int launch(app a) {
         try {
-            __ver_json.vmajor = version::MAJOR;
-            __ver_json.vminor = version::MINOR;
-            __ver_json.vpatch = version::PATCH;
-            __ver_json.vbuild = version::BUILD;
-            __ver_json.vtag   = version::TAG;
-            __ver_json.vdate  = __DATE__;
-            __ver_json.vtime  = __TIME__;
+            memory::init();
+            try {
+                __ver_json.vmajor = version::MAJOR;
+                __ver_json.vminor = version::MINOR;
+                __ver_json.vpatch = version::PATCH;
+                __ver_json.vbuild = version::BUILD;
+                __ver_json.vtag = version::TAG;
+                __ver_json.vdate = __DATE__;
+                __ver_json.vtime = __TIME__;
 
-            a();
+                a();
+            }
+            catch (std::exception &ex) {
+                serror("un-handled exception in application: %s", ex.what());
+            }
+            memory::cleanup();
         }
-        catch (std::exception& ex) {
-            serror("un handled exception in application");
+        catch (...)
+        {
+            serror("un-handled exception in application");
         }
-        memory::cleanup();
     }
 }

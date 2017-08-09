@@ -1,3 +1,6 @@
+#ifndef __IOD_PARSE_COMMAND_LINE__
+#define __IOD_PARSE_COMMAND_LINE__
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -12,7 +15,7 @@ namespace iod
 {
   using namespace s;
 
-  void parse_command_line(int argc, const char* argv[],
+  static void parse_command_line(int argc, const char* argv[],
                           std::map<std::string, std::vector<stringview>>& args_map,
                           std::vector<stringview>& positionals)
   {
@@ -357,3 +360,5 @@ namespace iod
     return parse_command_line(std::make_tuple(), argc, argv, opts...);
   }
 }
+
+#endif // __IOD_PARSE_COMMAND_LINE__

@@ -56,10 +56,17 @@ namespace suil {
                 __sock_t s;
                 ret = adaptor.accept(s, config.accept_timeout);
                 if (!ret) {
+                    int status = EXIT_FAILURE;
                     // timeout's are allowed
                     if (errno != ETIMEDOUT) {
-                        error("accepting next connection failed: %s", errno_s);
-                        return errno;
+                        if (!exiting) {
+                            error("accepting next connection failed: %s", errno_s);
+                            status = errno;
+                        }
+
+                        // cleanup socket
+                        adaptor.close();
+                        return status;
                     }
                 }
                 else {
@@ -68,7 +75,15 @@ namespace suil {
 
                 return 0;
             },
-            hdlr);
+            [&](uint8_t w) {
+                worker::register_cleaner([&]() {
+                    /* close adaptor to allow the worker to exit */
+                    exiting = true;
+                    adaptor.shutdown();
+                });
+
+                return hdlr(w);
+            });
 
             notice("server exiting, status %d", status);
 
@@ -103,6 +118,7 @@ namespace suil {
         server_config& config;
         bool     running{true};
         bool     has_lock{false};
+        bool     exiting{false};
     };
 
     template <class __H = server_handler>
