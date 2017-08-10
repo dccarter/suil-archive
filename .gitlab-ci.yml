@@ -16,12 +16,12 @@ build:
     - mkdir -p ./build
     - cd ./build
     - cmake ..
-    - make clean
-    - make -j2 package -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
+       -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
        -DSUIL_MINOR_VERSION=$SUIL_MINOR_VERSION 
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION 
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
-       
+    - make clean
+    - make -j2 package
     - cd ..
   cache:
     paths:
