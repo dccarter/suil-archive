@@ -10,7 +10,7 @@ build:
     - apk update
     - apk add openssh bash cmake sqlite sqlite-dev
     - apk add openssl libressl-dev postgresql-dev
-    - apk add bsd-compat-headers gcc g++ make
+    - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
     - mkdir -p ./build
