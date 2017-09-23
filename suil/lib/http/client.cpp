@@ -2,6 +2,7 @@
 // Created by dc on 9/7/17.
 //
 #include <fcntl.h>
+#include <libgen.h>
 #include <sys/param.h>
 #include "config.hpp"
 #include "client.hpp"
@@ -50,7 +51,7 @@ namespace suil {
                         buffer_t tmp(127);
                         tmp << "--" << boundary << CRLF;
                         tmp << "Content-Disposition: form-data; name=\""
-                            << ff.name << "\"; filename=\"" << basename(ff.path.cstr)
+                            << ff.name << "\"; filename=\"" << ::basename(ff.path.cstr)
                             << "\"" << CRLF;
                         if (ff.ctype) {
                             /* append content type header */
