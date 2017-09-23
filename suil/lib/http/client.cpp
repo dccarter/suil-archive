@@ -51,7 +51,7 @@ namespace suil {
                         buffer_t tmp(127);
                         tmp << "--" << boundary << CRLF;
                         tmp << "Content-Disposition: form-data; name=\""
-                            << ff.name << "\"; filename=\"" << ::basename(ff.path.cstr)
+                            << ff.name << "\"; filename=\"" << basename(ff.path.str)
                             << "\"" << CRLF;
                         if (ff.ctype) {
                             /* append content type header */
