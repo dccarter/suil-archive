@@ -5,7 +5,7 @@
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
   to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  the rights to use, dup, modify, merge, publish, distribute, sublicense,
   and/or sell copies of the Software, and to permit persons to whom
   the Software is furnished to do so, subject to the following conditions:
 
@@ -66,6 +66,7 @@ struct mill_tcplistener {
 struct mill_tcpconn {
     struct mill_tcpsock_ sock;
     int fd;
+    int buffered;
     size_t ifirst;
     size_t ilen;
     size_t olen;
@@ -255,25 +256,27 @@ size_t mill_tcpsend_(struct mill_tcpsock_ *s, const void *buf, size_t len,
         mill_panic("trying to send to an unconnected socket");
     struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
 
-    /* If it fits into the output buffer copy it there and be done. */
-    if(conn->olen + len <= MILL_TCP_BUFLEN) {
-        memcpy(&conn->obuf[conn->olen], buf, len);
-        conn->olen += len;
-        errno = 0;
-        return len;
-    }
+    if (conn->buffered) {
+        /* If it fits into the output buffer dup it there and be done. */
+        if (conn->olen + len <= MILL_TCP_BUFLEN) {
+            memcpy(&conn->obuf[conn->olen], buf, len);
+            conn->olen += len;
+            errno = 0;
+            return len;
+        }
 
-    /* If it doesn't fit, flush the output buffer first. */
-    tcpflush(s, deadline);
-    if(errno != 0)
-        return 0;
+        /* If it doesn't fit, flush the output buffer first. */
+        tcpflush(s, deadline);
+        if (errno != 0)
+            return 0;
 
-    /* Try to fit it into the buffer once again. */
-    if(conn->olen + len <= MILL_TCP_BUFLEN) {
-        memcpy(&conn->obuf[conn->olen], buf, len);
-        conn->olen += len;
-        errno = 0;
-        return len;
+        /* Try to fit it into the buffer once again. */
+        if (conn->olen + len <= MILL_TCP_BUFLEN) {
+            memcpy(&conn->obuf[conn->olen], buf, len);
+            conn->olen += len;
+            errno = 0;
+            return len;
+        }
     }
 
     /* The data chunk to send is longer than the output buffer.
@@ -312,10 +315,12 @@ size_t mill_tcpsendfile_(struct mill_tcpsock_ *s, int fd, off_t offset,
         mill_panic("trying to send to an unconnected socket");
     struct mill_tcpconn *conn = (struct mill_tcpconn*)s;
 
-    /* flush the current output buffer */
-    tcpflush(s, deadline);
-    if(errno != 0)
-        return 0;
+    if (conn->buffered) {
+        /* flush the current output buffer */
+        tcpflush(s, deadline);
+        if (errno != 0)
+            return 0;
+    }
 
     size_t remaining = len;
     off_t toffset = offset +  len;

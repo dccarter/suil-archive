@@ -5,7 +5,7 @@
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
   to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  the rights to use, dup, modify, merge, publish, distribute, sublicense,
   and/or sell copies of the Software, and to permit persons to whom
   the Software is furnished to do so, subject to the following conditions:
 
@@ -250,7 +250,7 @@ size_t mill_unixsend_(struct mill_unixsock_ *s, const void *buf, size_t len,
         mill_panic("trying to send to an unconnected socket");
     struct mill_unixconn *conn = (struct mill_unixconn*)s;
 
-    /* If it fits into the output buffer copy it there and be done. */
+    /* If it fits into the output buffer dup it there and be done. */
     if(conn->olen + len <= MILL_UNIX_BUFLEN) {
         memcpy(&conn->obuf[conn->olen], buf, len);
         conn->olen += len;
@@ -440,10 +440,16 @@ size_t mill_unixrecvuntil_(struct mill_unixsock_ *s, void *buf, size_t len,
 }
 
 void mill_unixshutdown_(struct mill_unixsock_ *s, int how) {
-    mill_assert(s->type == MILL_UNIXCONN);
-    struct mill_unixconn *c = (struct mill_unixconn*)s;
-    int rc = shutdown(c->fd, how);
-    mill_assert(rc == 0 || errno == ENOTCONN);
+    if(s->type == MILL_UNIXLISTENER) {
+        struct mill_unixlistener *l = (struct mill_unixlistener *) s;
+        int rc = shutdown(l->fd, how);
+        mill_assert(rc == 0 || errno == ENOTCONN);
+    }
+    else {
+        struct mill_unixconn *c = (struct mill_unixconn *) s;
+        int rc = shutdown(c->fd, how);
+        mill_assert(rc == 0 || errno == ENOTCONN);
+    }
 }
 
 void mill_unixclose_(struct mill_unixsock_ *s) {

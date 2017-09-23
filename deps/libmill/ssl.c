@@ -5,7 +5,7 @@
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
   to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  the rights to use, dup, modify, merge, publish, distribute, sublicense,
   and/or sell copies of the Software, and to permit persons to whom
   the Software is furnished to do so, subject to the following conditions:
 
@@ -67,6 +67,7 @@ static void ssl_init(void) {
     initialised = 1;
     OpenSSL_add_all_algorithms();
     SSL_library_init();
+    SSL_load_error_strings();
 
     /* TODO: Move to sslconnect() */
     ssl_cli_ctx = SSL_CTX_new(SSLv23_client_method());
@@ -126,8 +127,10 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
     if(!BIO_should_retry(c->bio)) {
         unsigned long sslerr = ERR_get_error();
         /* XXX: Ref. openssl/source/ssl/ssl_lib.c .. */
-        if(ERR_GET_LIB(sslerr) != ERR_LIB_SYS)
+        if(ERR_GET_LIB(sslerr) != ERR_LIB_SYS) {
             errno = ECONNRESET;
+        }
+
         return -1;
     }
 
@@ -139,6 +142,7 @@ static int ssl_wait(struct mill_sslconn *c, int64_t deadline) {
         }
         return rc;
     }
+
     if(BIO_should_write(c->bio)) {
         int rc = fdwait(mill_tcpfd(c->s), FDW_OUT, deadline);
         if(rc == 0) {
@@ -209,17 +213,18 @@ static struct mill_sslsock_ *ssl_conn_new(tcpsock s, SSL_CTX *ctx, int client) {
     return &c->sock;
 }
 
-size_t mill_sslrecv_(struct mill_sslsock_ *s, void *buf, int len,
+ssize_t mill_sslrecv_(struct mill_sslsock_ *s, void *buf, int len,
       int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to use an unconnected socket");
     struct mill_sslconn *c = (struct mill_sslconn*)s;
 
     int rc;
-    if(len < 0) {
+    if(len < 0 || buf == NULL) {
         errno = EINVAL;
         return -1;
     }
+
     while(1) {
         rc = BIO_read(c->bio, buf, len);
         if(rc >= 0)
@@ -229,14 +234,14 @@ size_t mill_sslrecv_(struct mill_sslsock_ *s, void *buf, int len,
     }
 }
 
-size_t mill_sslrecvuntil_(struct mill_sslsock_ *s, void *buf, size_t len,
+ssize_t mill_sslrecvuntil_(struct mill_sslsock_ *s, void *buf, size_t len,
       const char *delims, size_t delimcount, int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to receive from an unconnected socket");
     char *pos = (char*)buf;
     size_t i;
     for(i = 0; i != len; ++i, ++pos) {
-        size_t res = sslrecv(s, pos, 1, deadline);
+        ssize_t res = sslrecv(s, pos, 1, deadline);
         if(res == 1) {
             size_t j;
             for(j = 0; j != delimcount; ++j)
@@ -250,7 +255,7 @@ size_t mill_sslrecvuntil_(struct mill_sslsock_ *s, void *buf, size_t len,
     return len;
 }
 
-size_t mill_sslsend_(struct mill_sslsock_ *s, const void *buf, int len,
+ssize_t mill_sslsend_(struct mill_sslsock_ *s, const void *buf, int len,
       int64_t deadline) {
     if(s->type != MILL_SSLCONN)
         mill_panic("trying to use an unconnected socket");
@@ -263,7 +268,7 @@ size_t mill_sslsend_(struct mill_sslsock_ *s, const void *buf, int len,
     }
     while(1) {
         rc = BIO_write(c->bio, buf, len);
-        if (rc >= 0)
+        if (rc > 0)
             return rc;
         if(ssl_wait(c, deadline) < 0)
             return 0;
@@ -288,17 +293,59 @@ void mill_sslflush_(struct mill_sslsock_ *s, int64_t deadline) {
 
 struct mill_sslsock_ *mill_sslconnect_(struct mill_ipaddr addr,
       int64_t deadline) {
+    SSL *ssl = NULL;
+    int rc = 0;
     ssl_init();
+
     tcpsock sock = tcpconnect(addr, deadline);
     if(!sock)
         return NULL;
-    struct mill_sslsock_ *c = ssl_conn_new(sock, ssl_cli_ctx, 1);
+    struct mill_sslconn *c = (struct mill_sslconn *)
+            ssl_conn_new(sock, ssl_cli_ctx, 1);
     if(!c) {
         tcpclose(sock);
         errno = ENOMEM;
         return NULL;
     }
-    return c;
+    BIO_get_ssl(c->bio, &ssl);
+    if (ssl == NULL) {
+        mill_trace(__FUNCTION__, "getting ssl from bio error");
+        mill_sslclose_(&c->sock);
+        errno = EIO;
+        return NULL;
+    }
+
+    /* perform non-blocking ssl connect */
+    rc = SSL_connect(ssl);
+    while ((rc = SSL_connect(ssl)) == -1) {
+        switch (SSL_get_error(ssl, rc)) {
+            case SSL_ERROR_WANT_READ:
+                rc = fdwait(mill_tcpfd(c->s), FDW_IN, deadline);
+                if(rc == 0) {
+                    errno = ETIMEDOUT;
+                    goto sslconnect_failure;
+                }
+                break;
+            case SSL_ERROR_WANT_WRITE:
+                rc = fdwait(mill_tcpfd(c->s), FDW_OUT, deadline);
+                if(rc == 0) {
+                    errno = ETIMEDOUT;
+                    goto sslconnect_failure;
+                }
+                break;
+            default:
+                mill_trace(__FUNCTION__, "unknown SSL_connect error");
+                ERR_print_errors_fp(stderr);
+                goto sslconnect_failure;
+        }
+    }
+
+    return &c->sock;
+
+sslconnect_failure:
+    mill_sslclose_(&c->sock);
+    errno = EIO;
+    return NULL;
 }
 
 struct mill_sslsock_ *mill_sslaccept_(struct mill_sslsock_ *s, int64_t deadline) {

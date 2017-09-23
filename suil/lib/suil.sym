@@ -1,0 +1,145 @@
+
+_id
+_name
+_age
+_worker
+_suil
+_path
+_wdir
+_W
+_entry
+_module
+_on_connect
+_on_message
+_on_close
+_logsink
+_logformat
+_key
+_authenticate
+_realm
+_appsdb
+_authdb
+_cmdargs
+_keep_alive
+
+# event bus
+_type
+_sequence
+_data
+_uid
+_status
+_version
+_v
+
+
+# Applications Table
+# {id, name, wdir, entry, pid}
+_entry
+_pid
+
+# Memory information
+memory:
+_allocs
+_frees
+_alloc_miss
+_pools
+_entries
+
+# Server statistics
+_tx_bytes
+_rx_bytes
+_total_requests
+_open_requests
+
+# Version
+_vsoftware
+_vmajor
+_vminor
+_vpatch
+_vbuild
+_vtag
+_vdate
+_vtime
+
+# Configuration
+_http_endpoint
+_allow_caching
+_allow_compress
+_root
+_route
+_nworkers
+_port
+_verbose
+_V
+_background
+_accept_timeout
+_expires
+_E
+_db
+_D
+_tag
+_t
+_base
+_b
+_runas
+_r
+_chroot
+_n
+_shm
+
+# SQL
+_AUTO_INCREMENT
+_READ_ONLY
+_PRIMARY_KEY
+_UNIQUE
+_SYNCHRONOUS
+_TIMEOUT
+_EXPIRES
+_ASYNC
+
+# JWT (JSON Web Token)
+_iss
+_aud
+_sub
+_exp
+_alg
+_typ
+_claims
+
+#---------------------------------------------------
+# SQL User table
+# { id, username, email, passwd, fullname, salt }
+#---------------------------------------------------
+$_id
+_username
+_email
+_passwd
+_fullname
+_salt
+
+#--------------------------------------------------
+# SQL Application Table
+# {id, tag, owner, name, version, description}
+#--------------------------------------------------
+$_id
+$_tag
+$_name
+$_version
+_owner
+_description
+
+#-------------------------------------------------
+# SQL Configuration table
+# {id, app_id, name, data, type}
+#--------------------------------------------------
+$_id
+$_name
+_data
+_app_id
+_type
+
+# ROUTE PROPERTIES
+_STATIC
+_AUTHORIZE
+_PARSE_FORM
+_PARSE_COOKIES

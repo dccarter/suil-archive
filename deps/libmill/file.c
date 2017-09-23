@@ -5,7 +5,7 @@
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
   to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  the rights to use, dup, modify, merge, publish, distribute, sublicense,
   and/or sell copies of the Software, and to permit persons to whom
   the Software is furnished to do so, subject to the following conditions:
 
@@ -90,7 +90,7 @@ struct mill_file *mill_mfmkstemp_(
 
 size_t mill_mfwrite_(struct mill_file *f, const void *buf, size_t len,
       int64_t deadline) {
-    /* If it fits into the output buffer copy it there and be done. */
+    /* If it fits into the output buffer dup it there and be done. */
     if(f->olen + len <= MILL_FILE_BUFLEN) {
         memcpy(&f->obuf[f->olen], buf, len);
         f->olen += len;

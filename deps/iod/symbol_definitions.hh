@@ -115,6 +115,12 @@
     iod_define_symbol(iod_pcl_required)
 #endif
 
+#ifndef IOD_SYMBOL_iod_pcl_special
+#define IOD_SYMBOL_iod_pcl_special
+    iod_define_symbol(iod_pcl_special)
+#endif
+
+
 #ifndef IOD_SYMBOL_json_key
 #define IOD_SYMBOL_json_key
     iod_define_symbol(json_key)

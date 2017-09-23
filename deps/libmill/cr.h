@@ -5,7 +5,7 @@
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"),
   to deal in the Software without restriction, including without limitation
-  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  the rights to use, dup, modify, merge, publish, distribute, sublicense,
   and/or sell copies of the Software, and to permit persons to whom
   the Software is furnished to do so, subject to the following conditions:
 
@@ -121,7 +121,7 @@ extern struct mill_cr *mill_running;
 int mill_suspend(void);
 
 /* Schedules preiously suspended coroutine for execution. Keep in mind that
-   it doesn't immediately run it, just puts it into the queue of ready
+   it doesn't immediately start it, just puts it into the queue of ready
    coroutines. */
 void mill_resume(struct mill_cr *cr, int result);
 

@@ -5,4 +5,6 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_executable(iodsyms tools/iod_generate_symbols.cc)
 
-install(TARGETS iodsyms DESTINATION bin)
+if (SUIL_BUILD_DEV_PACKAGE)
+    install(TARGETS iodsyms DESTINATION bin)
+endif()

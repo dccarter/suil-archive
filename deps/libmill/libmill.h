@@ -690,19 +690,19 @@ MILL_EXPORT struct mill_sslsock_ *mill_sslaccept_(
     int64_t deadline);
 MILL_EXPORT struct mill_ipaddr mill_ssladdr_(
     struct mill_sslsock_ *s);
-MILL_EXPORT size_t mill_sslrecv_(
+MILL_EXPORT ssize_t mill_sslrecv_(
     struct mill_sslsock_ *s,
     void *buf,
     int len,
     int64_t deadline);
-MILL_EXPORT size_t mill_sslrecvuntil_(
+MILL_EXPORT ssize_t mill_sslrecvuntil_(
     struct mill_sslsock_ *s,
     void *buf,
     size_t len,
     const char *delims,
     size_t delimcount,
     int64_t deadline);
-MILL_EXPORT size_t mill_sslsend_(
+MILL_EXPORT ssize_t mill_sslsend_(
     struct mill_sslsock_ *s,
     const void *buf,
     int len,

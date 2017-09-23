@@ -6,7 +6,7 @@
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
+ * without limitation the rights to use, dup, modify, merge, publish,
  * distribute, sublicense, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
@@ -269,7 +269,7 @@ const char *dns_strerror(int error) {
 	case DNS_EFETCHED:
 		return "Answer already fetched";
 	case DNS_ESERVICE:
-		return "The service passed was not recognized for the specified socket type";
+		return "The application passed was not recognized for the specified socket type";
 	case DNS_ENONAME:
 		return "The name does not resolve for the supplied parameters";
 	case DNS_EFAIL:
@@ -6949,7 +6949,7 @@ exec:
 		if (dns_header(F->answer)->aa)
 			dgoto(R->sp, DNS_R_FINISH);
 
-		/* XXX: Should we copy F->answer to R->nodata? */
+		/* XXX: Should we dup F->answer to R->nodata? */
 
 		dgoto(R->sp, DNS_R_FOREACH_A);
 	case DNS_R_CNAME0_A:
@@ -8304,7 +8304,7 @@ static int parse_packet(int argc DNS_NOTUSED, char *argv[] DNS_NOTUSED) {
 		fprintf(stderr, "orig:%"PRIuZ"\n", P->end);
 		hexdump(P->data, P->end, stdout);
 
-		fprintf(stderr, "copy:%"PRIuZ"\n", Q->end);
+		fprintf(stderr, "dup:%"PRIuZ"\n", Q->end);
 		hexdump(Q->data, Q->end, stdout);
 	}
 
