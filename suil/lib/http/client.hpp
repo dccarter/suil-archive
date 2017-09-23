@@ -8,7 +8,6 @@
 #include <deque>
 #include <vector>
 #include <fcntl.h>
-#include <curl/curl.h>
 
 #include "http.hpp"
 #include "parser.hpp"
