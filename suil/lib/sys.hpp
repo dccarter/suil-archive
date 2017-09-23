@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <libgen.h>
 #include <uuid/uuid.h>
 #include <unordered_map>
 #include <sys/param.h>
