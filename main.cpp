@@ -1,10 +1,11 @@
 //
 // Created by dc on 20/06/17.
 //
-#include "http/endpoint.hpp"
-#include "http/fserver.hpp"
-#include "sql/sqlite.hpp"
-#include "sql/pgsql.hpp"
+#include <suil/http/endpoint.hpp>
+#include <suil/http/fserver.hpp>
+#include <suil/sql/sqlite.hpp>
+#include <suil/sql/pgsql.hpp>
+#include <suil/app.hpp>
 
 using  namespace suil;
 
@@ -31,69 +32,96 @@ typedef decltype(iod::D(
 )) user_t;
 typedef sql::orm<typename sql::pgsql_db::Connection, user_t> user_orm_t;
 
-int main(int argc, const char *argv[])
-{
-    memory::init();
 
-    auto opts = parse_cmd(argc, argv);
-    /* set logging verbosity */
-    log::setup(opt(verbose, 6));
+struct http_task : public app_task {
+    template <typename... __Args>
+    http_task(const char *name, __Args... args)
+        : app_task(name),
+          ep("/api/", args...)
+    {
+//        ep.middleware<sql::Postgres>().
+//                setup("dbname=test1 user=postgres password=*******",
+//                      opt(EXPIRES, 10000),
+//                      opt(ASYNC, true));
 
-    http::endpoint<http::system_attrs, middleware, sql::Postgres> ep("/api/",
-            opt(port, opts.port));
+        // setup file server
+        http::file_server fs(ep,
+                             opt(root, "/home/dc/app/"));
 
-    ep.middleware<sql::Postgres>().
-    setup("dbname=test1 user=postgres password=admin123",
-            opt(EXPIRES, 10000),
-            opt(ASYNC, true));
-
-    // setup file server
-    http::file_server fs(ep,
-        opt(root, "/home/dc/app/"));
-
-    eproute(ep, "/hello/<string>")
-    ("GET"_method)
-    .attrs(opt(AUTHORIZE, false))
-    ([&](std::string name) {
-        return "Hello " + name;
-    });
-
-    eproute(ep, "/users")
-    ("GET"_method)
-    ([&](const http::request& req) {
-
-        auto &conn = ep.middleware<sql::Postgres>().conn();
-        user_orm_t user_orm("users", conn);
-        std::vector<user_t> users;
-        user_orm.forall([&](user_t& u){
-            users.push_back(u);
+        eproute(ep, "/hello/<string>")
+        ("GET"_method)
+        .attrs(opt(AUTHORIZE, false))
+        ([&](std::string name) {
+            return "Hello " + name;
         });
 
-        // close the connection
-        conn.close();
+//        eproute(ep, "/users")
+//        ("GET"_method)
+//        ([&](const http::request& req) {
+//
+//            auto &conn = ep.middleware<sql::Postgres>().conn();
+//            user_orm_t user_orm("users", conn);
+//            std::vector<user_t> users;
+//            user_orm.forall([&](user_t& u){
+//                users.push_back(u);
+//            });
+//
+//            // close the connection
+//            conn.close();
+//
+//            return iod::json_encode(users);
+//        });
 
-        return iod::json_encode(users);
-    });
+        eproute(ep, "/form")
+        ("POST"_method)
+        .attrs(opt(PARSE_FORM, true))
+        ([&](const http::request& req) {
+            http::request_form_t form(req);
+            form |
+            [&](const zcstring& name, const zcstring& val) {
+                sinfo("argument: %s: %s", name.cstr, val.str);
+                return false;
+            };
 
-    eproute(ep, "/form")
-    ("POST"_method)
-    .attrs(opt(PARSE_FORM, true))
-    ([&](const http::request& req) {
-        http::request_form_t form(req);
-        form |
-        [&](const zcstring& name, const zcstring& val) {
-            sinfo("argument: %s: %s", name.cstr, val.str);
-            return false;
-        };
+            form |
+            [&](const http::upfile_t& f) {
+                sinfo("file: name=%s, size %ld", f.name().cstr, f.size());
+                f.save("/home/dc/app");
+                return false;
+            };
+            return http::status_t::OK;
+        });
+    }
 
-        form |
-        [&](const http::upfile_t& f) {
-            sinfo("file: name=%s, size %ld", f.name().cstr, f.size());
-            f.save("/home/dc/app");
-            return false;
-        };
-        return http::status_t::OK;
-    });
+protected:
+    virtual int start()  {
+        ep.start();
+    }
 
-    ep.start();
+    virtual void stop(int code = EXIT_SUCCESS) {
+        ep.stop();
+    }
+
+private:
+    http::endpoint<http::system_attrs, middleware/*, sql::Postgres*/> ep;
+};
+
+coroutine void do_start(application& app) {
+    app.start();
+}
+
+int main(int argc, const char *argv[])
+{
+    auto opts = parse_cmd(argc, argv);
+    suil::init();
+
+    application app("demo");
+    /* setup logging options */
+    log::setup(opt(verbose, opts.verbose),
+               opt(name, "demo"));
+    app.regtask<http_task>("http", opt(port, opts.port));
+    //go(do_start(app));
+
+    //msleep(utils::after(10000));
+    app.start();
 }

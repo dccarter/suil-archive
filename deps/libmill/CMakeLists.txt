@@ -12,6 +12,12 @@ set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
 set_target_properties(
         mill_s PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+set_target_properties(mill mill_s
+        PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
 if(HAVE_CLOCK_GETTIME)
   target_link_libraries(mill rt)
   target_link_libraries(mill_s rt)

@@ -4,23 +4,22 @@
 
 # the base path where suil development library was installed
 # if not installed in system
-set(SUIL_PATH_BASE "" CACHE STRING "Base path on which suil was installed")
+set(SUIL_BASE_PATH "" CACHE STRING "Base path on which suil was installed")
 
 # Enable building debug project
 option(SUIL_PROJECT_DEBUG "Enable building of debug projects" ON)
 
-if (${SUIL_PATH_BASE})
-    # ensure that the base path will be searched for libraries
-    # includes
-    list(APPEND CMAKE_LIBRARY_PATH ${SUIL_PATH_BASE}/lib)
-    include_directories(${SUIL_PATH_BASE}/include)
-else()
-    set(SUIL_PATH_BASE /usr/local/)
+if (NOT SUIL_BASE_PATH)
+    set(SUIL_BASE_PATH /usr/local/)
 endif()
+message(STATUS "Base path: ${SUIL_BASE_PATH}")
+
+include(CheckSymbolExists)
+include(CheckFunctionExists)
 
 # Include some helper utilities
-include(SuilUtils.cmake)
-include(SuilConfigVersion.cmake)
+include(SuilUtils)
+include(SuilConfigVersion)
 
 # Ensure that some libraries exist
 SuilCheckFunctions()
@@ -48,6 +47,9 @@ function(SuilProject name)
         # initialize project
         project(${name} C CXX)
 
+        message(STATUS "using suil link directory: ${SUIL_BASE_PATH}/lib")
+        link_directories(${SUIL_BASE_PATH}/lib)
+
         # find required packages
         find_package(PostgreSQL REQUIRED)
         find_package(OpenSSL REQUIRED)
@@ -55,6 +57,9 @@ function(SuilProject name)
 
         # include all source
         include_directories(${SUIL_PACKAGE_INCLUDES})
+        message(STATUS "using suil include directory: ${SUIL_BASE_PATH}/include")
+        include_directories(${SUIL_BASE_PATH}/include)
+        message(STATUS "Package includes: ${SUIL_PACKAGE_INCLUDES}")
         set(SUIL_PROJECT_INCLUDES ${SUIL_PACKAGE_INCLUDES} PARENT_SCOPE)
 
         # add definitions from suil
@@ -63,14 +68,6 @@ function(SuilProject name)
 
         # push suil libraries to parent scope
         set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_LIBRARIES} PARENT_SCOPE)
-
-        # push suil debug library and file
-        set(SUIL_PROJECT_DBG_MAIN
-                ${SUIL_PATH_BASE}/share/suil/src/dbgshell.cpp
-                PARENT_SCOPE)
-        set(SUIL_PROJECT_DBG_LIB
-                suildbgshell
-                PARENT_SCOPE)
 
         # Some basic project definitions
         set(SUIL_PROJECT_NAME ${name} PARENT_SCOPE)
@@ -109,21 +106,21 @@ function(SuilApp name)
     # get the source files
     set(${name}_SOURCES ${SUIL_APP_SOURCES})
     if (NOT SUIL_APP_SOURCES)
-        file(GLOB_RECURSE ${name}_SOURCES ${name}/src/*.c ${name}/src/*.cpp)
+        file(GLOB_RECURSE ${name}_SOURCES src/*.c src/*.cpp)
     endif()
     if (NOT ${name}_SOURCES)
-        message(FATAL_ERROR "adding application'${name} without sources")
+        message(FATAL_ERROR "adding application '${name}' without sources")
     else()
         message(STATUS "target '${name} sources: ${${name}_SOURCES}")
     endif()
 
     # add the target
-    add_library(${name} SHARED ${${name}_SOURCES})
+    add_executable(${name} ${${name}_SOURCES})
 
     # generate symbols
     set(${name}_SYMBOLS ${SUIL_APP_SYMBOLS})
     if (NOT ${name}_SYMBOLS)
-        set(${name}_SYMBOLS ${name}/symbols.sym)
+        set(${name}_SYMBOLS symbols.sym)
     endif()
     if (EXISTS ${${name}_SYMBOLS})
         # generate symbols if project uses symbols
@@ -144,7 +141,7 @@ function(SuilApp name)
     endif()
 
     # add target include directories
-    set(${name}_INCLUDES ${name}/src ${name}/includes)
+    set(${name}_INCLUDES src includes)
     if (SUIL_APP_INCLUDES)
         set(${name}_INCLUDES ${${name}_INCLUDES} ${SUIL_APP_INCLUDES})
     endif()
@@ -152,30 +149,23 @@ function(SuilApp name)
     target_include_directories(${name} PUBLIC ${${name}_INCLUDES})
 
     # install the target
-    set(${name}_INSTALL_FILES ${PROJECT_BINARY_DIR}/${name}/${name}.app)
+    set(${name}_INSTALL_FILES ${PROJECT_BINARY_DIR}/${name}/${name})
     if (SUIL_APP_INSTALL_FILES)
-        set(${name}_INSTALL_FILES ${${name}_INSTALL_FILES} ${SUIL_APP_INSTALL_FILES})
+        message(STATUS "target '${name} install files: ${SUIL_APP_INSTALL_FILES}")
+        install(FILES ${SUIL_APP_INSTALL_FILES}
+                DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/)
     endif()
-    message(STATUS "target '${name} install files: ${${name}_INSTALL_FILES}")
-    install(FILES ${${name}_INSTALL_FILES}
-            DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/${name}/)
+    message(STATUS "target '${name} install target")
+    install(TARGETS ${name}
+            ARCHIVE DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/
+            LIBRARY DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/
+            RUNTIME DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/)
+
 
     set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})
     if (${name}_INSTALL_DIRS)
         message(STATUS "target '${name} install directories: ${${name}_INSTALL_DIRS}")
         install(DIRECTORY ${${name}_INSTALL_DIRS}
-                DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/${name}/)
-    endif()
-
-    if (SUIL_APP_DEBUG AND SUIL_PROJECT_DEBUG)
-        set(${name}dbg_SOURCES ${SUIL_PROJECT_DBG_MAIN})
-        add_executable(${name}dbg ${${name}dbg_SOURCES})
-        add_dependencies(${name}dbg ${${name}})
-        target_link_libraries(${name}dbg
-                ${name}
-                ${SUIL_PROJECT_DBG_LIBRARY}
-                ${${name}_LIBRARIES})
-        target_compile_definitions(${name}dbg
-                PUBLIC "-DSUIL_APP_NAME=\"${name}\"")
+                DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/)
     endif()
 endfunction()

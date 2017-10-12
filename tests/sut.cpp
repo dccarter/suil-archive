@@ -5,8 +5,8 @@
 
 #include "catch/catch.hpp"
 
-#include "net.hpp"
-#include "config.hpp"
+#include <suil/net.hpp>
+#include <suil/config.hpp>
 
 TEST_CASE("Suil version test", "[version]") {
     REQUIRE(SUIL_MAJOR_VERSION == suil::version::MAJOR);

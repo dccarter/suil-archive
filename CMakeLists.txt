@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.8)
 project(suil C CXX)
 set(CMAKE_MODULE_PATH
         ${CMAKE_MODULE_PATH}
@@ -23,6 +23,8 @@ option(SUIL_BUILD_DEV_PACKAGE  "Produce a development package" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough")
 
 set(SUIL_DEFINES)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -40,8 +42,8 @@ SuilCheckLibrary(sqlite3 LIBRARY sqlite3 libsqlite3)
 # Configuration file
 configure_file(
         ${CMAKE_SOURCE_DIR}/config.hpp.in
-        ${CMAKE_BINARY_DIR}/config.hpp)
-include_directories(${CMAKE_BINARY_DIR})
+        ${CMAKE_BINARY_DIR}/.generated/suil/config.hpp)
+include_directories(${CMAKE_BINARY_DIR}/.generated)
 
 find_package(OpenSSL REQUIRED)
 if (OpenSSL_FOUND)
@@ -82,28 +84,35 @@ if (SUIL_BUILD_DEV_PACKAGE)
     install(DIRECTORY deps/iod
             DESTINATION include
             FILES_MATCHING PATTERN "*.hpp")
-
+    install(DIRECTORY deps/boost
+            DESTINATION include
+            FILES_MATCHING PATTERN "*.h")
     install(DIRECTORY deps/boost
             DESTINATION include
             FILES_MATCHING PATTERN "*.hh")
     install(DIRECTORY deps/boost
             DESTINATION include
             FILES_MATCHING PATTERN "*.hpp")
-
-    install(DIRECTORY suil/lib
-            DESTINATION include
+    install(DIRECTORY suil/
+            DESTINATION include/suil
             FILES_MATCHING PATTERN "*.hh")
-    install(DIRECTORY suil/lib
-            DESTINATION include
+    install(DIRECTORY suil/
+            DESTINATION include/suil
             FILES_MATCHING PATTERN "*.hpp")
-    install(FILES ${CMAKE_BINARY_DIR}/config.hpp
+    install(DIRECTORY suil/
+            DESTINATION include/suil
+            FILES_MATCHING PATTERN "*.h")
+    install(DIRECTORY cmake
+            DESTINATION share/suil
+            FILES_MATCHING PATTERN "*.cmake")
+    install(FILES ${CMAKE_BINARY_DIR}/.generated/suil/config.hpp
             DESTINATION include/suil)
 endif()
 
-include_directories(suil/lib ${PostgreSQL_INCLUDE_DIRS})
-include_directories(suil/app)
+include_directories(${PostgreSQL_INCLUDE_DIRS})
+include_directories(SYSTEM ${PROJECT_SOURCE_DIR})
 
-add_subdirectory(suil/lib)
+add_subdirectory(suil)
 
 add_executable(scrap main.cpp)
 target_link_libraries(scrap ${SUIL_LIBRARIES} suil)
@@ -132,6 +141,6 @@ set(CPACK_PACKAGE_VERSION_PATCH ${SUIL_PATCH_VERSION})
 set(CPACK_PACKAGE_VERSION ${SUIL_MAJOR_VERSION}.${SUIL_MINOR_VERSION}.${SUIL_PATCH_VERSION})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${SUIL_PACKAGE_POSTFIX})
 set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/LICENSE)
-set(CPACK_GENERATOR "TGZ;DEB")
+set(CPACK_GENERATOR "TGZ")
 
 include(CPack)
