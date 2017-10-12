@@ -1,6 +1,7 @@
 //
 // Created by dc on 9/26/17.
 //
+#include <sys/wait.h>
 #include <suil/app.hpp>
 
 namespace suil {
