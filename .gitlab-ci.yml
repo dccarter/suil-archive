@@ -20,6 +20,7 @@ build:
        -DSUIL_MINOR_VERSION=$SUIL_MINOR_VERSION 
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION 
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
+       -DSUIL_BUILD_DEV_PACKAGE=ON
     - make clean
     - make -j2 package
     - cd ..
