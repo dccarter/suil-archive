@@ -28,7 +28,10 @@ build-dev:
     - cd ..
   cache:
     paths:
-      - build/sut
+      - ./build/
+  artifacts:
+    paths:
+      - ./build/
 
 build-prod:
   stage: build
@@ -66,10 +69,11 @@ build-prod:
     - cd ..
   cache:
     paths:
-      - build
+      - ./build/
   artifacts:
     paths:
-      - build/suil*tar.gz
+      - ./build/
+      - ./build/suil*tar.gz
       
 test:
   stage: test
