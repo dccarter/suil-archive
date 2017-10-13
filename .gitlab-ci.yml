@@ -72,7 +72,7 @@ build-prod:
       - ./build/
   artifacts:
     paths:
-      - ./build/
+      - ./build/sut
       - ./build/suil*tar.gz
       
 test:
