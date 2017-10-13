@@ -1,5 +1,5 @@
 # suil 
-[![Build Status](http://suilteam.ddns.net:49001/buildStatus/icon?job=Nightly/suil)](http://suilteam.ddns.net:49001/job/Nightly/job/suil/)
+[![build status](http://suilteam-gitlab/software/suil/badges/master/build.svg)](http://suilteam-gitlab/software/suil/commits/master)
 
 A lightweight mordern `C++` micro service development framework
 
