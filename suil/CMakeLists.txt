@@ -17,6 +17,7 @@ suil_iod_symbols(suil
         SYMBOLS ${CMAKE_SOURCE_DIR}/suil/suil.sym
         OUTPUT  ${CMAKE_SOURCE_DIR}/suil/symbols.h
         DEPENDS iodsyms)
+add_dependencies(suil_s suil-gensyms)
 
 set(suil_INSTALL_TARGETS suil_s)
 if (SUIL_BUILD_DEV_PACKAGE)
