@@ -1,10 +1,12 @@
 # Build Pipeline for Suil Project
 image: alpine:latest
 
-build:
+build-dev:
   stage: build
   tags:
     - alpine
+  only:
+    - master
   # Install all the required dependecies before proceeding to build
   before_script: 
     - apk update
@@ -27,7 +29,52 @@ build:
   cache:
     paths:
       - build/sut
-      - build/suil*tar.deb
+
+build-prod:
+  stage: build
+  tags:
+    - alpine
+  only:
+    - tags
+# Install all the required dependecies before proceeding to build
+  before_script: 
+    - apk update
+    - apk add openssh bash cmake sqlite sqlite-dev
+    - apk add openssl libressl-dev postgresql-dev
+    - apk add bsd-compat-headers gcc g++ make util-linux-dev
+    
+  script:
+    - mkdir -p ./build
+    - cd ./build
+    # Build runtime binaries
+    - cmake ..
+       -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
+       -DSUIL_MINOR_VERSION=$SUIL_MINOR_VERSION 
+       -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION 
+       -DSUIL_BUILD_NUMBER=$CI_JOB_ID
+    - make clean
+    - make -j2 package
+    # Build development binaries
+    - cmake ..
+       -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
+       -DSUIL_MINOR_VERSION=$SUIL_MINOR_VERSION 
+       -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION 
+       -DSUIL_BUILD_NUMBER=$CI_JOB_ID
+       -DSUIL_BUILD_DEV_PACKAGE=ON
+    - make clean
+    - make -j2 package
+    - cd ..
+  cache:
+    paths:
+      - build
   artifacts:
     paths:
       - build/suil*tar.gz
+      
+test:
+  stage: test
+  tags:
+    - alpine
+  script:
+    - cd ./build
+    - ./sut
