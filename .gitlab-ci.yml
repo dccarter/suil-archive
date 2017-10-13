@@ -31,7 +31,7 @@ build-dev:
       - ./build/
   artifacts:
     paths:
-      - ./build/
+      - ./build/sut
 
 build-prod:
   stage: build
@@ -79,6 +79,10 @@ test:
   stage: test
   tags:
     - alpine
+  before_script:
+    - apk update
+    - apk add openssl libressl postgresql
+    - apk add sqlite musl libstdc++ libuuid
   script:
     - cd ./build
     - ./sut
