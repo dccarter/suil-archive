@@ -32,6 +32,7 @@ build-dev:
   artifacts:
     paths:
       - ./build/sut
+    expire_in: 30 mins
 
 build-prod:
   stage: build
