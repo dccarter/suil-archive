@@ -19,11 +19,12 @@ namespace suil {
             )) jwt_header_t;
 
             typedef decltype(iod::D(
-                prop(iss, zcstring),
-                prop(aud, zcstring),
-                prop(sub, zcstring),
-                prop(exp, int64_t),
-                prop(claims, iod::json_string)
+                s::_iss(var(optional), var(ignore))    = zcstring(),
+                s::_aud(var(optional), var(ignore))    = zcstring(),
+                s::_sub(var(optional), var(ignore))    = zcstring(),
+                s::_exp(var(optional), var(ignore))    = int64_t(),
+                s::_roles(var(optional), var(ignore)) = std::vector<zcstring>(),
+                s::_claims(var(optional)) = iod::json_string()
             )) jwt_payload_t;
 
             jwt_t(const char* typ)
@@ -38,8 +39,8 @@ namespace suil {
 
             template <typename __T>
             inline void claims(__T& claims) {
-                /* encode the claims to a json string*/
-                payload.claims.str = std::move(iod::json_encode(claims));
+                /* encode the claims to a json string*/;
+                payload.claims = std::move(iod::json_encode(claims));
             }
 
             template <typename... __Claims>
@@ -47,6 +48,26 @@ namespace suil {
                 auto tmp = iod::D(c...);
                 /* encode the claims to a json string*/
                 claims(tmp);
+            }
+
+            inline void roles(std::vector<zcstring>& roles) {
+                for (auto& r : roles) {
+                    payload.roles.push_back(std::move(r.dup()));
+                }
+            }
+
+            inline std::vector<zcstring>& roles() {
+                return payload.roles;
+            }
+
+            inline void roles(const char *r) {
+                payload.roles.push_back(std::move(zcstring(r).dup()));
+            }
+
+            template <typename... __T>
+            inline void roles(const char *a, __T... args) {
+                roles(a);
+                roles(args...);
             }
 
             template <typename __T>
@@ -118,12 +139,13 @@ namespace suil {
         };
 
         typedef decltype(iod::D(
-            s::_id(var(AUTO_INCREMENT), var(UNIQUE)) = int(),
+            s::_id(var(AUTO_INCREMENT), var(UNIQUE), var(optional)) = int(),
             s::_username(var(PRIMARY_KEY)) = zcstring(),
             s::_email(var(UNIQUE))         = zcstring(),
             prop(passwd,     zcstring),
-            prop(salt,       zcstring),
-            prop(fullname,   zcstring)
+            s::_salt(var(optional))        = zcstring(),
+            prop(fullname,   zcstring),
+            s::_roles(var(optional)) = std::vector<zcstring>()
         )) user_t;
 
         struct rand_8byte_salt {
@@ -160,8 +182,10 @@ namespace suil {
                       request_auth(0)
                 {}
 
-                inline void authorize(jwt_t&& jwt) {
+                inline void authorize(jwt_t&& jwt, user_t& user) {
                     this->jwt = std::move(jwt);
+                    this->jwt.roles(user.roles);
+                    this->jwt.sub(user.email);
                     send_tok = 1;
                     encode = 1;
                     request_auth = 0;
@@ -208,25 +232,37 @@ namespace suil {
                     if (auth.empty()||
                         strncasecmp(auth.data(), "Bearer ", 7)) {
                         /* user is not authorized */
-                        resp.header("WWW-Authenticate", authenticate);
-                        throw error::unauthorized();
+                        authrequest(resp);
                     }
 
                     /* temporary dup of the token */
                     ctx.actual_token = zcstring(&auth.data()[7], auth.size() - 7, false);
-                    zcstring token(ctx.actual_token.dup());
-                    if (!jwt_t::decode(ctx.jwt, std::move(token), key)) {
-                        /* decoding the web-token failed */
-                        resp.header("WWW-Authenticate", authenticate);
-                        throw error::unauthorized();
+                    if (ctx.actual_token.len == 0) {
+                        /* no need to proceed, token is invalid */
+                        authrequest(resp);
                     }
 
-                    /* token successfully decoded */
-                    if (ctx.jwt.exp() < time(NULL)) {
-                        /* token expired */
-                        resp.header("WWW-Authenticate", authenticate);
-                        throw error::unauthorized();
+                    zcstring token(ctx.actual_token.dup());
+
+                    bool valid{false};
+                    try {
+                        valid = jwt_t::decode(ctx.jwt, std::move(token), key);
                     }
+                    catch(...) {
+                        /* error decoding token */
+                        authrequest(resp, "Invalid authorization token.");
+                    }
+
+                    if (!valid || (ctx.jwt.exp() < time(NULL))) {
+                        /* token unauthorized */
+                        authrequest(resp);
+                    }
+
+                    if (!req.route().AUTHORIZE.check(ctx.jwt.roles())) {
+                        /* token does not have permission to access resouce */
+                        authrequest(resp, "Access to resource denied.");
+                    }
+
                     ctx.token_hdr = zcstring(auth.data(), auth.size(), false);
                     ctx.send_tok = 1;
                 }
@@ -266,10 +302,8 @@ namespace suil {
                 zcstring tmp(opts.get(sym(key), zcstring()));
                 /* configure key */
                 if (tmp) {
-                    key = std::move(tmp);
-                } else {
-                    /* generate random key */
-                    key  = rand_8byte_salt()("");
+                    key = std::move(tmp.dup());
+                    debug("jwt key changed to %s", key.cstr);
                 }
 
                 /* configure authenticate header string */
@@ -277,6 +311,12 @@ namespace suil {
                 if (tmp) {
                     authenticate = utils::catstr("Bear realm=\"",tmp, "\"");
                 }
+            }
+
+            template <typename... __A>
+            inline void setup(__A... args) {
+                auto opts = iod::D(args...);
+                configure(opts);
             }
 
             jwt_authorization()
@@ -287,6 +327,12 @@ namespace suil {
             }
 
         private:
+            inline void authrequest(response& resp, const char *msg = "")
+            {
+                resp.header("WWW-Authenticate", authenticate);
+                throw error::unauthorized(msg);
+            }
+
             uint64_t  expiry{3600};
             zcstring  key;
             zcstring  authenticate;
@@ -294,68 +340,75 @@ namespace suil {
 
         namespace auth {
             template <typename __C>
-            bool getuser(__C& conn, user_t& user) {
+            static bool getuser(__C& conn, user_t& user) {
                 buffer_t qb(32);
-                qb << "SELECT * FROM users WHERE username='";
-                __C::params(qb, 0); qb << "'";
+                qb << "SELECT * FROM suildb.users WHERE username=";
+                __C::params(qb, 1);
 
                 return (conn(qb)(user.username) >> user);
             }
 
             template <typename __C>
-            bool hasuser(__C& conn, user_t& user) {
-                int users = 0;
+            static bool hasuser(__C& conn, user_t& user) {
+                size_t users = 0;
                 buffer_t qb(32);
-                qb << "SELECT COUNT(username) FROM users WHERE username='";
-                __C::params(qb, 0);
-                qb << "'";
+                qb << "SELECT COUNT(username) FROM suildb.users WHERE username=";
+                __C::params(qb, 1);
 
                 conn(qb)(user.username) >> users;
                 return users != 0;
             }
 
             template <typename __C>
-            bool updateuser(__C& conn, user_t& user) {
-                sql::orm<__C,user_t> orm("users", conn);
-                return orm.update(user) == 1;
+            static bool hasusers(__C& conn) {
+                size_t users = 0;
+                conn("SELECT COUNT(username) FROM suildb.users")() >> users;
+                return users != 0;
             }
 
             template <typename __C>
-            void removeuser(__C& conn, user_t& user) {
-                sql::orm<__C,user_t> orm("users", conn);
+            static bool updateuser(__C& conn, user_t& user) {
+                sql::orm<__C,user_t> orm("suildb.users", conn);
+                return orm.update(user);
+            }
+
+            template <typename __C>
+            static void removeuser(__C& conn, user_t& user) {
+                sql::orm<__C,user_t> orm("suildb.users", conn);
                 orm.remove(user);
             }
 
             template <typename __C>
-            bool adduser(__C& conn, const zcstring& key, user_t& user) {
+            static bool adduser(__C& conn, const zcstring& key, user_t& user) {
+                /* generate random salt for user */
+                user.salt   = rand_8byte_salt()(nullptr);
+                user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
+                sql::orm<__C,user_t> orm("suildb.users", conn);
+                return orm.insert(user);
+            }
+
+            template <typename __C>
+            static bool updateuser(__C& conn, const zcstring& key, user_t& user) {
                 /* generate random salt for user */
                 user.salt   = rand_8byte_salt()(nullptr);
                 user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
                 sql::orm<__C,user_t> orm("users", conn);
-                return orm.insert(user) == 1;
+                return orm.update(user);
             }
 
             template <typename __C>
-            bool updateuser(__C& conn, const zcstring& key, user_t& user) {
-                /* generate random salt for user */
-                user.salt   = rand_8byte_salt()(nullptr);
-                user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
-                sql::orm<__C,user_t> orm("users", conn);
-                return orm.update(user) == 1;
-            }
-
-            template <typename __C>
-            bool seedusers(__C& conn, const zcstring& key, std::vector<user_t> users) {
-                sql::orm<__C,user_t> orm("users", conn);
-                if (!orm.exists()) {
+            static bool seedusers(__C& conn, const zcstring& key, std::vector<user_t> users) {
+                sql::orm<__C,user_t> orm("suildb.users", conn);
+                if (hasusers(conn)) {
                     /* table does not exist */
-                    throw suil_error::create("table 'users' does not exist");
+                    swarn("seeding to non-empty table prohibited");
+                    return false;
                 }
 
                 for (auto& user : users) {
                     user.salt   = rand_8byte_salt()(nullptr);
                     user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
-                    if ((orm.update(user)) != 1) {
+                    if ((orm.insert(user)) != 1) {
                         swarn("seed database table with user '%' failed", user.username.cstr);
                         return false;
                     }
@@ -365,14 +418,27 @@ namespace suil {
             }
 
             template <typename __C>
+            static bool seedusers(__C& conn, const zcstring& key, const char *json) {
+                decltype(iod::D(prop(data, std::vector<user_t>))) users;
+                zcstring jstr = utils::fs::readall(json);
+                if (!jstr) {
+                    swarn("reading file %s failed", json);
+                    return false;
+                }
+                iod::json_decode(users, jstr);
+                return  seedusers(conn, key, users.data);
+            }
+
+            template <typename __C>
             bool verifyuser(__C& conn, const zcstring& key, user_t& user) {
                 user_t u;
-                u.username = user.username;
+                u.username = std::move(user.username);
                 if (getuser(conn, u)) {
                     /* user exists */
                     zcstring passwd = pbkdf2_sha1_hash(key)(user.passwd, u.salt);
                     if (passwd == u.passwd) {
                         /* user authorized */
+                        user = std::move(u);
                         return true;
                     }
                 }

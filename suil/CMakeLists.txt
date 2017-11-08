@@ -27,7 +27,7 @@ install(TARGETS ${suil_INSTALL_TARGETS}
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin)
-install(FILES suil.sql
-        DESTINATION share/suil/src/sqlite)
+install(FILES suil.sql suil.pgsql.sql
+        DESTINATION share/suil/db/)
 install(FILES suil.sqlite
         DESTINATION share/suil/sqlite/)

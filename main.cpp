@@ -6,8 +6,10 @@
 #include <suil/sql/sqlite.hpp>
 #include <suil/sql/pgsql.hpp>
 #include <suil/app.hpp>
+#include <suil/http/client.hpp>
 
 using  namespace suil;
+using  namespace suil::http;
 
 struct middleware {
     struct Context {
@@ -20,8 +22,7 @@ struct middleware {
     }
 
     void after(http::request&, http::response&, Context&)
-    {
-    }
+    {}
 };
 
 typedef decltype(iod::D(
@@ -37,7 +38,7 @@ struct http_task : public app_task {
     template <typename... __Args>
     http_task(const char *name, __Args... args)
         : app_task(name),
-          ep("/api/", args...)
+          ep("/api/v1", args...)
     {
 //        ep.middleware<sql::Postgres>().
 //                setup("dbname=test1 user=postgres password=*******",
@@ -50,7 +51,7 @@ struct http_task : public app_task {
 
         eproute(ep, "/hello/<string>")
         ("GET"_method)
-        .attrs(opt(AUTHORIZE, false))
+        .attrs(opt(AUTHORIZE, Auth{false}))
         ([&](std::string name) {
             return "Hello " + name;
         });
@@ -119,9 +120,18 @@ int main(int argc, const char *argv[])
     /* setup logging options */
     log::setup(opt(verbose, opts.verbose),
                opt(name, "demo"));
+
+    /*auto browser = client::load("http://browser.dc1.suilteam.com");
+    {
+        client::response resp = client::get(browser, "/api/v1/gsearch/basic",
+        [&](client::request& req) {
+            req.args("q", "Barack Obama");
+            return true;
+        });
+        strace("request honored");
+    }*/
     app.regtask<http_task>("http", opt(port, opts.port));
     //go(do_start(app));
-
     //msleep(utils::after(10000));
     app.start();
 }

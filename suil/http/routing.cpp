@@ -311,7 +311,7 @@ namespace suil {
             char *url;
             if (api_base.empty() || strncasecmp(req.url, api_base.c_str(), api_base.size()) == 0) {
                 /* the request is an api` rule */
-                size_t index = api_base.empty()? 0: api_base.size()-1;
+                size_t index = api_base.empty()? 0: api_base.size();
                 url = &req.url[index];
             }
             else {

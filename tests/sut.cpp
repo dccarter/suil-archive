@@ -8,14 +8,14 @@
 #include <suil/net.hpp>
 #include <suil/config.hpp>
 
-TEST_CASE("Suil version test", "[version]") {
+TEST_CASE("Suil Version Test", "[version]") {
     REQUIRE(SUIL_MAJOR_VERSION == suil::version::MAJOR);
     REQUIRE(SUIL_MINOR_VERSION == suil::version::MINOR);
     REQUIRE(SUIL_PATCH_VERSION == suil::version::PATCH);
     REQUIRE(SUIL_BUILD_NUMBER  == suil::version::BUILD);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
     suil::memory::init();
     int result = Catch::Session().run(argc, argv);

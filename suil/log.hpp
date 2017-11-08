@@ -7,11 +7,19 @@
 
 #include <stdarg.h>
 #include <functional>
-#include <string>
+#include <string.h>
+
+#include <suil/symbols.h>
 
 #ifndef SUIL_LOG_BUF_SIZE
 #define SUIL_LOG_BUF_SIZE (2048)
 #endif
+
+#define var(v) s::_##v
+#define sym(v) var(v)
+#define opt(o, v) var(o) = v
+#define on(ev) s::_on_##ev
+#define sizeofcstr(ch)   (sizeof(ch)-1)
 
 namespace suil {
 
@@ -127,7 +135,7 @@ namespace suil {
             logger()
             {}
             logger(const char *tag)
-                : tag(strdup(tag))
+                : tag(::strdup(tag))
             {}
 
             void log(level l, const char *fmt, ...) const;
@@ -244,7 +252,7 @@ namespace suil {
                     /* free duplicated name */
                     free(__log.appname);
                 }
-                __log.appname = strdup(name);
+                __log.appname = ::strdup(name);
             }
         }
     }

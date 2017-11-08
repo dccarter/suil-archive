@@ -151,6 +151,11 @@
     iod_define_symbol(optional)
 #endif
 
+#ifndef IOD_SYMBOL_ignore
+#define IOD_SYMBOL_ignore
+    iod_define_symbol(ignore)
+#endif
+
 #ifndef IOD_SYMBOL_options
 #define IOD_SYMBOL_options
     iod_define_symbol(options)

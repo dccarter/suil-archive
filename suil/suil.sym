@@ -21,6 +21,7 @@ _appsdb
 _authdb
 _cmdargs
 _keep_alive
+_data
 
 # event bus
 _type
@@ -116,6 +117,7 @@ _email
 _passwd
 _fullname
 _salt
+_roles
 
 #--------------------------------------------------
 # SQL Application Table

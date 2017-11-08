@@ -264,6 +264,7 @@ namespace suil {
 
                     // handle received request
                     bool err{false};
+                    int64_t start = mnow();
                     response res(status_t::OK);
                     detail::context<__Mws...> ctx =
                             detail::context<__Mws...>();
@@ -299,10 +300,18 @@ namespace suil {
                         res.body.append(ex.what());
                         err = true;
                     }
+                    catch (std::exception& ex) {
+                        res.status = status_t::INTERNAL_ERROR;
+                        res.body.reset(0, true);
+                        res.body.append(ex.what());
+                        err = true;
+                        debug("request unhandled error: %s", ex.what());
+                    }
                     catch (...) {
                         res.status = status_t::INTERNAL_ERROR;
                         res.body.reset(0, true);
                         err = true;
+                        debug("request unhandled unknown error");
                     }
 
                     send_response(req, res, err);
@@ -311,6 +320,10 @@ namespace suil {
                         res()(req, res);
                         close_ = true;
                     }
+
+                    debug("\"%s %s HTTP/%u.%u\" %u - %lu ms",
+                          http::method_name((http::method_t) req.method), req.url,
+                          req.http_major, req.http_minor, res.status, (mnow()-start));
 
                     req.clear();
                     res.clear();

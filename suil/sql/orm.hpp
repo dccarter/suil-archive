@@ -66,7 +66,7 @@ namespace suil {
             {}
 
             template<typename  __T>
-            int find(int id, __T& o)
+            bool find(int id, __T& o)
             {
                 buffer_t qb(32);
                 bool first = true;
@@ -88,7 +88,7 @@ namespace suil {
             }
 
             template<typename __T>
-            int insert(const __T& o)
+            bool insert(const __T& o)
             {
                 buffer_t qb(32), vb(32);
 
@@ -96,14 +96,14 @@ namespace suil {
 
                 bool first = true;
                 int i = 1;
-                auto values = iod::foreach(without_auto_inc_type()) |
+                auto values = iod::foreach2(without_auto_inc_type()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << ", ";
                         vb << ", ";
                     }
                     first = false;
-                    qb << m.symbol.name();
+                    qb << m.symbol().name();
                     __C::params(vb, i++);
 
                     return m.symbol() = m.symbol().member_access(o);
@@ -115,7 +115,7 @@ namespace suil {
                 auto req = conn(qb);
                 iod::apply(values, req);
 
-                return req.last_insert_id();
+                return req.status();
             }
 
             template <typename __F>
@@ -126,7 +126,7 @@ namespace suil {
             }
 
             template <typename __T>
-            int update(const __T& o) {
+            bool update(const __T& o) {
                 auto pk = iod::intersect(o, primary_keys());
                 static_assert(decltype(pk)::size() > 0,
                         "primary key required in order to update an object.");
@@ -167,7 +167,7 @@ namespace suil {
                 auto req = conn(qb);
                 iod::apply(values, pks, req);
 
-                return req.last_insert_id();
+                return req.status();
             }
 
             template <typename __T>
@@ -184,21 +184,13 @@ namespace suil {
                         qb << " and ";
                     }
                     first = false;
-                    qb << m.symbol.name() << " = ";
+                    qb << m.symbol().name() << " = ";
                     __C::params(qb, i++);
 
                     return m.symbol() = o[m.symbol()];
                 };
                 // execute query
                 iod::apply(values, conn(qb));
-            }
-
-            /**
-             * @brief check if table associated with orm exists
-             * @return true if table exists
-             */
-            inline bool exists() {
-                return conn.has_table(table);
             }
 
             ~orm() {

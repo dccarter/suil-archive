@@ -5,10 +5,8 @@
 #include <sys/mman.h>
 #include <sys/queue.h>
 #include <sys/param.h>
-#include <fcntl.h>
 
 #include <suil/sys.hpp>
-#include <suil/log.hpp>
 
 namespace suil {
     define_log_tag(MEMORY);

@@ -17,9 +17,85 @@
 
 namespace suil {
 
+    struct Auth {
+        template <typename... A>
+        Auth(A... a)
+            : enabled(true)
+        {
+            add_roles(a...);
+        }
+
+        Auth(bool en)
+                : enabled(en)
+        {}
+
+        Auth(const Auth& auth) {
+            for(auto& r: auth.roles) {
+                roles.emplace_back(std::move(r.dup()));
+            }
+            enabled = auth.enabled;
+        }
+        Auth&operator=(const Auth& other) {
+            for(auto& r: other.roles) {
+                roles.emplace_back(std::move(r.dup()));
+            }
+            enabled = other.enabled;
+            return *this;
+        }
+
+        Auth(Auth&& auth)
+            : roles(std::move(auth.roles)),
+              enabled(auth.enabled)
+        {}
+
+        Auth&operator=(const Auth&& other) {
+            roles = std::move(other.roles);
+            enabled = other.enabled;
+            return *this;
+        }
+
+        Auth()
+        {}
+
+        operator bool() const {
+            return enabled;
+        }
+
+        bool check(const std::vector<zcstring>& rs) const {
+            if (roles.empty()) {
+                return true;
+            } else if (std::find(rs.begin(),
+                                 rs.end(), "System")
+                       != rs.end()){;
+            }
+
+            for (auto& r: roles) {
+                for (auto& tmp: rs) {
+                    if (r == tmp)
+                        return true;
+                }
+            }
+        }
+
+    private:
+        void add_roles(const char* r) {
+            roles.emplace_back(std::move(zcstring(r).dup()));
+        }
+        template <typename... A>
+        void add_roles(const char* r, A&... a) {
+            add_roles(r);
+            add_roles(a...);
+        }
+
+        bool  enabled{true};
+        std::vector<zcstring> roles{};
+    };
+
+    using Roles = Auth;
+
     typedef decltype(iod::D(
         prop(STATIC,        bool),
-        prop(AUTHORIZE,     bool),
+        prop(AUTHORIZE,     Auth),
         prop(PARSE_COOKIES, bool),
         prop(PARSE_FORM,    bool)
     )) route_attributes_t;

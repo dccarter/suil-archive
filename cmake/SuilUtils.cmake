@@ -19,13 +19,13 @@ function(suil_iod_symbols name)
     endif()
 
     # locate symbols file
-    set(${name}_SYMBOLS ${CMAKE_SOURCE_DIR}/${name}/${name}.sym)
+    set(${name}_SYMBOLS ${CMAKE_SOURCE_DIR}/${name}.sym)
     if (IOD_SYMBOLS_SYMBOLS)
         set(${name}_SYMBOLS ${IOD_SYMBOLS_SYMBOLS})
     endif()
 
     # set output path
-    set(${name}_OUTPUT ${CMAKE_SOURCE_DIR}/${name}/symbols.h)
+    set(${name}_OUTPUT ${CMAKE_SOURCE_DIR}/${name}_symbols.h)
     if (IOD_SYMBOLS_OUTPUT)
         set(${name}_OUTPUT ${IOD_SYMBOLS_OUTPUT})
     endif()

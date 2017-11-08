@@ -6,7 +6,6 @@
 #define SUIL_APP_HPP
 
 #include <suil/sys.hpp>
-#include <suil/log.hpp>
 
 namespace suil {
 

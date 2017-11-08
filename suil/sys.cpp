@@ -10,7 +10,6 @@
 #include <fcntl.h>
 
 #include <suil/sys.hpp>
-#include <suil/log.hpp>
 #include <suil/config.hpp>
 
 namespace suil {
@@ -37,6 +36,7 @@ namespace suil {
         memory::init();
         initialized = true;
     }
+
 
     datetime::datetime(time_t t)
         : t_(t)
@@ -432,7 +432,9 @@ namespace suil {
 
         errno = 0;
         l = strtoll(str.str, &ep, base);
-        if (errno != 0 || str == ep || *ep != '\0') {
+        if (errno != 0 || str.str == ep || !matchany(*ep, '.', '\0')) {
+            strace("strtoll error: (str = %p, ep = %p), *ep = %02X, errno = %d",
+                    str.str, ep, *ep, errno);
             throw std::range_error("invalid converting t o number failed");
         }
 
@@ -447,6 +449,18 @@ namespace suil {
         return (l);
     }
 
+    zcstring utils::find(zcstring &src, char what, size_t after) {
+        char *pos = nullptr, *end = src.str + src.len;
+        while ((pos = strchr(src.str, what)) && 0 != after--);
+        if (pos == nullptr) {
+            return zcstring();
+        }
+        else {
+            *pos++ = '\0';
+            return zcstring(pos, end-pos, false);
+        }
+    }
+
     const std::vector<char *> utils::strsplit(zcstring &str, const char *delim) {
         int		count;
         char		*ap = NULL, *ptr = str.str, *eptr = ptr + str.len;
@@ -454,8 +468,8 @@ namespace suil {
 
         count = 0;
         for (ap = strsep(&ptr, delim); ap != NULL; ap = strsep(&ptr, delim)) {
-            out.push_back(ap);
             if (*ap != '\0' && ap != eptr) {
+                out.push_back(ap);
                 ap++;
                 count++;
             }
@@ -464,20 +478,31 @@ namespace suil {
         return std::move(out);
     }
 
-    zcstring utils::strstrip(zcstring &str, char strip) {
+    zcstring utils::strstrip(zcstring &str, char strip, bool ends) {
         size_t	len = str.len;
-        char		*s, *p;
+        char		*s, *p, *e;
 
         buffer_t b(str.len);
         void *tmp = b;
         p = (char *)tmp;
+        s = str.str;
+        e = str.str + (str.len-1);
+        while (strip == *s) s++;
+        while (strip == *e) e--;
+        e++;
 
-        for (s = str.str; s < (str.str + len); s++) {
-            if (*s == strip)
-                continue;
-            *p++ = *s;
+        if (ends) {
+            memcpy(p, s, (e-s));
+            b.seek(e-s);
         }
-        b.seek(p - (char *)tmp);
+        else {
+            for (; s < e; s++) {
+                if (*s == strip)
+                    continue;
+                *p++ = *s;
+            }
+            b.seek(p - (char *)tmp);
+        }
 
         // the zcstr will take ownership of the buffer
         return std::move(zcstring(b));
@@ -548,10 +573,15 @@ namespace suil {
         return std::move(bytestr(RAW, MD5_DIGEST_LENGTH));
     }
 
-    zcstr<> utils::HMAC_Sha256(zcstr<> &secret, const uint8_t *data, size_t len) {
+    zcstr<> utils::HMAC_Sha256(zcstr<> &secret, const uint8_t *data, size_t len, bool  b64) {
         uint8_t *result = HMAC(EVP_sha256(), secret.cstr, secret.len,
                                   data, len, nullptr, nullptr);
-        return base64::encode(result, SHA256_DIGEST_LENGTH);
+        if (b64) {
+            return base64::encode(result, SHA256_DIGEST_LENGTH);
+        }
+        else {
+            return std::move(bytestr(result, SHA256_DIGEST_LENGTH));
+        }
     }
 
     static inline bool _mkdir(const char *dir, mode_t m) {

@@ -117,10 +117,6 @@ namespace suil {
             friend struct connection;
             friend struct system_attrs;
             friend struct request_form_t;
-            template <typename __T, typename... __Meta>
-            friend inline bool form_cast(const request& req, __T& out, __Meta... meta);
-            template <typename __T>
-            friend inline bool form_cast(const request& req, __T& out);
 
             status_t process_headers();
             virtual int handle_body_part(const char *at, size_t length);
@@ -179,16 +175,6 @@ namespace suil {
             friend class router_t;
             request_params_t params;
         };
-
-        template <typename __T, typename... __Meta>
-        inline bool form_cast(const request& req, __T& out, __Meta... meta) {
-            return utils::meta_cast(req.form, out, meta...);
-        }
-
-        template <typename __T>
-        inline bool form_cast(const request& req, __T& out) {
-            return utils::meta_cast(req.form, out);
-        }
     }
 
 }

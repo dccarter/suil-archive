@@ -18,8 +18,6 @@
 #include <iod/pow_10.hh>
 #include <iod/stringview.hh>
 
-// Json IOD api.
-
 namespace iod {
 
     using namespace s;
@@ -43,6 +41,9 @@ namespace iod {
 
     struct json_string {
         std::string str;
+        inline bool empty() const {
+            return str.empty();
+        }
     };
 
     inline std::string json_encode(const json_string &o);
@@ -237,6 +238,31 @@ namespace iod {
             ss << ']';
         }
 
+        template <typename T>
+        inline bool json_ignore(const typename std::enable_if<std::is_arithmetic<T>::value, T>::type&) {
+            return false;
+        }
+
+        template <typename T>
+        inline bool json_is_empty(
+                typename  std::enable_if<(std::is_same<const char*, T>::value||std::is_same<char*, T>::value), T>::type v)
+        {
+            return v == nullptr || strlen(v) == 0;
+        }
+
+        template <typename T>
+        inline bool json_is_empty(
+                const typename  std::enable_if<!(std::is_same<const char*, T>::value||std::is_same<char*, T>::value), T>::type& v
+        )
+        {
+            return v.empty();
+        }
+
+        template <typename T>
+        inline bool json_ignore(const typename std::enable_if<!std::is_arithmetic<T>::value, T>::type& v) {
+            return json_is_empty<T>(v);
+        }
+
         template<typename S, typename ...Tail>
         inline void json_encode_(const sio<Tail...> &o, S &ss) {
             ss << '{';
@@ -244,6 +270,10 @@ namespace iod {
             bool first = true;
             foreach(o) | [&](auto m) {
                 if (!m.attributes().has(_json_skip)) {
+                    /* ignore empty entry */
+                    auto val = m.value();
+                    if (m.attributes().has(_ignore) && json_ignore<decltype(val)>(val)) return;
+
                     if (!first) { ss << ','; }
                     first = false;
                     json_encode_symbol(m.attributes().get(_json_key, m.symbol()), ss);

@@ -365,7 +365,9 @@ namespace suil {
             char       *path{nullptr};
         };
 
-        using Sqlite = sql::middleware<sqlite_db>;
+        namespace  mw {
+            using sqlite = sql::middleware<sqlite_db>;
+        }
     }
 }
 #endif //SUIL_SQLITE_HPP

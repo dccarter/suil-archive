@@ -4,8 +4,8 @@
 #include <fcntl.h>
 #include <sys/param.h>
 
-#include <suil/config.hpp>
 #include <suil/http/client.hpp>
+#include <sys/mman.h>
 
 namespace suil {
     namespace http {
@@ -138,10 +138,6 @@ namespace suil {
 
             int response::handle_body_part(const char *at, size_t length) {
                 if (reader == nullptr) {
-                    if (body.empty()) {
-                        /* reserve enough room for entire body */
-                        body.reserve(content_length + 2);
-                    }
                     return parser::handle_body_part(at, length);
                 }
                 else {
@@ -149,6 +145,44 @@ namespace suil {
                         return 0;
                     }
                     return -1;
+                }
+            }
+
+            int response::handle_headers_complete() {
+                /* if reader is configured, */
+                if (reader != NULL) {
+                    reader(NULL, content_length);
+                }
+                else {
+                    body.reserve(content_length + 2);
+                }
+                return 0;
+            }
+
+            bool memory_offload::map_region(size_t len) {
+                size_t total = len;
+                int page_sz = getpagesize();
+                total += page_sz-(len % page_sz);
+                data = (char *) mmap(NULL, total, PROT_READ, MAP_SHARED , -1, 0);
+                if (data == nullptr) {
+                    swarn("client::memory_offload mmap failed: %s", errno_s);
+                    return false;
+                }
+                is_mapped = true;
+                return true;
+            }
+
+            memory_offload::~memory_offload() {
+                if (data) {
+                    if (is_mapped) {
+                        /* unmap mapped memory */
+                        munmap(data, offset);
+                    }
+                    else {
+                        /* free allocated memory */
+                        free(data);
+                    }
+                    data = nullptr;
                 }
             }
 
@@ -267,7 +301,8 @@ namespace suil {
                 size_t nwr = sock.send(head.data(), head.size(), timeout);
                 if (nwr != head.size()) {
                     /* sending headers failed, no need to send body */
-                    throw suil_error::create("send request failed: ", errno_s);
+                    throw suil_error::create("send request failed: (", nwr, ",",
+                             head.size(), ")", errno_s);
                 }
                 if (content_length == 0) {
                     sock.flush();

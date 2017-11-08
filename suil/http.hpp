@@ -553,13 +553,13 @@ namespace suil {
             iod::cl::description(
                    "Suil " SUIL_VERSION_STRING "\n",
                    opt(nworkers, "Number of parallel workers."),
-                   opt(port, "The TCP number to listen on."),
-                   opt(root, "Root directory for serving static files"),
-                   opt(route, "The route prefix to use when serving static files"),
-                   opt(verbose, "Verbosity level 0 (less severe), ... 4(more severe) | 5 (traces)")),
+                   opt(port,     "The TCP number to listen on."),
+                   opt(root,     "Root directory for serving static files"),
+                   opt(route,    "The route prefix to use when serving static files"),
+                   opt(verbose,  "Verbosity level 0 (less severe), ... 4(more severe) | 5 (traces)")),
             opt(nworkers, int(0)),
-            opt(port, int(1080)),
-            opt(root, std::string("./www/")),
+            opt(port,     int(1080)),
+            opt(root,     std::string("./www/")),
             opt(route, std::string("/www/")),
             opt(verbose, int(6))
         );

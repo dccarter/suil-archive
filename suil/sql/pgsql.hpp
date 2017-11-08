@@ -31,67 +31,90 @@ namespace suil {
             INT4OID = 23,
             TEXTOID = 25,
             FLOAT4OID = 700,
-            FLOAT8OID = 701
+            FLOAT8OID = 701,
+            INT2ARRAYOID   = 1005,
+            INT4ARRAYOID   = 1007,
+            TEXTARRAYOID   = 1009,
+            FLOAT4ARRAYOID = 1021
         };
+
         namespace _internals {
-            Oid type_to_pgsql_oid_type(const char&)
+            inline Oid type_to_pgsql_oid_type(const char&)
             { return CHAROID; }
-            Oid type_to_pgsql_oid_type(const short int&)
+            inline Oid type_to_pgsql_oid_type(const short int&)
             { return INT2OID; }
-            Oid type_to_pgsql_oid_type(const int&)
+            inline Oid type_to_pgsql_oid_type(const int&)
             { return INT4OID; }
-            Oid type_to_pgsql_oid_type(const long long&)
+            inline Oid type_to_pgsql_oid_type(const long long&)
             { return INT8OID; }
-            Oid type_to_pgsql_oid_type(const float&)
+            inline Oid type_to_pgsql_oid_type(const float&)
             { return FLOAT4OID; }
-            Oid type_to_pgsql_oid_type(const double&)
+            inline Oid type_to_pgsql_oid_type(const double&)
             { return FLOAT8OID; }
-            Oid type_to_pgsql_oid_type(const char*)
+            inline Oid type_to_pgsql_oid_type(const char*)
             { return TEXTOID; }
-            Oid type_to_pgsql_oid_type(const std::string&)
+            inline Oid type_to_pgsql_oid_type(const std::string&)
             { return TEXTOID; }
-            Oid type_to_pgsql_oid_type(const zcstring&)
+            inline Oid type_to_pgsql_oid_type(const zcstring&)
             { return TEXTOID; }
-            Oid type_to_pgsql_oid_type(const strview_t&)
+            inline Oid type_to_pgsql_oid_type(const strview_t&)
             { return TEXTOID; }
 
-            Oid type_to_pgsql_oid_type(const unsigned char&)
+            inline Oid type_to_pgsql_oid_type(const unsigned char&)
             { return CHAROID; }
-            Oid type_to_pgsql_oid_type(const unsigned  short int&)
+            inline Oid type_to_pgsql_oid_type(const unsigned  short int&)
             { return INT2OID; }
-            Oid type_to_pgsql_oid_type(const unsigned int&)
+            inline Oid type_to_pgsql_oid_type(const unsigned int&)
             { return INT4OID; }
-            Oid type_to_pgsql_oid_type(const unsigned long long&)
+            inline Oid type_to_pgsql_oid_type(const unsigned long long&)
             { return INT8OID; }
 
-            char *vhod_to_vnod(unsigned long long& buf, const char& v) {
+            template <typename __T>
+            inline Oid type_to_pgsql_oid_type_number(
+                    const std::vector<typename std::enable_if<std::is_integral<__T>::value, __T>::type>&)
+            { return INT4ARRAYOID; }
+
+            template <typename __T>
+            inline Oid type_to_pgsql_oid_type_number(
+                    const std::vector<typename std::enable_if<std::is_floating_point<__T>::value, __T>::type>&)
+            { return FLOAT4ARRAYOID; }
+
+            template <typename __T>
+            inline Oid type_to_pgsql_oid_type(
+                    const std::vector<typename std::enable_if<std::is_arithmetic<__T>::value, __T>::type>& n)
+            { return type_to_pgsql_oid_type_number(n); }
+
+            inline Oid type_to_pgsql_oid_type(const std::vector<zcstring>&)
+            { return TEXTARRAYOID; }
+
+            inline char *vhod_to_vnod(unsigned long long& buf, const char& v) {
                 (*(char *) &buf) = v;
                 return (char *) &buf;
             }
-            char *vhod_to_vnod(unsigned long long& buf, const unsigned char& v) {
+            inline char *vhod_to_vnod(unsigned long long& buf, const unsigned char& v) {
                 (*(unsigned char *) &buf) = v;
                 return (char *) &buf;
             }
 
-            char *vhod_to_vnod(unsigned long long& buf, const short int& v) {
+            inline char *vhod_to_vnod(unsigned long long& buf, const short int& v) {
                 (*(unsigned short int *) &buf) = htons((unsigned short) v);
                 return (char *) &buf;
             }
-            char *vhod_to_vnod(unsigned long long& buf, const unsigned short int& v) {
+            inline char *vhod_to_vnod(unsigned long long& buf, const unsigned short int& v) {
                 (*(unsigned short int *) &buf) = htons((unsigned short) v);
                 return (char *) &buf;
             }
 
-            char *vhod_to_vnod(unsigned long long& buf, const int& v) {
+            inline char *vhod_to_vnod(unsigned long long& buf, const int& v) {
                 (*(unsigned int *) &buf) = htonl((unsigned int) v);
                 return (char *) &buf;
             }
-            char *vhod_to_vnod(unsigned long long& buf, const unsigned int& v) {
+            inline char *vhod_to_vnod(unsigned long long& buf, const unsigned int& v) {
                 (*(unsigned int *) &buf) = htonl((unsigned int) v);
                 return (char *) &buf;
             }
 
-            char *vhod_to_vnod(unsigned long long& buf, const float& v) {
+            inline char *vhod_to_vnod(unsigned long long& buf, const float& v) {
                 (*(unsigned int *) &buf) = htonl(*((unsigned int*) &v));
                 return (char *) &buf;
             }
@@ -112,48 +135,111 @@ namespace suil {
             };
 
             template <typename __T>
-            char *vhod_to_vnod(unsigned long long& buf, const __T& v) {
+            static char *vhod_to_vnod(unsigned long long& buf, const __T& v) {
                 order8b_t& to = (order8b_t &)buf;
                 order8b_t& from = (order8b_t &)v;
-                to.u32_1 =  htonl(from.u32_1);
-                to.u32_2 =  htonl(from.u32_2);
+                to.u32_1 =  htonl(from.u32_2);
+                to.u32_2 =  htonl(from.u32_1);
 
                 return (char *) &buf;
             }
 
-            void vnod_to_vhod(const char *buf, char& v) {
+            template <typename __T>
+            static inline void vhod_to_vnod_append(buffer_t& b,
+                  const typename  std::enable_if<std::is_arithmetic<__T>::value, __T>::type & d)
+            { b << d; }
+
+            static inline void vhod_to_vnod_append(buffer_t& b, const zcstring &d) {
+                b << '"' << d << '"';
+            }
+
+            template <typename __T>
+            static char *vhod_to_vnod(buffer_t& b, const std::vector<__T>& data) {
+                b << "{";
+                bool  first{true};
+                for (auto& d: data) {
+                    if (!first) b << ',';
+                    first = false;
+                    vhod_to_vnod_append(b, d);
+                }
+
+                b << "}";
+
+                return b.data();
+            }
+
+            template <typename __T>
+            static typename std::enable_if<std::is_arithmetic<__T>::value, __T>::type
+            __array_value(const char* in, size_t len)
+            {
+                zcstring tmp(in, len, false);
+                __T out{0};
+                utils::cast(tmp, out);
+                return out;
+            };
+
+            static zcstring __array_value(const char* in, size_t len)
+            {
+                zcstring tmp(in, len, false);
+                return std::move(tmp.dup());
+            };
+
+            template <typename __T>
+            static void parse_array(std::vector<__T>& to, const char *from) {
+                const char *start = strchr(from, '{'), *end = strchr(from, '}');
+                if (start == nullptr || end == nullptr) return;
+
+                size_t len{0};
+                const char *s = start;
+                const char *e = end;
+                bool done{false};
+                s++;
+                while (!done) {
+                    e = strchr(s, ',');
+                    if (!e) {
+                        done = true;
+                        e = end;
+                    }
+                    len = e-s;
+                    to.emplace_back(std::move(__array_value(s, len)));
+                    e++;
+                    s = e;
+                }
+            }
+
+            inline void vnod_to_vhod(const char *buf, char& v) {
                 v = *buf;
             }
-            void vnod_to_vhod(const char *buf, unsigned char& v) {
+            inline void vnod_to_vhod(const char *buf, unsigned char& v) {
                 v = (unsigned char) *buf;
             }
 
-            void vnod_to_vhod(const char *buf, short int& v) {
+            inline void vnod_to_vhod(const char *buf, short int& v) {
                 v = (short int)ntohs(*((const unsigned short int*) buf));
             }
-            void vnod_to_vhod(const char *buf, unsigned short int& v) {
+            inline void vnod_to_vhod(const char *buf, unsigned short int& v) {
                 v = ntohs(*((const unsigned short int*) buf));
             }
 
-            void vnod_to_vhod(const char *buf, int& v) {
+            inline void vnod_to_vhod(const char *buf, int& v) {
                 v = (unsigned int)(int)ntohl(*((const unsigned int*) buf));
             }
-            void vnod_to_vhod(const char *buf, unsigned int& v) {
+            inline void vnod_to_vhod(const char *buf, unsigned int& v) {
                 v = ntohl(*((unsigned int*) buf));
             }
 
-            void vnod_to_vhod(const char *buf, float& v) {
+            inline void vnod_to_vhod(const char *buf, float& v) {
                 float4_t f;
                 f.u32 = ntohl(*((unsigned int*) buf));
                 v = f.f32;
             }
 
             template <typename __T>
-            void vnod_to_vhod(const char *buf, __T& v) {
+            static void vnod_to_vhod(const char *buf, __T& v) {
                 order8b_t &to = (order8b_t &)v;
                 order8b_t *from = (order8b_t *) buf;
-                to.u32_1 = ntohl(from->u32_1);
-                to.u32_2 = ntohl(from->u32_2);
+                to.u32_1 = ntohl(from->u32_2);
+                to.u32_2 = ntohl(from->u32_1);
             }
         };
 
@@ -176,11 +262,25 @@ namespace suil {
 
                 // declare a buffer that will hold values transformed to network order
                 unsigned long long norder[size] = {0};
+                // collects all buffers that were needed to submit a transaction
+                // and frees them after the transaction
+                struct garbage_collector {
+                    std::vector<void*> bag{};
+
+                    ~garbage_collector() {
+                        for(auto b: bag)
+                            memory::free(b);
+                    }
+                } gc;
 
                 int i = 0;
                 iod::foreach(std::forward_as_tuple(args...)) |
                 [&](auto& m) {
-                    this->bind(values[i], oids[i], lens[i], bins[i], norder[i], m);
+                    void *tmp = this->bind(values[i], oids[i], lens[i], bins[i], norder[i], m);
+                    if (tmp != nullptr) {
+                        /* add to garbage collector*/
+                        gc.bag.push_back(tmp);
+                    }
                     i++;
                 };
 
@@ -195,7 +295,7 @@ namespace suil {
                             values,
                             lens,
                             bins,
-                            1);
+                            0);
                     if (!status) {
                         error("ASYNC QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
                         throw std::runtime_error("executing async query failed");
@@ -274,14 +374,21 @@ namespace suil {
                             values,
                             lens,
                             bins,
-                            1);
+                            0);
                     ExecStatusType status = PQresultStatus(result);
-                    if (status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK) {
+
+                    if ((status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)) {
                         error("QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
                         PQclear(result);
-                        throw std::runtime_error("executing query failed");
+                        results.fail();
+                    }
+                    else if ((PQntuples(result) == 0)) {
+                        debug("QUERY: %s has zero entries: %s",
+                              stmt.cstr, PQerrorMessage(conn));
+                        PQclear(result);
                     }
                     else {
+
                         /* cache the results */
                         results.add(result);
                     }
@@ -320,8 +427,8 @@ namespace suil {
                 results.reset();
             }
 
-            inline int last_insert_id() {
-                results.results.size();
+            inline bool status() {
+                return !results.failed();
             }
 
         private:
@@ -380,61 +487,79 @@ namespace suil {
             }
 
             template <typename __V>
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, __V& v) {
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder,
+                       typename std::enable_if<std::is_arithmetic<__V>::value, __V>::type& v) {
                 val = _internals::vhod_to_vnod(norder, v);
                 len  =  sizeof(__V);
                 bin  = 1;
                 oid  = _internals::type_to_pgsql_oid_type(v);
+                return nullptr;
             }
 
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, std::string& v) {
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, std::string& v) {
                 val = v.data();
                 oid  = TEXTOID;
                 len  = (int) v.size();
                 bin  = 0;
+                return nullptr;
             }
 
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const std::string& v) {
-                bind(val, oid, len, bin, norder, *const_cast<std::string*>(&v));
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const std::string& v) {
+                return bind(val, oid, len, bin, norder, *const_cast<std::string*>(&v));
             }
 
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, char *s) {
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, char *s) {
+                return bind(val, oid, len, bin, norder, (const char *)s);
+            }
+
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const char *s) {
                 val = s;
                 oid  =  TEXTOID;
                 len  = (int) strlen(s);
                 bin  = 0;
+                return nullptr;
             }
 
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const char *s) {
-                bind(val, oid, len, bin, norder, *const_cast<char *>(s));
-            }
-
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, zcstring& s) {
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, zcstring& s) {
                 val = s.cstr;
                 oid  =  TEXTOID;
                 len  = s.len;
-                bin  = 0;
+                bin  = 1;
+                return nullptr;
             }
 
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const zcstring& s) {
-                bind(val, oid, len, bin, norder, *const_cast<zcstring*>(&s));
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const zcstring& s) {
+                return bind(val, oid, len, bin, norder, *const_cast<zcstring*>(&s));
             }
 
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, strview_t& v) {
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, strview_t& v) {
                 val = v.data();
                 oid  = TEXTOID;
                 len  = (int) v.size();
-                bin  = 0;
+                bin  = 1;
+                return nullptr;
             }
 
-            void bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const strview_t& v) {
-                bind(val, oid, len, bin, norder, *const_cast<strview_t*>(&v));
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const strview_t& v) {
+                return bind(val, oid, len, bin, norder, *const_cast<strview_t*>(&v));
             }
+
+            template <typename __V>
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const std::vector<__V>& v) {
+                buffer_t b(32);
+                val  = _internals::vhod_to_vnod(b, v);
+                oid  = _internals::type_to_pgsql_oid_type(v);
+                len  = (int) b.size();
+                bin  = 0;
+                return b.release();
+            }
+
 
             struct pgsql_result {
                 using result_q_t = std::deque<PGresult*>;
                 typedef result_q_t::const_iterator results_q_it;
 
+                bool failure{false};
                 result_q_t   results;
                 results_q_it it;
                 int row{0};
@@ -459,7 +584,18 @@ namespace suil {
                 void read(__V& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
-                        _internals::vnod_to_vhod(data, v);
+                        //_internals::vnod_to_vhod(data, v);
+                        zcstring tmp(data);
+                        utils::cast(data, v);
+                    }
+                }
+
+                template <typename __T>
+                void read(std::vector<__T>& v, int col) {
+                    if (!empty()) {
+                        char *data = PQgetvalue(*it, row, col);
+                        int len = PQgetlength(*it, row, col);
+                        _internals::parse_array(v, data);
                     }
                 }
 
@@ -496,7 +632,7 @@ namespace suil {
                 }
 
                 inline bool empty() {
-                    return results.empty();
+                    return failure || results.empty();
                 };
 
                 ~pgsql_result() {
@@ -505,6 +641,14 @@ namespace suil {
 
                 inline void add(PGresult *res) {
                     results.push_back(res);
+                }
+
+                inline void fail() {
+                    failure = true;
+                }
+
+                inline bool failed() const {
+                    return failure;
                 }
             };
 
@@ -567,11 +711,16 @@ namespace suil {
                 return (*this)(breq);
             }
 
-            bool has_table(const zcstring& name) {
+            bool has_table(const char *name) {
+                const char *schema = "public";
+                return has_table(schema, name);
+            }
+
+            bool has_table(const char* schema, const char* name) {
                 auto stmt = (*this)("SELECT COUNT(tablename) FROM pg_catalog.pg_tables"
-                        " WHERE schemaname='public' AND tablename='$0'");
+                                            " WHERE schemaname='$1' AND tablename='$2';");
                 int found = 0;
-                return (stmt(name) >> found) && found == 1;
+                return (stmt(schema, name) >> found) && found == 1;
             }
 
             template <typename __T>
@@ -834,7 +983,9 @@ namespace suil {
             zcstring      conn_str;
         };
 
-        using Postgres = sql::middleware<pgsql_db>;
+        namespace mw {
+            using postgres = sql::middleware<pgsql_db>;
+        }
     }
 }
 #endif //SUIL_PGSQL_HPP

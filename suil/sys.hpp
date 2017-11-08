@@ -13,13 +13,13 @@
 #include <unordered_map>
 #include <sys/param.h>
 
-#include <suil/mem.hpp>
-#include <suil/symbols.h>
-
 #include <boost/utility/string_view.hpp>
 #include <iod/json.hh>
 #include <iod/parse_command_line.hh>
 #include <libmill/libmill.h>
+
+#include <suil/mem.hpp>
+#include <suil/log.hpp>
 
 #define errno_s strerror(errno)
 
@@ -518,7 +518,7 @@ namespace suil {
             }
         }
 
-        zcstr(zcstr&& s)
+        zcstr(zcstr&& s) noexcept
             : str(s.str),
               len(s.len),
               own(s.own),
@@ -530,7 +530,7 @@ namespace suil {
             s.hash = 0;
         }
 
-        zcstr& operator=(zcstr&& s) {
+        zcstr& operator=(zcstr&& s) noexcept {
             str = s.str;
             len = s.len;
             own = s.own;
@@ -595,10 +595,18 @@ namespace suil {
 
         bool operator==(const zcstr& s) const {
             if (str != nullptr && s.str != nullptr) {
-                return ((str == s.str) && (len == s.len)) ||
-                       (strncmp(str, s.str, MIN(s.len, len)) == 0);
+                return (len == s.len) && ((str == s.str) ||
+                        (strncmp(str, s.str, len) == 0));
             }
             return str == s.str;
+        }
+
+        inline int compare(const char* s) const {
+            return strncmp(str, s, MIN(strlen(s), len));
+        }
+
+        inline int compare(const zcstr& s) const {
+            return strncmp(str, s.str, MIN(s.len, len));
         }
 
         bool operator!=(const zcstr& s) const {
@@ -1250,18 +1258,34 @@ namespace suil {
             zcstring readall(const char* path, bool async = false);
         }
 
+        /**
+         * @brief Converts a string to a decimal number. Floating point
+         * numbers are not supported
+         * @param str the string to convert to a number
+         * @param base the numbering base to the string is in
+         * @param min expected minimum value
+         * @param max expected maximum value
+         * @return a number converted from given string
+         */
         int64_t strtonum(const zcstring& str, int base, long long min, long long max);
+
+        zcstring find(zcstring& src, char what, size_t after = 0);
 
         const std::vector<char*> strsplit(zcstr<>&, const char *delim);
 
-        zcstr<> strstrip(zcstr<>& str, char strip);
+        zcstr<> strstrip(zcstr<>& str, char strip = ' ', bool ends = false);
+
+        inline zcstr<> strtrim(zcstr<>& str, char what = ' ') {
+            return strstrip(str, what, true);
+        }
 
         void *memfind(void *src, size_t slen, const void *needle, size_t len);
 
         template<typename __T>
         typename std::enable_if<std::is_integral<__T>::value, __T>::type
         to_number(const zcstring& str) {
-            return (__T)utils::strtonum(str, 10, INT64_MIN, INT64_MAX);
+            __T tmp = (__T)utils::strtonum(str, 10, INT64_MIN, INT64_MAX);
+            return tmp;
         }
 
         template<typename __T>
@@ -1270,7 +1294,7 @@ namespace suil {
             double f;
             char *end;
             f = strtod(str.cstr, &end);
-            if (errno)  {
+            if (errno || *end != '\0')  {
                 throw std::runtime_error(errno_s);
             }
             return (__T) f;
@@ -1308,7 +1332,8 @@ namespace suil {
         }
 
         template <typename __T>
-        inline void cast(const zcstr<>& data, typename std::enable_if<std::is_arithmetic<__T>::value, __T>::type& to) {
+        inline typename std::enable_if<std::is_arithmetic<__T>::value, void>::type
+        cast(const zcstr<>& data, __T& to) {
             to = utils::to_number<__T>(data);
         }
 
@@ -1329,6 +1354,14 @@ namespace suil {
             return def;
         }
 
+        inline const char* env(const char *name, const char *def = nullptr) {
+            const char *v = std::getenv(name);
+            if (v != nullptr) {
+                def = v;
+            }
+            return def;
+        }
+
         inline zcstr<> env(const char *name, zcstr<> def = zcstr<>{}) {
             const char *v = std::getenv(name);
             if (v != nullptr) {
@@ -1336,40 +1369,6 @@ namespace suil {
             }
 
             return std::move(def);
-        }
-
-        template<typename __T, typename... __Meta>
-        inline bool meta_cast(const zcstr_map_t<zcstring>& map, __T& out, __Meta... meta) {
-            auto opts = std::make_tuple(meta...);
-            int filled = 0;
-            iod::foreach(opts)|
-            [&](auto& m) {
-                zcstring key(m.name());
-                auto it = map.find(key);
-                if (it != map.end()) {
-                    utils::cast(it->second, out[m]);
-                    filled++;
-                }
-            };
-            return sizeof...(__Meta) == filled;
-        }
-
-        template<typename __T>
-        inline bool meta_cast(const zcstr_map_t<zcstring>& map, __T& out) {
-            bool fail = false;
-            iod::foreach(out)|
-            [&](auto& m) {
-                if (!fail) {
-                    zcstring key(m.symbol().name());
-                    auto it = map.find(key);
-                    if (it != map.end()) {
-                        utils::cast(it->second, out[m.symbol()]);
-                    } else {
-                        fail = true;
-                    }
-                }
-            };
-            return fail;
         }
 
         zcstr<> urlencode(const zcstring& str);
@@ -1381,21 +1380,21 @@ namespace suil {
         zcstr<> randbytes(size_t size);
         zcstr<> bytestr(const uint8_t*, size_t);
         zcstr<> md5Hash(const uint8_t*, size_t);
-        zcstr<> HMAC_Sha256(zcstr<>&, const uint8_t*, size_t);
+        zcstr<> HMAC_Sha256(zcstr<>&, const uint8_t*, size_t, bool b64 = false);
 
-        static inline zcstr<> HMAC_Sha256(zcstr<>& secret, zcstr<>& msg) {
-            return HMAC_Sha256(secret, (const uint8_t*) msg.cstr, msg.len);
+        static inline zcstr<> HMAC_Sha256(zcstr<>& secret, zcstr<>& msg, bool b64 = false) {
+            return HMAC_Sha256(secret, (const uint8_t*) msg.cstr, msg.len, b64);
         }
 
-        static inline zcstr<> HMAC_Sha256(zcstr<>& secret, buffer_t& msg) {
-            return HMAC_Sha256(secret, (const uint8_t*) msg.data(), msg.size());
+        static inline zcstr<> HMAC_Sha256(zcstr<>& secret, buffer_t& msg, bool b64 = false) {
+            return HMAC_Sha256(secret, (const uint8_t*) msg.data(), msg.size(), b64);
         }
 
         static inline zcstr<> md5Hash(const char *str) {
             return std::move(md5Hash((const uint8_t *)str, strlen(str)));
         }
 
-        static inline zcstr<> md5Hash(zcstr<>& zc) {
+        static inline zcstr<> md5Hash(const zcstr<>& zc) {
             return std::move(md5Hash((const uint8_t *) zc.cstr, zc.len));
         }
 
@@ -1403,37 +1402,22 @@ namespace suil {
             return std::move(md5Hash((const uint8_t *) b.data(), b.size()));
         }
 
-        template<typename __C, typename __Opts, typename... __Meta>
-        inline void apply_options(__C& obj, __Opts& opts, __Meta... meta) {
-            auto schema = std::make_tuple(meta...);
-            if (opts.size()) {
-                iod::foreach(schema) |
-                [&] (auto& m) {
-                    /* use given metadata to to set options */
-                    m.member_access(obj) = opts[m];
-                };
-            }
-        }
-
         template<typename __C, typename __Opts>
         inline void apply_options(__C& o, __Opts& opts) {
             /* the target object here is also an sio*/
-            iod::foreach(opts) |
-            [&] (auto& m) {
-                /* use given metadata to to set options */
-                m.symbol().member_access(o) = m.value();
-            };
+            if (opts.size()) {
+                iod::foreach(opts) |
+                [&](auto &m) {
+                    /* use given metadata to to set options */
+                    m.symbol().member_access(o) = m.value();
+                };
+            }
         }
 
         template<typename __C, typename... __Opts>
-        inline void apply_config(__C& obj, __Opts&... opts) {
+        inline void apply_config(__C& obj, __Opts... opts) {
             auto options = iod::D(opts...);
-            if (options.size()) {
-                iod::foreach(options) |
-                [&] (auto& m) {
-                    m.symbol().member_access(obj) = m.value();
-                };
-            }
+            utils::apply_options(obj, options);
         }
 
         template<typename __C>
@@ -1460,7 +1444,22 @@ namespace iod {
     namespace json_internals {
         template<typename S>
         inline void json_encode_(const suil::zcstring& s, S &ss) {
-            ss << '"' << s.cstr << '"';
+            if (s) {
+                ss << '"' << s.cstr << '"';
+            }
+            else {
+                ss << "\"\"";
+            }
+        }
+
+        template<typename S>
+        inline void json_encode_(const iod::json_string s, S &ss) {
+            if (!s.str.empty()) {
+                ss << '"' << s.str << '"';
+            }
+            else {
+                ss << "{}";
+            }
         }
 
         template <>
@@ -1492,13 +1491,11 @@ namespace iod {
         inline void iod_from_json_(S *, suil::zcstring &s, json_parser &p) {
             p >> '"' >> fill(s) >> '"';
         }
+
+        inline bool json_ignore(const suil::zcstring& v) {
+            return v.empty();
+        }
     }
 }
 
-#define var(v) s::_##v
-#define sym(v) var(v)
-#define opt(o, v) var(o) = v
-#define on(ev) s::_on_##ev
-
-#define sizeofcstr(ch)   (sizeof(ch)-1)
 #endif //SUIL_SYS_HPP

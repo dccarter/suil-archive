@@ -100,7 +100,7 @@ function(SuilApp name)
     # parse function arguments
     set(options DEBUG)
     set(kvargs)
-    set(kvvargs SOURCES DEFINES LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS)
+    set(kvvargs VERSION SOURCES DEFINES LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS)
     cmake_parse_arguments(SUIL_APP "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
     # get the source files
@@ -114,19 +114,27 @@ function(SuilApp name)
         message(STATUS "target '${name} sources: ${${name}_SOURCES}")
     endif()
 
+    # get application version
+    set(${name}_VERSION ${SUIL_APP_VERSION})
+    if (NOT ${name}_VERSION)
+        set(${name}_VERSION "0.0.0")
+    endif()
+
     # add the target
     add_executable(${name} ${${name}_SOURCES})
 
     # generate symbols
-    set(${name}_SYMBOLS ${SUIL_APP_SYMBOLS})
+    set(${name}_SYMBOLS ${CMAKE_SOURCE_DIR}/${name}.sym)
     if (NOT ${name}_SYMBOLS)
         set(${name}_SYMBOLS symbols.sym)
     endif()
+    message(STATUS "using symbols: ${${name}_SYMBOLS}")
+
     if (EXISTS ${${name}_SYMBOLS})
         # generate symbols if project uses symbols
         suil_iod_symbols(${name}
+                BINARY ${SUIL_BASE_PATH}/bin/iodsyms
                 SYMBOLS ${${name}_SYMBOLS})
-        add_dependencies(${name} ${name}-gensysms)
     endif()
 
     # add dependecy libraries
@@ -139,6 +147,8 @@ function(SuilApp name)
         message(STATUS "target '${name}' extra defines: ${SUIL_APP_DEFINES}")
         target_compile_definitions(${name} PUBLIC ${SUIL_APP_DEFINES})
     endif()
+    target_compile_definitions(${name} PUBLIC "-DAPP_VERSION=\"${${name}_VERSION}\"")
+    target_compile_definitions(${name} PUBLIC "-DAPP_NAME=\"${name}\"")
 
     # add target include directories
     set(${name}_INCLUDES src includes)

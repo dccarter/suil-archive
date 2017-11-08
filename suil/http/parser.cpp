@@ -2325,7 +2325,7 @@ namespace suil {
                         std::move(hv));
             }
             p->headers_complete = 1;
-            return 0;
+            return p->handle_headers_complete();
         }
 
         int parser::on_body(http_parser *s, const char *at, size_t len) {
@@ -2363,6 +2363,10 @@ namespace suil {
         int parser::handle_body_part(const char *at, size_t len) {
             body.append(at, len);
 
+            return 0;
+        }
+
+        int parser::handle_headers_complete() {
             return 0;
         }
 

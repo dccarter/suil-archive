@@ -97,26 +97,30 @@ namespace suil {
 
             int start() {
 
-                eproute((*this), "/admin/stats")
+                eproute((*this), "/sys/stats")
                 ("GET"_method)
+                .attrs(opt(AUTHORIZE, Roles{"System"}))
                 ([this] () {
                     return this->stats;
                 });
 
-                eproute((*this), "/admin/memory")
+                eproute((*this), "/sys/memory")
                 ("GET"_method)
+                .attrs(opt(AUTHORIZE, Roles{"System"}))
                 ([this] () {
                     return memory::get_usage();
                 });
 
-                eproute((*this), "/admin/v1")
+                eproute((*this), "/sys/about")
                 ("GET"_method)
+                .attrs(opt(AUTHORIZE, Roles{"System"}))
                 ([this] () {
                     return SUIL_SOFTWARE_NAME " " SUIL_VERSION_STRING;
                 });
 
-                eproute((*this), "/admin/v2")
+                eproute((*this), "/sys/version")
                 ("GET"_method)
+                .attrs(opt(AUTHORIZE, Roles{"System"}))
                 ([this] () {
                     return ver_json;
                 });

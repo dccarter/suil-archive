@@ -253,6 +253,7 @@ namespace suil {
 
                 virtual int handle_body_part(const char *at, size_t length) override;
                 virtual int msg_complete() override ;
+                virtual int handle_headers_complete() override;
                 void receive(sock_adaptor& sock, int64_t timeout);
 
                 bool body_read{false};
@@ -283,7 +284,8 @@ namespace suil {
                 inline void args(const char *name, __V val) {
                     zcstring key(zcstring(name).dup());
                     zcstring tmp(utils::tozcstr(val));
-                    arguments.emplace(key, utils::urlencode(tmp));
+                    arguments.emplace(std::move(key),
+                                      std::move(utils::urlencode(tmp)));
                 }
 
                 template <typename __V, typename... __E>
@@ -497,38 +499,82 @@ namespace suil {
 
 #undef CRLF
 
-            struct response_offload: file_t {
-                explicit response_offload(const char *path, int64_t timeout = -1)
+            struct file_offload: file_t {
+                explicit file_offload(const char *path, int64_t timeout = -1)
                         : file_t(path, O_WRONLY|O_CREAT, 0644),
                           timeout(timeout)
                 {
-                    writer = [&](const char *data, size_t len) {
-                        if (data == nullptr) {
+                    handler = [&](const char *data, size_t len) {
+                        if (len == 0) {
                             /* done receving */
                             flush(timeout);
                         }
-
-                        size_t nwr = write(data, len, timeout);
-                        if (nwr != len) {
-                            throw suil_error::create("writing to file failed: ",
-                                                     errno_s);
+                        else if (data != nullptr){
+                            size_t nwr = write(data, len, timeout);
+                            if (nwr != len) {
+                                throw suil_error::create("writing to file failed: ",
+                                                         errno_s);
+                            }
+                            offset += nwr;
+                            return nwr;
                         }
-                        offset += nwr;
-                        return nwr;
                     };
                 }
 
-                ~response_offload() override = default;
+                ~file_offload() override = default;
 
-                operator response_writer_t&() {
-                    return writer;
+                response_writer_t& operator()() {
+                    return handler;
                 }
-
-                response_writer_t  writer{nullptr};
 
             private:
                 off_t       offset{0};
                 int64_t     timeout{-1};
+                response_writer_t  handler{nullptr};
+            };
+
+            struct memory_offload {
+                memory_offload(size_t mapped_min = 65000)
+                    : mapped_min(mapped_min)
+                {
+                    handler = [&](const char *at, size_t len) {
+                        if (at == NULL && len) {
+                            if (len > mapped_min) {
+                                /* used mapped memory */
+                                return map_region(len);
+                            }
+                            else {
+                                /* allocate memory from heap */
+                                data = (char *) malloc(len);
+                                return data != nullptr;
+                            }
+                        }
+                        else {
+                            /* received data portion */
+                            memcpy(&data[offset], at, len);
+                            offset += len;
+                            return true;
+                        }
+                    };
+                }
+
+                ~memory_offload();
+
+                operator zcstring() {
+                    return zcstring(data, offset, false);
+                }
+
+                response_writer_t& operator()() {
+                    return handler;
+                }
+
+            private:
+                bool    map_region(size_t len);
+                char    *data{nullptr};
+                size_t  offset{0};
+                size_t  mapped_min{65350};
+                bool    is_mapped{false};
+                response_writer_t handler{nullptr};
             };
 
             /**
@@ -560,6 +606,10 @@ namespace suil {
                 return sess;
             }
 
+            inline session load(const char *url, int port = 80) {
+                return load(url, port, nullptr);
+            }
+
             inline response get(session::handle_t& h, const char *resource, request_builder_t builder = nullptr ) {
                 return client::perform(method_t::Get, h, resource, builder);
             }
@@ -569,18 +619,21 @@ namespace suil {
                 return client::perform(method_t::Get, h, resource, builder);
             }
 
-            inline response get(response_offload& wr, session::handle_t& h, const char *resource, request_builder_t builder = nullptr ) {
-                return client::perform(method_t::Get, h, resource, builder, wr.writer);
+            template <typename __T>
+            inline response get(__T& off, session::handle_t& h, const char *resource, request_builder_t builder = nullptr ) {
+                return client::perform(method_t::Get, h, resource, builder, off());
             }
 
-            inline response get(response_offload& wr,session& sess, const char *resource, request_builder_t builder = nullptr ) {
+            template <typename __T>
+            inline response get(__T& off,session& sess, const char *resource, request_builder_t builder = nullptr ) {
                 auto h = sess.handle();
-                return client::perform(method_t::Get, h, resource, builder, wr.writer);
+                return client::perform(method_t::Get, h, resource, builder, off());
             }
 
             inline response post(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
                 return client::perform(method_t::Post, h, resource, builder);
             }
+
             inline response post(session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
                 return client::perform(method_t::Post, h, resource, builder);
@@ -589,6 +642,7 @@ namespace suil {
             inline response put(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
                 return client::perform(method_t::Put, h, resource, builder);
             }
+
             inline response put(session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
                 return client::perform(method_t::Put, h, resource, builder);
@@ -605,6 +659,7 @@ namespace suil {
             inline response options(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
                 return client::perform(method_t::Options, h, resource, builder);
             }
+
             inline response options(session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
                 return client::perform(method_t::Options, h, resource, builder);
@@ -613,6 +668,7 @@ namespace suil {
             inline response head(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
                 return client::perform(method_t::Head, h, resource, builder);
             }
+
             inline response head(session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
                 return client::perform(method_t::Head, h, resource, builder);

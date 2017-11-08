@@ -132,6 +132,12 @@ namespace suil {
                 body.append(str.str, str.len);
             }
 
+            template <typename __T>
+            inline response& operator<<(const __T data) {
+                body << data;
+                return *this;
+            }
+
             inline void appendf(const char *fmt, ...) {
                 va_list  args;
                 va_start(args, fmt);

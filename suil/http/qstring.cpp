@@ -220,8 +220,6 @@ inline char *qs_scanvalue(const char *key, const char *qs, char *val, size_t val
 }
 #endif
 
-#include <suil/mem.hpp>
-
 namespace suil {
     namespace http {
 

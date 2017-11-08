@@ -23,7 +23,7 @@ namespace suil {
 
             /* get signature hash  */
             zcstring signature =
-                    utils::HMAC_Sha256(secret, data);
+                    utils::HMAC_Sha256(secret, data, true);
             strace("token signature orig:%s, generated %s",
                    tok_sig, signature.cstr);
 
@@ -41,10 +41,10 @@ namespace suil {
             }
 
             zcstring header(base64::decode(parts[0]));
-            sdebug("header: %s", header.cstr);
+            strace("header: %s", header.cstr);
             iod::json_decode(jwt.header, header);
             zcstring payload(base64::decode(parts[1]));
-            sdebug("header: %s", payload.cstr);
+            strace("header: %s", payload.cstr);
             iod::json_decode(jwt.payload, payload);
             return true;
         }
@@ -85,7 +85,7 @@ namespace suil {
             zcstring signature =
                     utils::HMAC_Sha256(secret,
                                        (const uint8_t *) tmp.data(),
-                                       tmp.size());
+                                       tmp.size(), true);
 
             /* 4. header.payload.signature */
             tmp << "." << signature;

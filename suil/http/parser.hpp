@@ -363,6 +363,8 @@ namespace suil {
 
             virtual int handle_body_part(const char *at, size_t length);
 
+            virtual int handle_headers_complete();
+
             virtual int msg_complete() {
                 content_length = body.size();
             }
