@@ -24,7 +24,7 @@ build-dev:
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
        -DSUIL_BUILD_DEV_PACKAGE=ON
     - make clean
-    - make -j2 package
+    - make -j2
     - cd ..
   cache:
     paths:
@@ -50,6 +50,7 @@ build-prod:
   script:
     - mkdir -p ./build
     - cd ./build
+    - rm -rf *.tag.gz
     # Build runtime binaries
     - cmake ..
        -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
