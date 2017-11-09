@@ -15,8 +15,8 @@ build-dev:
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
-    - mkdir -p ./build
-    - cd ./build
+    - mkdir -p ./build$CI_COMMIT_TAG
+    - cd ./build$CI_COMMIT_TAG
     - cmake ..
        -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
        -DSUIL_MINOR_VERSION=$SUIL_MINOR_VERSION 
@@ -28,10 +28,10 @@ build-dev:
     - cd ..
   cache:
     paths:
-      - ./build/
+      - ./build$CI_COMMIT_TAG/
   artifacts:
     paths:
-      - ./build/sut
+      - ./build$CI_COMMIT_TAG/sut
     expire_in: 30 mins
 
 build-release:
@@ -48,8 +48,8 @@ build-release:
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
-    - mkdir -p ./build-$CI_COMMIT_TAG
-    - cd ./build-$CI_COMMIT_TAG
+    - mkdir -p ./build$CI_COMMIT_TAG
+    - cd ./build$CI_COMMIT_TAG
     - rm -rf *.tag.gz
     # Build runtime binaries
     - cmake ..
@@ -74,8 +74,8 @@ build-release:
     - cd ..
   artifacts:
     paths:
-      - ./build-$CI_COMMIT_TAG/sut
-      - ./build-$CI_COMMIT_TAG/suil*tar.gz
+      - ./build$CI_COMMIT_TAG/sut
+      - ./build$CI_COMMIT_TAG/suil*tar.gz
       
 test:
   stage: test
@@ -86,5 +86,5 @@ test:
     - apk add openssl libressl postgresql
     - apk add sqlite musl libstdc++ libuuid
   script:
-    - cd ./build-$CI_COMMIT_TAG
+    - cd ./build$CI_COMMIT_TAG
     - ./sut
