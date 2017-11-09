@@ -34,7 +34,7 @@ build-dev:
       - ./build/sut
     expire_in: 30 mins
 
-build-prod:
+build-release:
   stage: build
   tags:
     - alpine
