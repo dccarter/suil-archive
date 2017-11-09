@@ -48,8 +48,8 @@ build-release:
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
-    - mkdir -p ./build
-    - cd ./build
+    - mkdir -p ./build-$CI_COMMIT_TAG
+    - cd ./build-$CI_COMMIT_TAG
     - rm -rf *.tag.gz
     # Build runtime binaries
     - cmake ..
@@ -72,13 +72,10 @@ build-release:
     - make clean
     - make -j2 package
     - cd ..
-  cache:
-    paths:
-      - ./build/
   artifacts:
     paths:
-      - ./build/sut
-      - ./build/suil*tar.gz
+      - ./build-$CI_COMMIT_TAG/sut
+      - ./build-$CI_COMMIT_TAG/suil*tar.gz
       
 test:
   stage: test
@@ -89,5 +86,5 @@ test:
     - apk add openssl libressl postgresql
     - apk add sqlite musl libstdc++ libuuid
   script:
-    - cd ./build
+    - cd ./build-$CI_COMMIT_TAG
     - ./sut
