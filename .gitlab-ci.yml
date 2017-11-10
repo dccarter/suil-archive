@@ -141,7 +141,7 @@ test:devel:
 test:latest:
   stage: test
   tags:
-    - alpine
+    - tags
   only:
     - master
   before_script:
