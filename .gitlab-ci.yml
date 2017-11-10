@@ -114,7 +114,7 @@ build:release:devel:
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean
     - make -j2 install package
-    - cp -r ../Dockerfile.alpine ./Dockerfile
+    - cp -r ../Dockerfile.build.alpine ./Dockerfile
     - docker build --pull -t "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION" .
     - docker push "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION"
     - cd ..
