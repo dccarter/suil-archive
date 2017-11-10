@@ -135,7 +135,7 @@ test:devel:
     - apk add sqlite musl libstdc++ libuuid
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
   script:
-    - docker run --rm -it --name "$CI_COMMIT_REF_SLUG" $CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:latest /usr/local/bin/sut
+    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" $CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:latest /usr/local/bin/sut
 
 test:latest:
   stage: test
@@ -149,4 +149,4 @@ test:latest:
     - apk add sqlite musl libstdc++ libuuid
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
   script:
-    - docker run --rm -it --name "$CI_COMMIT_REF_SLUG" $CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION /usr/local/bin/sut
+    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" $CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION /usr/local/bin/sut
