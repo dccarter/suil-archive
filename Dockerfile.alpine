@@ -8,3 +8,4 @@ RUN apk  add openssl libressl postgresql && \
 
 # Copy Binaries
 COPY artifacts/ /usr/local/
+COPY sut        /usr/local/bin/sut
