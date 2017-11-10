@@ -1,31 +1,43 @@
 # Build Pipeline for Suil Project
 image: alpine:latest
 
-build-dev:
+before_script:
+  - apk update
+  - apk add openssl docker
+  - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
+
+variables:
+  SUIL_BUILD_VERSION: $SUIL_MAJOR_VERSION.$SUIL_PATCH_VERSION.$SUIL_MINOR_VERSION-$SUIL_VERSION_TAG
+
+build:dev:
   stage: build
   tags:
     - alpine
   only:
     - master
-  # Install all the required dependecies before proceeding to build
+  # Install all the required dependencies before proceeding to build
   before_script: 
     - apk update
     - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add openssl libressl-dev postgresql-dev
+    - apk add libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
     - cd ./build$CI_COMMIT_TAG
     - cmake ..
-       -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
+       -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION
        -DSUIL_MINOR_VERSION=$SUIL_MINOR_VERSION 
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION 
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
        -DSUIL_BUILD_DEV_PACKAGE=ON
     - make clean
-    - make -j2
+    - make -j2 install
+    - cp -r ../Dockerfile.build.alpine ./Dockerfile
+    - docker build --pull -t "$CI_REGISTRY_IMAGE-devel:latest" .
+    - docker push "$CI_REGISTRY_IMAGE:latest"
     - cd ..
+
   cache:
     paths:
       - ./build$CI_COMMIT_TAG/
@@ -34,17 +46,17 @@ build-dev:
       - ./build$CI_COMMIT_TAG/sut
     expire_in: 30 mins
 
-build-release:
+build:release:prod:
   stage: build
   tags:
     - alpine
   only:
     - tags
-# Install all the required dependecies before proceeding to build
+# Install all the required dependencies before proceeding to build
   before_script: 
     - apk update
     - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add openssl libressl-dev postgresql-dev
+    - apk add libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
@@ -60,7 +72,29 @@ build-release:
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
        -DSUIL_BUILD_DEV_PACKAGE=OFF
     - make clean
-    - make -j2 package
+    - make -j2 install package
+    - cp -r ../Dockerfile.alpine ./Dockerfile
+    - docker build --pull -t "development/$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION" .
+    - docker push "development/$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION"
+    - cd ..
+
+  artifacts:
+    paths:
+      - ./build$CI_COMMIT_TAG/sut
+      - ./build$CI_COMMIT_TAG/suil*tar.gz
+
+build:release:prod:
+  stage: build
+  tags:
+    - alpine
+  only:
+    - tags
+# Install all the required dependencies before proceeding to build
+  before_script:
+    - apk update
+    - apk add openssh bash cmake sqlite sqlite-dev
+    - apk add libressl-dev postgresql-dev
+    - apk add bsd-compat-headers gcc g++ make util-linux-dev
     # Build development binaries
     - cmake ..
        -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
@@ -71,7 +105,11 @@ build-release:
        -DSUIL_BUILD_DEV_PACKAGE=ON
     - make clean
     - make -j2 package
+    - cp -r ../Dockerfile.alpine ./Dockerfile
+    - docker build --pull -t "production/$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION" .
+    - docker push "production/$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION"
     - cd ..
+
   artifacts:
     paths:
       - ./build$CI_COMMIT_TAG/sut

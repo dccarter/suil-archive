@@ -1,0 +1,11 @@
+FROM alpine:latest
+MAINTAINER "Carter Mbotho <carter@suilteam.com>"
+
+# Install dependencies
+RUN apk update
+RUN apk  add openssh bash cmake sqlite sqlite-dev && \
+         apk add openssl libressl-dev postgresql-dev && \
+         apk add bsd-compat-headers gcc g++ make util-linux-dev
+
+# Copy Binaries
+COPY artifacts/ /usr/local/
