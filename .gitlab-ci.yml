@@ -14,6 +14,7 @@ build:dev:
   before_script: 
     - apk update
     - apk add openssl docker
+    - echo "docker login -u $SUIL_REGISTRY_USER -p $SUIL_REGISTRY_PASSWD $CI_REGISTRY"
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
     - apk add openssh bash cmake sqlite sqlite-dev
     - apk add libressl-dev postgresql-dev
