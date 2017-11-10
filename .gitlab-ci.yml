@@ -137,7 +137,7 @@ test:devel:
   script:
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" $CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:latest /usr/local/bin/sut
 
-test:latest:
+test:production:
   stage: test
   tags:
     - alpine
