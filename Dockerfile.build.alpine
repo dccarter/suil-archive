@@ -9,3 +9,4 @@ RUN apk  add openssh bash cmake sqlite sqlite-dev && \
 
 # Copy Binaries
 COPY artifacts/ /usr/local/
+COPY sut        /usr/local/bin/sut

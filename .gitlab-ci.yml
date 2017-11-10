@@ -122,17 +122,32 @@ build:release:devel:
 
   artifacts:
     paths:
-      - ./build$CI_COMMIT_TAG/sut
       - ./build$CI_COMMIT_TAG/suil*tar.gz
       
-test:
+test:devel:
   stage: test
   tags:
     - alpine
+  only:
+    - master
   before_script:
     - apk update
-    - apk add openssl libressl postgresql
+    - apk add openssl libressl postgresql docker
     - apk add sqlite musl libstdc++ libuuid
+    - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
   script:
-    - cd ./build$CI_COMMIT_TAG
-    - ./sut
+    - docker run --rm --name "$CI_COMMIT_REF_SLUG" -it "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:latest" /usr/local/bin/sut
+
+test:latest:
+  stage: test
+  tags:
+    - alpine
+  only:
+    - master
+  before_script:
+    - apk update
+    - apk add openssl libressl postgresql docker
+    - apk add sqlite musl libstdc++ libuuid
+    - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
+  script:
+    - docker run --rm --name "$CI_COMMIT_REF_SLUG" -it "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION" /usr/local/bin/sut
