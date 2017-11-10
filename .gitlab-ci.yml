@@ -29,6 +29,7 @@ build:dev:
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION 
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
        -DSUIL_BUILD_DEV_PACKAGE=ON
+       -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean
     - make -j2 install
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
@@ -71,6 +72,7 @@ build:release:prod:
        -DSUIL_BUILD_TAG=$SUIL_VERSION_TAG
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
        -DSUIL_BUILD_DEV_PACKAGE=OFF
+       -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean
     - make -j2 install package
     - cp -r ../Dockerfile.alpine ./Dockerfile
@@ -110,8 +112,9 @@ build:release:devel:
        -DSUIL_BUILD_TAG=$SUIL_VERSION_TAG
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
        -DSUIL_BUILD_DEV_PACKAGE=ON
+       -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean
-    - make -j2 package
+    - make -j2 install package
     - cp -r ../Dockerfile.alpine ./Dockerfile
     - docker build --pull -t "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION" .
     - docker push "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION"
