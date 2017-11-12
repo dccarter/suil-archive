@@ -14,7 +14,7 @@ build:dev:
   before_script: 
     - apk update
     - apk add openssl docker
-    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKER_HUB_PASSWD
+    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKERHUB_PASSWD
     - apk add openssh bash cmake sqlite sqlite-dev
     - apk add libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
@@ -54,7 +54,7 @@ build:release:devel:
   before_script: 
     - apk update
     - apk add openssl docker
-    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKER_HUB_PASSWD
+    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKERHUB_PASSWD
     - apk add openssh bash cmake sqlite sqlite-dev
     - apk add libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
@@ -144,7 +144,7 @@ test:devel:
     - apk update
     - apk add openssl libressl postgresql docker
     - apk add sqlite musl libstdc++ libuuid
-    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKER_HUB_PASSWD
+    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKERHUB_PASSWD
   script:
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:latest /usr/local/bin/sut
 
