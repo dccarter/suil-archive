@@ -17,4 +17,3 @@ RUN  chmod +x   /usr/local/bin/buildapp
 RUN adduser -s /bin/sh -h /home/build/ -D build
 
 WORKDIR /home/build
-USER build
