@@ -2,14 +2,16 @@
 
 # Used to build suil applications
 echo "build suil application: $1"
+project=$1
 shift
 echo "build arguments: $@"
 
 # Ensure that this indeed is a Cmake project
-[ -f $1 ] || {
-    echo "Project $1 does not exist"
+[ -d "$project" ] || {
+    echo "Project $project does not exist"
     exit 1
 }
+cd "$project"
 
 # Ensure that this indeed is a Cmake project
 [ -f CMakeLists.txt ] || {
