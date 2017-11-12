@@ -14,7 +14,7 @@ build:dev:
   before_script: 
     - apk update
     - apk add openssl docker
-    - docker login -u $SUIL_REGISTRY_USER -p $SUIL_REGISTRY_PASSWD $CI_REGISTRY
+    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKER_HUB_PASSWD
     - apk add openssh bash cmake sqlite sqlite-dev
     - apk add libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
@@ -32,8 +32,8 @@ build:dev:
     - make clean
     - make -j2 install
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
-    - docker build --pull -t "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:latest" .
-    - docker push "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:latest"
+    - docker build --pull -t suilteam/suil-dev:latest" .
+    - docker push suilteam/suil-dev:latest"
     - cd ..
 
   cache:
@@ -44,7 +44,7 @@ build:dev:
       - ./build$CI_COMMIT_TAG/sut
     expire_in: 30 mins
 
-build:release:prod:
+build:release:devel:
   stage: build
   tags:
     - alpine
@@ -54,7 +54,7 @@ build:release:prod:
   before_script: 
     - apk update
     - apk add openssl docker
-    - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
+    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKER_HUB_PASSWD
     - apk add openssh bash cmake sqlite sqlite-dev
     - apk add libressl-dev postgresql-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
@@ -63,7 +63,7 @@ build:release:prod:
     - mkdir -p ./build$CI_COMMIT_TAG
     - cd ./build$CI_COMMIT_TAG
     - rm -rf *.tag.gz
-    # Build runtime binaries
+    # Build release binaries
     - cmake ..
        -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION 
        -DSUIL_MINOR_VERSION=$SUIL_MINOR_VERSION 
@@ -75,8 +75,8 @@ build:release:prod:
     - make clean
     - make -j2 install package
     - cp -r ../Dockerfile.alpine ./Dockerfile
-    - docker build --pull -t "$CI_REGISTRY_IMAGE/production/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION" .
-    - docker push "$CI_REGISTRY_IMAGE/production/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION"
+    - docker build --pull -t suilteam/suil-dev:$SUIL_BUILD_VERSION" .
+    - docker push suilteam/suil-dev:$SUIL_BUILD_VERSION"
     # Build debug binaries
     - cmake ..
        -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION
@@ -95,7 +95,7 @@ build:release:prod:
     paths:
       - ./build$CI_COMMIT_TAG/suil*tar.gz
 
-build:release:devel:
+build:release:prod:
   stage: build
   tags:
     - alpine
@@ -111,7 +111,7 @@ build:release:devel:
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
 
   script:
-    # Build development binaries
+    # Build release binaries
     - mkdir -p ./build$CI_COMMIT_TAG
     - cd ./build$CI_COMMIT_TAG
     - rm -rf *.tag.gz
@@ -126,8 +126,8 @@ build:release:devel:
     - make clean
     - make -j2 install package
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
-    - docker build --pull -t "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION" .
-    - docker push "$CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION"
+    - docker build --pull -t "$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION" .
+    - docker push "$CI_REGISTRY_IMAGE/:$SUIL_BUILD_VERSION"
     - cd ..
 
   artifacts:
@@ -144,9 +144,9 @@ test:devel:
     - apk update
     - apk add openssl libressl postgresql docker
     - apk add sqlite musl libstdc++ libuuid
-    - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
+    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKER_HUB_PASSWD
   script:
-    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" $CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:latest /usr/local/bin/sut
+    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:latest /usr/local/bin/sut
 
 test:production:
   stage: test
@@ -158,6 +158,6 @@ test:production:
     - apk update
     - apk add openssl libressl postgresql docker
     - apk add sqlite musl libstdc++ libuuid
-    - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
+    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUIL_DOCKER_HUB_PASSWD
   script:
-    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" $CI_REGISTRY_IMAGE/development/$CI_PROJECT_NAME:$SUIL_BUILD_VERSION /usr/local/bin/sut
+    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:$SUIL_BUILD_VERSION /usr/local/bin/sut
