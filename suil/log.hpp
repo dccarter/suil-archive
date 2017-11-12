@@ -213,7 +213,8 @@ namespace suil {
             }
 
             if (l == level::CRITICAL) {
-                throw std::runtime_error(buf);
+                // print stack trace
+                exit(EXIT_FAILURE);
             }
         }
 

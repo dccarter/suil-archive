@@ -440,6 +440,18 @@ namespace suil {
 
             std::vector<char*> get_all (const char* name) const;
 
+            template <typename __T>
+            __T get(const char* name) const {
+                __T tmp{};
+                strview_t sv(get(name));
+                if (!sv.empty()) {
+                    zcstring str(sv.data(), sv.size(), false);
+                    utils::cast(str, tmp);
+                }
+
+                return tmp;
+            }
+
         private:
             int nparams_{0};
             char *url_{nullptr};

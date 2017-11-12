@@ -4,12 +4,8 @@ project(libsuil C CXX)
 file(GLOB_RECURSE LIB_SUIL_SOURCES *.cpp *.c)
 add_library(suil STATIC ${LIB_SUIL_SOURCES})
 target_link_libraries(suil ${SUIL_LIBRARIES})
-target_compile_definitions(suil
-        PUBLIC "-DSUIL_FILE_SERVER_ROUTE=\"1511d5908a7811e790ed6f6e6c696e65\"")
 add_library(suil_s SHARED ${LIB_SUIL_SOURCES})
 target_link_libraries(suil_s ${SUIL_LIBRARIES})
-target_compile_definitions(suil_s
-        PUBLIC "-DSUIL_FILE_SERVER_ROUTE=\"1511d5908a7811e790ed6f6e6c696e65\"")
 set_target_properties(suil_s PROPERTIES OUTPUT_NAME suil)
 
 suil_iod_symbols(suil

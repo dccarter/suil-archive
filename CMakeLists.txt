@@ -19,17 +19,20 @@ set(SUIL_COPYRIGHT "Copyright (C) 2017, 2017-2017 Suilteam")
 set(SUIL_VERSION ${SUIL_MAJOR_VERSION}.${SUIL_MINOR_VERSION}.${SUIL_PATCH_VERSION})
 
 option(SUIL_BUILD_UNIT_TEST    "Enable unit testing" ON)
+option(SUIL_BUILD_EXAMPLES      "Enable building examples" OFF)
 option(SUIL_BUILD_DEV_PACKAGE  "Produce a development package" OFF)
+option(SUIL_DEV_IDE            "Currently using an IDE" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough")
+set(SUIL_FILE_SERVER_ROUTE 1511d5908a7811e790ed6f6e6c696e65)
 
 set(SUIL_DEFINES)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(SUIL_BUILD_DEBUG ON)
-    set(SUIL_DEFINES -DSUIL_DEBUG)
+    set(SUIL_DEFINES ${SUIL_DEFINES} -DSUIL_DEBUG)
 endif()
 
 include(CheckSymbolExists)
@@ -65,6 +68,7 @@ add_subdirectory(deps/iod)
 include_directories(deps)
 
 if (SUIL_BUILD_DEV_PACKAGE)
+    configure_file(buildapp.sh ${CMAKE_BINARY_DIR}/buildapp COPYONLY)
     install(DIRECTORY deps/libmill
             DESTINATION include
             FILES_MATCHING PATTERN "*.h")
@@ -124,12 +128,20 @@ if (SUIL_BUILD_UNIT_TEST)
     target_compile_definitions(sut PUBLIC -DSUIL_TESTING)
 endif()
 
+if (SUIL_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
 if (SUIL_BUILD_DEV_PACKAGE)
     message(STATUS "Development package enabled")
     set(SUIL_PACKAGE_POSTFIX dev)
 else()
     message(STATUS "Production package enabled")
     set(SUIL_PACKAGE_POSTFIX prod)
+endif()
+
+if (SUIL_DEV_IDE)
+    add_subdirectory(apps/suil-web)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

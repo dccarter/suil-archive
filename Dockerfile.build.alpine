@@ -10,3 +10,11 @@ RUN apk  add openssh bash cmake sqlite sqlite-dev && \
 # Copy Binaries
 COPY artifacts/ /usr/local/
 COPY sut        /usr/local/bin/sut
+COPY buildapp   /usr/local/bin/
+RUN  chmod +x   /usr/local/bin/buildapp
+
+# User to use for building
+RUN adduser -Ms /bin/sh build
+
+USER build
+WORKDIR /home/build

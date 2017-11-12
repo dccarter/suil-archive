@@ -39,7 +39,9 @@ namespace suil {
         template <typename... __Opts>
         application(const char *name, __Opts... opts)
             : name(zcstring(name).dup())
-        {}
+        {
+            log::setup(opt(name, name));
+        }
 
         template <typename __T, typename... __Args>
         __T& regtask(const char *name, __Args... args) {
@@ -60,6 +62,14 @@ namespace suil {
 
         int start();
         void stop(int code = EXIT_SUCCESS);
+
+        inline void killsig(){}
+        void killsig(int s);
+        template <typename... __S>
+        inline void killsig(int s, __S... o) {
+            killsig(s);
+            killsig(o...);
+        }
 
         ~application();
 

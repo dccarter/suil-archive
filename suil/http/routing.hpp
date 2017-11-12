@@ -31,7 +31,7 @@ namespace suil {
             }
 
             friend class router_t;
-            route_attributes_t attrs_{false, true, false, {}};
+            route_attributes_t attrs_{false, false, false, false};
 
         protected:
             uint32_t methods_{1 << (uint16_t) method_t::Get};
@@ -411,7 +411,7 @@ namespace suil {
             {
                 unsigned rule_index{};
                 std::array<unsigned, (int)suil::detail::ParamType::MAX> param_childrens{};
-                hmap_t<unsigned> children;
+                std::unordered_map<std::string, unsigned> children;
 
                 bool issimple() const
                 {

@@ -30,6 +30,7 @@ namespace suil {
             headers.clear();
             body.clear();
             cookies.clear();
+            chunks.clear();
             status = status_t::OK;
         }
 

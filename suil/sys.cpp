@@ -7,7 +7,7 @@
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/md5.h>
-#include <fcntl.h>
+#include <syslog.h>
 
 #include <suil/sys.hpp>
 #include <suil/config.hpp>
@@ -24,17 +24,87 @@ namespace suil {
         const char*     SWNAME = SUIL_SOFTWARE_NAME;
     };
 
-    void init() {
-        static bool initialized{false};
-        if (initialized) return;
+    namespace __internal {
+        bool init() {
+            static bool initialized{false};
+            if (initialized) return false;
+            signal(SIGPIPE, SIG_IGN);
 
-        console::println("");
-        console::println("Powered by suil C++1y web framework");
-        console::printred("v" SUIL_VERSION_STRING "\n");
-        console::printblue("http://suil.suilteam.com\n");
-        console::println("---------------------------------------\n");
-        memory::init();
-        initialized = true;
+            console::println("");
+            console::println("Powered by suil C++1y web framework");
+            console::printred("v" SUIL_VERSION_STRING "\n");
+            console::printblue("http://suil.suilteam.com\n");
+            console::println("---------------------------------------\n");
+            memory::init();
+            initialized = true;
+
+            return initialized;
+        }
+
+        void chwdir(const std::string& to) {
+            if (!utils::fs::isdir(to.c_str())) {
+                throw suil_error::create("working directory: '", to, "' does not exist");
+            }
+
+            if (::chdir(to.c_str())) {
+                throw suil_error::create("setting working dir to('", to, "') failed: ", errno_s);
+            }
+        }
+
+        void daemonize(const std::string& wdir) {
+            pid_t pid, sid;
+            pid = fork();
+            if (pid < 0) {
+                console::printred("error: daemonizing failed: \n", errno_s);
+                exit(EXIT_FAILURE);
+            }
+
+            if (pid > 0) {
+                // close parent
+                exit(EXIT_SUCCESS);
+            }
+
+            /*Change file mode mask */
+            umask(0);
+
+            openlog("suil", LOG_PID|LOG_CONS, LOG_USER);
+            // temporarily redirect logs to syslogs
+            log::setup(var(logsink) =  [](const char *d, size_t  s, log::level l) {
+                syslog(LOG_INFO, "%s", d);
+            });
+
+            sid = setsid();
+            if (sid < 0) {
+                serror("Creating session ID for daemon failed: %s", errno_s);
+                closelog();
+                exit(EXIT_FAILURE);
+            }
+            sinfo("Created session ID %d for suil daemon", sid);
+
+            std::string tmp(wdir);
+            if (wdir.empty())
+                tmp = "/";
+            try {
+                chwdir(tmp);
+            }
+            catch (...) {
+                serror("changing work director to '%s' failed: %s", tmp.c_str(), errno_s);
+                closelog();
+                exit(EXIT_FAILURE);
+            }
+
+            sinfo("suil application demonized %d", sid);
+            close(STDIN_FILENO);
+            close(STDOUT_FILENO);
+            close(STDERR_FILENO);
+
+            /* set pid file */
+            pid = getpid();
+            if (utils::fs::exists("suil.pid")) {
+                utils::fs::remove("suil.pid");
+            }
+            utils::fs::append("suil.pid", pid);
+        }
     }
 
 
@@ -258,6 +328,9 @@ namespace suil {
     void file_t::flush(int64_t timeout) {
         assert(fd);
         mfflush(fd, utils::after(timeout));
+        if (errno) {
+            printf("flushing failed: %s", errno_s);
+        }
     }
 
     off_t file_t::seek(off_t off) {
@@ -299,6 +372,26 @@ namespace suil {
 
     file_t::~file_t() {
         close();
+    }
+
+    file_logger::file_logger(const std::string dir, const std::string prefix)
+        : dst(nullptr)
+    {
+        open(dir, prefix);
+    }
+
+    void file_logger::open(const std::string &dir, const std::string& prefix) {
+        if (!utils::fs::exists(dir.c_str())) {
+            sdebug("creating file logger directory: %s", dir.c_str());
+            utils::fs::mkdir(dir.c_str(), true, 0777);
+        }
+        zcstring tmp{utils::catstr(dir, "/", prefix, "-", datetime()("%Y%m%d_%H%M%S"), ".log")};
+        dst = std::move(file_t(tmp.cstr, O_WRONLY|O_APPEND|O_CREAT, 0666));
+    }
+
+    void file_logger::log(const char *data, size_t sz, log::level) {
+        dst.write(data, sz, 1500);
+        dst.flush(1500);
     }
 
     zcstring base64::encode(const uint8_t *data, size_t sz) {
@@ -351,7 +444,7 @@ namespace suil {
         return std::move(ret);
     }
 
-    buffer_t base64::decode(const uint8_t *in, size_t size) {
+    zcstring base64::decode(const uint8_t *in, size_t size) {
         buffer_t b((uint32_t) (size/4)*3);
         static const unsigned char ASCII_LOOKUP[256] =
         {
@@ -410,7 +503,7 @@ namespace suil {
             b.append((uint8_t)(ASCII_LOOKUP[it[2]] << 6 | ASCII_LOOKUP[it[3]]));
         }
 
-        return std::move(b);
+        return std::move(zcstring(b));
     }
 
     char* utils::strndup(const char *str, size_t len) {
@@ -526,6 +619,8 @@ namespace suil {
     }
 
     zcstr<> utils::bytestr(const uint8_t* buf, size_t len) {
+        if (buf == nullptr)
+            return zcstring{};
         char *OUT = (char *)memory::alloc((len*2)+2);
         ssize_t rc = 0;
         for (size_t i = 0; i < len; i++) {
@@ -568,12 +663,18 @@ namespace suil {
     }
 
     zcstring utils::md5Hash(const uint8_t *data, size_t len) {
+        if (data == nullptr)
+            return zcstring{};
+
         uint8_t RAW[MD5_DIGEST_LENGTH];
         MD5(data, len, RAW);
         return std::move(bytestr(RAW, MD5_DIGEST_LENGTH));
     }
 
     zcstr<> utils::HMAC_Sha256(zcstr<> &secret, const uint8_t *data, size_t len, bool  b64) {
+        if (data == nullptr)
+            return zcstring{};
+
         uint8_t *result = HMAC(EVP_sha256(), secret.cstr, secret.len,
                                   data, len, nullptr, nullptr);
         if (b64) {
@@ -632,25 +733,67 @@ namespace suil {
         }
     }
 
-    void utils::fs::forall(const char *path, std::function<bool(const char *, bool)> h) {
-        DIR *d = opendir(path);
+    static void _forall(const char *base, zcstring& path, std::function<bool(const zcstring&, bool)> h, bool recursive, bool pod) {
+        zcstring cdir(utils::catstr(base, "/", path));
+        DIR *d = opendir(cdir.cstr);
+
         if (d == nullptr) {
             /* openining directory failed */
             throw suil_error::create("opendir('", path, "') failed: ", errno_s);
         }
 
-        struct dirent *dir;
-        while ((dir = readdir(d)) != NULL)
+        struct dirent *tmp;
+
+        while ((tmp = readdir(d)) != NULL)
         {
             /* ignore parent and current directory */
-            if (strmatchany(dir->d_name, ".", ".."))
+            if (utils::strmatchany(tmp->d_name, ".", ".."))
                 continue;
 
-            if (!h(dir->d_name, dir->d_type == DT_DIR))
-                break;
+
+            zcstring ipath = path? utils::catstr(path, "/", tmp->d_name) : zcstring(tmp->d_name);
+            bool is_dir{tmp->d_type == DT_DIR};
+
+            if (!pod) {
+                if (!h(ipath, is_dir)) {
+                    /* delegate cancelled travesal*/
+                    break;
+                }
+
+                if (recursive && is_dir) {
+                    /* recursively iterate current directory*/
+                    _forall(base, ipath, h, recursive, pod);
+                }
+            }
+            else {
+                if (recursive && is_dir) {
+                    /* recursively iterate current directory*/
+                    _forall(base, ipath, h, recursive, pod);
+                }
+
+                if (!h(ipath, is_dir)) {
+                    /* delegate cancelled travesal*/
+                    break;
+                }
+            }
         }
 
         closedir(d);
+    }
+
+    void utils::fs::forall(const char *path, std::function<bool(const zcstring&, bool)> h, bool recursive, bool pod) {
+        zcstring tmp{""};
+        _forall(path, tmp, h, recursive, pod);
+    }
+
+    std::vector<zcstring> utils::fs::ls(const char *path, bool recursive) {
+        std::vector<zcstring> all;
+        fs::forall(path, [&all](const zcstring& d, bool dir) {
+            all.emplace_back(d.dup());
+            return true;
+        }, recursive);
+
+        return std::move(all);
     }
 
     static inline void __remove(const char *path) {
@@ -661,28 +804,21 @@ namespace suil {
 
     static inline void _rmdir(const char *path) {
         utils::fs::forall(path,
-        [&](const char *name, bool d) -> bool {
+        [&](const zcstring& name, bool d) -> bool {
             zcstring tmp = utils::catstr(path, "/", name);
-            if (tmp && d) {
-                /* recursely delete current directory */
-                _rmdir(tmp.cstr);
-                /* delete the directory itself*/
-                __remove(tmp.cstr);
-            }
-            else {
-                __remove(tmp.cstr);
-            }
-
+            __remove(tmp.cstr);
             return true;
-        });
+        }, true, true);
     }
 
-    void utils::fs::remove(const char *path, bool recursive) {
-        if (recursive && isdir(path)) {
+    void utils::fs::remove(const char *path, bool recursive, bool contents) {
+        bool is_dir{isdir(path)};
+        if (recursive && is_dir) {
             _rmdir(path);
         }
 
-        __remove(path);
+        if (!is_dir || !contents)
+            __remove(path);
     }
 
     zcstring utils::fs::readall(const char *path, bool async) {
@@ -724,6 +860,12 @@ namespace suil {
         b.seek(nread);
 
         return zcstring(b);
+    }
+
+    void utils::fs::append(const char *path, const void *data, size_t sz, bool async) {
+        file_t f(path, O_WRONLY|O_CREAT|O_APPEND, 0666);
+        f.write(data, sz, 1500);
+        f.close();
     }
 
     zcstring utils::uuidstr(unsigned char *id) {

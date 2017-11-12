@@ -98,9 +98,9 @@ function(SuilApp name)
     endif()
 
     # parse function arguments
-    set(options DEBUG)
+    set(options DEBUG IODSYMS_PATHBIN)
     set(kvargs)
-    set(kvvargs VERSION SOURCES DEFINES LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS)
+    set(kvvargs VERSION SOURCES DEFINES LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
     cmake_parse_arguments(SUIL_APP "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
     # get the source files
@@ -124,16 +124,20 @@ function(SuilApp name)
     add_executable(${name} ${${name}_SOURCES})
 
     # generate symbols
-    set(${name}_SYMBOLS ${CMAKE_SOURCE_DIR}/${name}.sym)
+    set(${name}_SYMBOLS ${CMAKE_CURRENT_SOURCE_DIR}/${name}.sym)
     if (NOT ${name}_SYMBOLS)
         set(${name}_SYMBOLS symbols.sym)
     endif()
     message(STATUS "using symbols: ${${name}_SYMBOLS}")
 
     if (EXISTS ${${name}_SYMBOLS})
+        set(IODSYMS_BIN iodsyms)
+        if (SUIL_APP_IODSYMS_PATHBIN)
+            set(IODSYMS_BIN ${SUIL_BASE_PATH}/bin/iodsyms)
+        endif()
         # generate symbols if project uses symbols
         suil_iod_symbols(${name}
-                BINARY ${SUIL_BASE_PATH}/bin/iodsyms
+                BINARY ${IODSYMS_BIN}
                 SYMBOLS ${${name}_SYMBOLS})
     endif()
 
@@ -157,25 +161,32 @@ function(SuilApp name)
     endif()
     message(STATUS "target '${name}' includes: ${${name}_INCLUDES}")
     target_include_directories(${name} PUBLIC ${${name}_INCLUDES})
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-    # install the target
-    set(${name}_INSTALL_FILES ${PROJECT_BINARY_DIR}/${name}/${name})
+    # Get the artifacts directory
+    set(${name}_ARTIFACTS_DIR ${SUIL_APP_ARTIFACTS_DIR})
+    if (NOT SUIL_APP_ARTIFACTS_DIR)
+        set(${name}_ARTIFACTS_DIR ${name})
+    endif ()
+
+    # install the files
     if (SUIL_APP_INSTALL_FILES)
         message(STATUS "target '${name} install files: ${SUIL_APP_INSTALL_FILES}")
         install(FILES ${SUIL_APP_INSTALL_FILES}
-                DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/)
+                DESTINATION ${${name}_ARTIFACTS_DIR})
     endif()
+
     message(STATUS "target '${name} install target")
     install(TARGETS ${name}
-            ARCHIVE DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/
-            LIBRARY DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/
-            RUNTIME DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/)
+            ARCHIVE DESTINATION targets/lib
+            LIBRARY DESTINATION targets/lib
+            RUNTIME DESTINATION targets/bin)
 
 
     set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})
     if (${name}_INSTALL_DIRS)
         message(STATUS "target '${name} install directories: ${${name}_INSTALL_DIRS}")
         install(DIRECTORY ${${name}_INSTALL_DIRS}
-                DESTINATION ${PROJECT_SOURCE_DIR}/artifacts/)
+                DESTINATION ${${name}_ARTIFACTS_DIR})
     endif()
 endfunction()

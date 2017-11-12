@@ -31,9 +31,10 @@ namespace suil {
                 // initialize file server
                 init();
 
-                ep(config.route +"")
+                ep(config.route + "")
                 ("GET"_method, "HEAD"_method)
-                .attrs(opt(STATIC, true))
+                .attrs(opt(STATIC, true),
+                       opt(AUTHORIZE, Auth{false}))
                 ([&](const request& req, response& res) {
                     // handle static file request
                     zcstring path(req.url);
@@ -152,10 +153,10 @@ namespace suil {
                 {
                     cf.fd = -1;
                     cf.data = nullptr;
-                    cf.use_fd = is_mapped = 0;
+                    cf.use_fd = cf.is_mapped = 0;
                     cf.flags = 0;
-                    cf.len = size = 0;
-                    cf.last_mod = last_access = 0;
+                    cf.len = cf.size = 0;
+                    cf.last_mod = cf.last_access = 0;
                 }
 
                 cached_file_t&operator=(cached_file_t&& cf) {
@@ -172,13 +173,16 @@ namespace suil {
 
                     cf.fd = -1;
                     cf.data = nullptr;
-                    cf.use_fd = is_mapped = 0;
+                    cf.use_fd = cf.is_mapped = 0;
                     cf.flags = 0;
-                    cf.len = size = 0;
-                    cf.last_mod = last_access = 0;
+                    cf.len = cf.size = 0;
+                    cf.last_mod = cf.last_access = 0;
 
                     return *this;
                 }
+
+                //cached_file_t(cached_file_t&) = delete;
+                //cached_file_t&operator=(cached_file_t&) = delete;
 
                 void clear();
 

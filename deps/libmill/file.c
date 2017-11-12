@@ -34,7 +34,7 @@
 #include "utils.h"
 
 #ifndef MILL_FILE_BUFLEN
-#define MILL_FILE_BUFLEN (4096)
+#define MILL_FILE_BUFLEN (2048)
 #endif
 
 struct mill_file {

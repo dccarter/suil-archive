@@ -193,6 +193,7 @@ namespace suil {
     #define MEM_BLOCK_PREALLOC		64
     #define MEM_ALIGN		        (sizeof(size_t))
     #define MEM_MAGIC		        0xd0d0
+    #define MEM_NOMAGIC             0xadad
     #define MEMINFO(x)		        ((meminfo *)(((uint8_t *)x)-sizeof(meminfo)))
     #define MEMSIZE(x)              MEMINFO(x)->len
 
@@ -369,7 +370,7 @@ namespace suil {
         } else {
             ::free(addr);
         }
-
+        mem->magic = MEM_NOMAGIC;
         s_MEMORY.frees++;
     }
 

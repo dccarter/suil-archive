@@ -112,6 +112,11 @@ namespace suil {
                 return *params.attrs;
             }
 
+            template <typename __T>
+            __T query(const char *name) const {
+                return qps.get<__T>(name);
+            }
+
         private:
             template <typename __H, typename... __Mws>
             friend struct connection;

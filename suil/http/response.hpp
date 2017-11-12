@@ -85,6 +85,13 @@ namespace suil {
                 body << data;
             }
 
+            response(const float& data)
+                    : body(15),
+                      status(status_t::OK)
+            {
+                body << data;
+            }
+
 
             response(status_t status, buffer_t& body)
                 : body(0),

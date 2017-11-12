@@ -308,7 +308,7 @@ namespace suil {
 
                     // file successfully loaded, add file to cache
                     it = cached_files_.emplace(
-                            std::move(rel), std::move(cf)).first;
+                            std::move(rel.dup()), std::move(cf)).first;
                 }
             }
             else {

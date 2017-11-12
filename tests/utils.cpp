@@ -27,6 +27,16 @@ TEST_CASE("utils::cast", "[utils][cast]")
         REQUIRE(real == Approx(-5689.1299999));
     }
 
+    SECTION("string to number invalid arguments", "[strtonum]") {
+        int64_t num;
+        zcstring str("167");
+        // minimum can never be more than maximum
+        REQUIRE_THROWS(utils::strtonum(str, 10, 100, 99));
+        // number out of range
+        REQUIRE_THROWS(utils::strtonum(str, 10, 99, 100));
+        REQUIRE_THROWS(utils::strtonum(str, 10, 168, 200));
+    }
+
     SECTION("invalid zcstring to number") {
         uint64_t num;
         double   real;
@@ -47,6 +57,16 @@ TEST_CASE("utils::cast", "[utils][cast]")
         std::string to;
         utils::cast(from, to);
         CHECK("Hello World" == to);
+    }
+
+    SECTION("zcstring to type using explicit cast operator") {
+        zcstring from{"1556.8"};
+        int64_t i{0};
+        float f{0.0};
+        i = (int) from;
+        f = (float) from;
+        CHECK(i == 1556);
+        CHECK(f == Approx(1556.8));
     }
 
     SECTION("zcstring to zcstring") {
@@ -151,8 +171,7 @@ TEST_CASE("utils::base64", "[utils][base64]")
         binary b{0xFFEEDDCCBBAA0011, {0x01, 0x02, 0x03, 0x04}};
         zcstring ob((char *)&b, sizeof(binary), false);
         b64 = base64::encode((const uint8_t *) &b, sizeof(binary));
-        buffer_t tmp(base64::decode(b64));
-        zcstring db(tmp);
+        zcstring db(base64::decode(b64));
         REQUIRE(ob == db);
     }
 }
@@ -250,5 +269,133 @@ TEST_CASE("utils::string_ops", "[utils][string_ops]")
         REQUIRE(!utils::strmatchany("One", "Two", "Three", "One!!!"));
         // Will pass if any of the strings matches
         REQUIRE(utils::strmatchany("One", "Two", "Three", "One"));
+    }
+}
+
+TEST_CASE("utils::filesystem", "[utils][fs]") {
+    // creating a single directory
+    REQUIRE_NOTHROW(utils::fs::mkdir("test"));
+
+    SECTION("basic file operations" "[fs][file_ops]") {
+        // directory should have been created
+        REQUIRE(utils::fs::exists("test"));
+        // shouldn't files that don't exist
+        REQUIRE_FALSE(utils::fs::exists("test1"));
+        // Create another directory
+        REQUIRE_NOTHROW(utils::fs::touch("test/file.txt"));
+        // File should have been created
+        REQUIRE(utils::fs::exists("test/file.txt"));
+        // Size should be 0
+        REQUIRE(utils::fs::size("test/file.txt") == 0);
+        // Delete file, should not exist there after
+        REQUIRE_NOTHROW(utils::fs::remove("test/file.txt"));
+        // shouldn't files that don't exist
+        REQUIRE_FALSE(utils::fs::exists("test/file.txt"));
+    }
+
+    SECTION("basic directory operations", "[fs][dir_ops]") {
+        // Using created test directory
+        REQUIRE(utils::fs::isdir("test"));
+        // Create directory within test
+        REQUIRE_NOTHROW(utils::fs::mkdir("test/test1"));
+        // Should exist
+        REQUIRE(utils::fs::exists("test/test1"));
+        // Can be deleted if empty
+        REQUIRE_NOTHROW(utils::fs::remove("test/test1"));
+        // Should not exist
+        REQUIRE_FALSE(utils::fs::exists("test/test1"));
+        // Directory with parents requires recursive flag
+        REQUIRE_THROWS(utils::fs::mkdir("test/test1/child1"));
+        REQUIRE_NOTHROW(utils::fs::mkdir("test/test1/child1", true));
+        // Should exist
+        REQUIRE(utils::fs::exists("test/test1/child1"));
+        // Deleting non-empty directory also requires the recursive flag
+        REQUIRE_THROWS(utils::fs::remove("test/test1"));
+        REQUIRE_NOTHROW(utils::fs::remove("test/test1", true));
+        // Should not exist
+        REQUIRE_FALSE(utils::fs::exists("test/test1"));
+        // Multiple directories can be created at once
+        REQUIRE_NOTHROW(utils::fs::mkdir("test", {"test1", "test2"}));
+        // Test should have 2 directories
+        REQUIRE(utils::fs::ls("test").size() == 2);
+        // Remove all directories
+        REQUIRE_NOTHROW(utils::fs::remove("test", {"test1", "test2"}));
+        REQUIRE(utils::fs::ls("test").empty());
+        // Recursive again
+        REQUIRE_NOTHROW(utils::fs::mkdir("test", {"test1/child1/gchild1",
+                                                  "test1/child1/gchild2"
+                                                  "test1/child2/gchild1/ggchild/ggchild1",}, true));
+        // list recursively
+        REQUIRE(utils::fs::ls("test", true).size()==8);
+        // Remove recursively
+        REQUIRE_NOTHROW(utils::fs::remove("test", true, true));
+
+    }
+
+    SECTION("Basic file IO", "[fs][file_io]") {
+        const char *fname = "test/file.txt";
+        // Reading non-existent file
+        zcstring data;
+        REQUIRE_THROWS((data = utils::fs::readall(fname)));
+        // Create empty file
+        utils::fs::touch(fname, 0777);
+        data = utils::fs::readall(fname);
+        REQUIRE(data.empty());
+        // Write data to file
+        data = "The quick brown fox";
+        utils::fs::append(fname, data);
+        REQUIRE(utils::fs::size("test/file.txt") == data.len);
+        zcstring out = utils::fs::readall(fname);
+        REQUIRE(data == out);
+        // Append to file
+        data = utils::catstr(data, "\n jumped over the lazy dog");
+        utils::fs::append(fname, "\n jumped over the lazy dog");
+        REQUIRE(utils::fs::size(fname) == data.len);
+        out = utils::fs::readall(fname);
+        REQUIRE(data == out);
+        // Clear the file
+        utils::fs::clear(fname);
+        REQUIRE(utils::fs::size(fname) == 0 );
+    }
+
+    // Cleanup
+    REQUIRE_NOTHROW(utils::fs::remove("test", true));
+}
+
+TEST_CASE("utils::zcstring", "[utils][zcstring]")
+{
+    SECTION("initializing a zcstring") {
+        zcstring str;
+        REQUIRE(str.empty());
+        // initialize from other types
+        zcstring str1("Hello World");
+        REQUIRE_FALSE(str1.empty());
+        REQUIRE(str1.own == 0);
+        REQUIRE(strcmp(str1.str, "Hello World") == 0);
+
+        std::string stdstr("Hello World");
+
+        zcstring str2(stdstr);
+        REQUIRE_FALSE(str2.empty());
+        REQUIRE(str2.own == 0);
+        REQUIRE(strcmp(str2.str, "Hello World") == 0);
+
+        zcstring str3(stdstr, true);
+        REQUIRE_FALSE(str3.empty());
+        REQUIRE(str3.own == 1);
+        REQUIRE(strcmp(str3.str, "Hello World") == 0);
+        REQUIRE(str3.cstr != stdstr.data());
+
+        zcstring str4(utils::strdup("Hello World"), 12, true);
+        REQUIRE_FALSE(str4.empty());
+        REQUIRE(str4.own == 1);
+        REQUIRE(strcmp(str4.str, "Hello World") == 0);
+
+        buffer_t b(15);
+        b << "Hello World";
+        zcstring str5(utils::strdup("Hello World"), 12, true);
+        REQUIRE_FALSE(str5.empty());
+        REQUIRE(str5.own == 1);
+        REQUIRE(strcmp(str5.str, "Hello World") == 0);
     }
 }

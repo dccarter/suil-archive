@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <uuid/uuid.h>
 #include <unordered_map>
@@ -28,7 +29,28 @@ namespace suil {
     typedef uint8_t spid_t;
     extern const spid_t& spid;
 
-    void init();
+    namespace __internal{
+        bool init();
+        void chwdir(const std::string& to);
+        void daemonize(const std::string& wdir);
+    }
+
+    template <typename... __A>
+    void init(__A... args) {
+        if (__internal::init()) {
+            auto opts = iod::D(args...);
+
+            std::string wdir = opts.get(var(wdir), "");
+
+            if (opts.get(var(background), false)) {
+                // put the process to background
+                __internal::daemonize(wdir);
+            } else if (!wdir.empty()) {
+                // change directory in current process
+                __internal::chwdir(wdir);
+            }
+        }
+    }
 
     namespace version {
         extern const uint16_t  MAJOR;
@@ -407,6 +429,11 @@ namespace suil {
             return *this;
         }
 
+        buffer_t& operator<<(float d) {
+            appendf("%f", d);
+            return *this;
+        }
+
         buffer_t& operator<<(const char *str) {
             append(str);
             return *this;
@@ -500,7 +527,19 @@ namespace suil {
               own(0)
         {}
 
-        zcstr(const char *str, size_t len, bool own = true)
+        explicit zcstr(const strview_t str, bool own = 0)
+            : cstr(str.data()),
+              len((uint32_t)(str.size())),
+              own((uint8_t)(own? 1:0))
+        {}
+
+        explicit zcstr(const std::string& str, bool own = 0)
+            : cstr(own? utils::strndup(str.data(), str.size()): str.data()),
+              len((uint32_t)(str.size())),
+              own((uint8_t)(own? 1:0))
+        {}
+
+        explicit zcstr(const char *str, size_t len, bool own = true)
             : cstr(str),
               len((uint32_t)len),
               own((uint8_t)(own? 1 : 0))
@@ -544,16 +583,16 @@ namespace suil {
         }
 
         zcstr(const zcstr& s)
-            : str(s.str),
+            : str(s.own? utils::strndup(s.str, s.len): s.str),
               len(s.len),
-              own(0),
+              own(s.own),
               hash(s.hash)
         {}
 
         zcstr operator=(const zcstr& s) {
-            str  = s.str;
+            str  = s.own? utils::strndup(s.str, s.len) : s.str;
             len  = s.len;
-            own  = 0;
+            own  = s.own;
             hash = s.hash;
         }
 
@@ -612,6 +651,9 @@ namespace suil {
         bool operator!=(const zcstr& s) const {
             return !(*this == s);
         }
+
+        template <typename __T>
+        explicit inline operator __T() const;
 
         ~zcstr() {
             if (str && own) {
@@ -757,15 +799,16 @@ namespace suil {
             return encode((const uint8_t *) str.data(), str.size());
         }
 
-        static buffer_t decode(const uint8_t* in, size_t len);
+        static zcstring decode(const uint8_t* in, size_t len);
 
-        static buffer_t decode(const char* in) {
+        static zcstring decode(const char* in) {
             return decode((const uint8_t *)in, strlen(in));
         }
-        static buffer_t decode(strview_t& sv) {
+
+        static zcstring decode(strview_t& sv) {
             return std::move(decode((const uint8_t*)sv.data(), sv.size()));
         }
-        static buffer_t decode(const zcstr<>& zc) {
+        static zcstring decode(const zcstr<>& zc) {
             return std::move(decode((const uint8_t *)zc.cstr, zc.len));
         }
     };
@@ -1066,6 +1109,20 @@ namespace suil {
     struct file_t {
         file_t(mfile);
         file_t(const char *, int, mode_t);
+        file_t(file_t&) = delete;
+        file_t&operator=(file_t&) = delete;
+
+        file_t(file_t&& f)
+            : fd(f.fd)
+        {
+            f.fd = nullptr;
+        }
+
+        file_t&& operator=(file_t&& f) {
+            fd = f.fd;
+            f.fd = nullptr;
+        }
+
         virtual size_t write(const void*, size_t, int64_t);
         virtual bool   read(void*, size_t&, int64_t);
         virtual off_t  seek(off_t);
@@ -1116,6 +1173,28 @@ namespace suil {
 
     protected:
         mfile           fd;
+    };
+
+    struct file_logger {
+        file_logger(const std::string dir, const std::string prefix);
+        file_logger()
+            : dst(nullptr)
+        {}
+
+        virtual void log(const char *, size_t, log::level);
+
+        inline void close() {
+            dst.close();
+        }
+
+        void open(const std::string& str, const std::string& prefix);
+
+        inline ~file_logger() {
+            close();
+        }
+
+    private:
+        file_t dst;
     };
 
     template <typename __T>
@@ -1204,6 +1283,12 @@ namespace suil {
                 throw suil_error::create("file '", path, "' does not exist");
             }
 
+            inline void touch(const char *path, mode_t mode=0777) {
+                if (::open(path, O_CREAT|O_TRUNC|O_WRONLY, mode) < 0) {
+                    throw suil_error::create("touching file '", path, "' failed: ", errno_s);
+                }
+            }
+
             inline bool  exists(const char *path) {
                 return access(path, F_OK) != -1;
             }
@@ -1215,7 +1300,7 @@ namespace suil {
 
             void mkdir(const char *path, bool recursive = false, mode_t mode = 0777);
 
-            inline void mkdir(const char *base, std::vector<const char*>&& paths, bool recursive = false, mode_t mode = 0777) {
+            inline void mkdir(const char *base, const std::vector<const char*> paths, bool recursive = false, mode_t mode = 0777) {
                 for (auto& p : paths) {
                     if (p[0] == '/') {
                         mkdir(p, recursive, mode);
@@ -1227,23 +1312,18 @@ namespace suil {
                 }
             }
 
-            inline void mkdir(std::vector<const char*>&& paths, bool recursive = false, mode_t mode = 0777) {
+            inline void mkdir(const std::vector<const char*> paths, bool recursive = false, mode_t mode = 0777) {
                 char base[PATH_MAX];
                 getcwd(base, PATH_MAX);
                 mkdir(base, std::move(paths), recursive, mode);
             }
 
-            void remove(const char *path, bool recursive = false);
+            void remove(const char *path, bool recursive = false, bool contents = false);
 
-            inline void remove(const char *base, const std::vector<const char*>&& paths, bool recursive = false) {
+            inline void remove(const char *base, const std::vector<const char*> paths, bool recursive = false) {
                 for (auto& p : paths) {
-                    if (p[0] == '/') {
-                        remove(p, recursive);
-                    }
-                    else {
-                        zcstring tmp = catstr(base, "/", p);
-                        remove(tmp.cstr, recursive);
-                    }
+                    zcstring tmp = p[0] == '/'? utils::catstr(base, p) : utils::catstr(base, "/", p);
+                    remove(tmp.cstr, recursive);
                 }
             }
 
@@ -1253,9 +1333,42 @@ namespace suil {
                 remove(base, std::move(paths), recursive);
             }
 
-            void forall(const char *path, std::function<bool(const char *, bool)> h);
+            void forall(const char *path, std::function<bool(const zcstring&, bool)> h, bool recursive = false, bool pod = false);
+
+            std::vector<zcstring> ls(const char *path, bool recursive = false);
 
             zcstring readall(const char* path, bool async = false);
+
+            void append(const char *path, const void *data, size_t sz, bool async = true);
+
+            inline void append(const char *path, const buffer_t& b, bool async = true) {
+                append(path, b.data(), b.size(), async);
+            }
+
+            inline void append(const char *path, const std::string& s, bool async = true) {
+                append(path, s.data(), s.size(), async);
+            }
+
+            inline void append(const char *path, const strview_t& s, bool async = true) {
+                append(path, s.data(), s.size(), async);
+            }
+
+            inline void append(const char *path, const zcstring& s, bool async = true) {
+                append(path, s.cstr, s.len, async);
+            }
+
+            inline void clear(const char *path) {
+                if ((::truncate(path, 0) < 0) && errno != EEXIST) {
+                    throw suil_error::create("clearing file '", path, "' failed: ", errno_s);
+                }
+            }
+
+            template <typename __T>
+            inline void append(const char* path, const __T d, bool async = true) {
+                buffer_t b(15);
+                b << d;
+                append(path, b, async);
+            }
         }
 
         /**
@@ -1424,6 +1537,14 @@ namespace suil {
         inline void apply_config(__C& /* unsused parameter*/) {
         }
     }
+
+    template <typename __F>
+    template <typename __T>
+    inline zcstr<__F>::operator __T() const {
+        __T to;
+        utils::cast(*this, to);
+        return to;
+    };
 }
 
 namespace iod {

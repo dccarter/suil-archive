@@ -25,7 +25,7 @@ function(suil_iod_symbols name)
     endif()
 
     # set output path
-    set(${name}_OUTPUT ${CMAKE_SOURCE_DIR}/${name}_symbols.h)
+    set(${name}_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${name}_symbols.h)
     if (IOD_SYMBOLS_OUTPUT)
         set(${name}_OUTPUT ${IOD_SYMBOLS_OUTPUT})
     endif()

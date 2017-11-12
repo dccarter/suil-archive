@@ -6,7 +6,9 @@
 
 namespace suil {
 
-    static int   __notifyfd[2];
+    static int    __notifyfd[2];
+    unsigned long __sigmask{0};
+
     static void __sighandler(int sig) {
         sdebug("signal %d received", sig);
         if (write(__notifyfd[1], &sig, sizeof(sig)) < 0) {
@@ -20,6 +22,14 @@ namespace suil {
     bool application::check(const char *name) {
         zcstring tmp(name);
         return tasks.find(name) != tasks.end();
+    }
+
+    void application::killsig(int s) {
+        unsigned long tag = (unsigned long) 1L<<s;
+        if (!(tag&__sigmask)) {
+            signal(s, __sighandler);
+            __sigmask |= tag;
+        }
     }
 
     int application::start() {
@@ -57,7 +67,7 @@ namespace suil {
             }
         }
 
-        int code = EXIT_FAILURE;
+        int code = EXIT_SUCCESS;
         if (started) {
             /* wait for tasks to exit */
             debug("%u application tasks started", started);

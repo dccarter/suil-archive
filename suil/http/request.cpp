@@ -367,7 +367,7 @@ namespace suil {
             : file_t(mfmktemp((char *)path))
         {
             if (fd) {
-                this->path = zcstring(std::move(path));
+                this->path = std::move(zcstring(path));
             }
         }
 
