@@ -8,7 +8,7 @@ RUN apk  add openssh bash cmake sqlite sqlite-dev && \
          apk add bsd-compat-headers gcc g++ make util-linux-dev
 
 # Copy Binaries
-COPY artifacts/ /usr/local/
+COPY artifacts/ /usr/
 COPY sut        /usr/local/bin/sut
 COPY buildapp   /usr/local/bin/
 RUN  chmod +x   /usr/local/bin/buildapp

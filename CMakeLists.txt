@@ -106,8 +106,8 @@ if (SUIL_BUILD_DEV_PACKAGE)
     install(DIRECTORY suil/
             DESTINATION include/suil
             FILES_MATCHING PATTERN "*.h")
-    install(DIRECTORY cmake
-            DESTINATION share/suil
+    install(DIRECTORY cmake/
+            DESTINATION share/cmake/Modules
             FILES_MATCHING PATTERN "*.cmake")
     install(FILES ${CMAKE_BINARY_DIR}/.generated/suil/config.hpp
             DESTINATION include/suil)
