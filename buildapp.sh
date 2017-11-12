@@ -9,6 +9,7 @@ echo "build arguments: $@"
 # Ensure that this indeed is a Cmake project
 [ -d "$project" ] || {
     echo "Project $project does not exist"
+    ls
     exit 1
 }
 cd "$project"
@@ -16,6 +17,7 @@ cd "$project"
 # Ensure that this indeed is a Cmake project
 [ -f CMakeLists.txt ] || {
     echo "Current project is not a cmake project"
+    ls
     exit 1
 }
 
