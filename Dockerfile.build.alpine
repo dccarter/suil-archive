@@ -14,7 +14,7 @@ COPY buildapp   /usr/local/bin/
 RUN  chmod +x   /usr/local/bin/buildapp
 
 # User to use for building
-RUN adduser -Ms /bin/sh build
+RUN adduser -s /bin/sh -h /home/build/ build
 
 USER build
 WORKDIR /home/build
