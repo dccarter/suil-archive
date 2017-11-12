@@ -32,8 +32,8 @@ build:dev:
     - make clean
     - make -j2 install
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
-    - docker build --pull -t suilteam/suil-dev:latest" .
-    - docker push suilteam/suil-dev:latest"
+    - docker build --pull -t suilteam/suil-dev:latest .
+    - docker push suilteam/suil-dev:latest
     - cd ..
 
   cache:
@@ -75,8 +75,8 @@ build:release:devel:
     - make clean
     - make -j2 install package
     - cp -r ../Dockerfile.alpine ./Dockerfile
-    - docker build --pull -t suilteam/suil-dev:$SUIL_BUILD_VERSION" .
-    - docker push suilteam/suil-dev:$SUIL_BUILD_VERSION"
+    - docker build --pull -t suilteam/suil-dev:$SUIL_BUILD_VERSION .
+    - docker push suilteam/suil-dev:$SUIL_BUILD_VERSION
     # Build debug binaries
     - cmake ..
        -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION
@@ -127,7 +127,7 @@ build:release:prod:
     - make -j2 install package
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
     - docker build --pull -t "$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION" .
-    - docker push "$CI_REGISTRY_IMAGE/:$SUIL_BUILD_VERSION"
+    - docker push "$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION"
     - cd ..
 
   artifacts:
