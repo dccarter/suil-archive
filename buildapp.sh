@@ -1,19 +1,27 @@
 #!/bin/sh
 
 # Used to build suil applications
-echo 'build suil application `pwd`'
+echo "build suil application: $1"
+shift
+echo "build arguments: $@"
+
+# Ensure that this indeed is a Cmake project
+[ -f $1 ] || {
+    echo "Project $1 does not exist"
+    exit 1
+}
 
 # Ensure that this indeed is a Cmake project
 [ -f CMakeLists.txt ] || {
     echo "Current project is not a cmake project"
-    exit -1
+    exit 1
 }
 
 mkdir -p .build
 cd .build
 
 # run cmake
-cmake $@ .. || {
+cmake "$@" .. || {
     echo "cmake failed"
     exit 1
 }
