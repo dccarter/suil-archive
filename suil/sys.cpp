@@ -28,7 +28,7 @@ namespace suil {
         bool init() {
             static bool initialized{false};
             if (initialized) return false;
-            signal(SIGPIPE, SIG_IGN);
+            //signal(SIGPIPE, SIG_IGN);
 
             console::println("");
             console::println("Powered by suil C++1y web framework");
