@@ -70,7 +70,7 @@ build:release:devel:
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION
        -DSUIL_BUILD_TAG=$SUIL_VERSION_TAG
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
-       -DSUIL_BUILD_DEV_PACKAGE=OFF
+       -DSUIL_BUILD_DEV_PACKAGE=ON
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean
     - make -j2 install package
@@ -84,7 +84,7 @@ build:release:devel:
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION
        -DSUIL_BUILD_TAG=$SUIL_VERSION_TAG
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
-       -DSUIL_BUILD_DEV_PACKAGE=OFF
+       -DSUIL_BUILD_DEV_PACKAGE=ON
        -DCMAKE_BUILD_TYPE=Debug
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean
@@ -121,7 +121,7 @@ build:release:prod:
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION
        -DSUIL_BUILD_TAG=$SUIL_VERSION_TAG
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
-       -DSUIL_BUILD_DEV_PACKAGE=ON
+       -DSUIL_BUILD_DEV_PACKAGE=OFF
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean
     - make -j2 install package
