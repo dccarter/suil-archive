@@ -389,7 +389,7 @@ namespace suil {
 
                 for (auto h : res.headers) {
                     hbuf.append(h.first.cstr, h.first.len);
-                    hbuf.append(" : ", 1);
+                    hbuf.append(" : ", sizeofcstr(" : "));
                     hbuf.append(h.second.str, h.second.len);
                     hbuf.append("\r\n", 2);
                 }
