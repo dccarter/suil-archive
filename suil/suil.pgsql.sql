@@ -13,5 +13,6 @@ CREATE TABLE IF NOT EXISTS suildb.users (
     email TEXT UNIQUE NOT NULL,
     fullname VARCHAR(64) NOT NULL,
     salt VARCHAR(20) NOT NULL,
-    passwd VARCHAR(60) NOT NULL
+    passwd VARCHAR(60) NOT NULL,
+    roles TEXT[]
 );
