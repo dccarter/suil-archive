@@ -1466,8 +1466,8 @@ namespace suil {
             return zcstring(tmp.c_str(), tmp.size(), false).dup();
         }
 
-        inline zcstring&& tozcstr(const zcstring& str) {
-            return str.peek();
+        inline zcstring tozcstr(const zcstring& str) {
+            return std::move(str.peek());
         }
 
         inline zcstring tozcstr(const char *str) {
