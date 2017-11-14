@@ -174,6 +174,19 @@ namespace suil {
             const zcstring& appsalt;
         };
 
+        struct JwtUse {
+            typedef enum { HEADER, COOKIE} From;
+            JwtUse()
+                : use(From::HEADER)
+            {}
+            JwtUse(From from, const char *key)
+                : use(from),
+                  key(zcstring(key).dup())
+            {}
+
+            From use;
+            zcstring key{"Authorization"};
+        };
         struct jwt_authorization : LOGGER(dtag(AUTHENTICATION)) {
             struct Context{
                 Context()
@@ -206,6 +219,14 @@ namespace suil {
                     return authenticate(status_t::UNAUTHORIZED, msg);
                 }
 
+                inline void logout(const char* redirect = NULL) {
+                    if (redirect) {
+                        logout_url = zcstring(redirect).dup();
+                    }
+                    // do not send token, but send delete cookie if using cookie method
+                    send_tok = 0;
+                }
+
                 const zcstring& token() const  {
                     return actual_token;
                 }
@@ -224,19 +245,35 @@ namespace suil {
                 } __attribute__((packed));
                 zcstring token_hdr{};
                 zcstring actual_token{};
+                zcstring logout_url{};
             };
 
             void before(request& req, response& resp, Context& ctx) {
                 if (req.route().AUTHORIZE) {
-                    auto auth = req.header("Authorization");
-                    if (auth.empty()||
-                        strncasecmp(auth.data(), "Bearer ", 7)) {
-                        /* user is not authorized */
-                        authrequest(resp);
+                    zcstring tkhdr;
+                    if (use.use == JwtUse::HEADER) {
+                        auto auth = req.header(use.key);
+                        if (auth.empty() ||
+                            strncasecmp(auth.data(), "Bearer ", 7)) {
+                            /* user is not authorized */
+                            authrequest(resp);
+                        }
+                        /* temporary dup of the token */
+                        tkhdr = zcstring(auth.data(), auth.size(), false);
+                        ctx.actual_token = zcstring(&auth.data()[7], auth.size() - 7, false);
+                    }
+                    else {
+                        // token
+                        cookie_it cookies = req();
+                        auto auth = cookies[use.key];
+                        if (!auth) {
+                            /* user is not authorized */
+                            authrequest(resp);
+                        }
+                        tkhdr = auth;
+                        ctx.actual_token = auth;
                     }
 
-                    /* temporary dup of the token */
-                    ctx.actual_token = zcstring(&auth.data()[7], auth.size() - 7, false);
                     if (ctx.actual_token.len == 0) {
                         /* no need to proceed, token is invalid */
                         authrequest(resp);
@@ -263,7 +300,7 @@ namespace suil {
                         authrequest(resp, "Access to resource denied.");
                     }
 
-                    ctx.token_hdr = zcstring(auth.data(), auth.size(), false);
+                    ctx.token_hdr = tkhdr;
                     ctx.send_tok = 1;
                 }
             }
@@ -271,17 +308,40 @@ namespace suil {
             void after(request&, http::response& resp, Context& ctx) {
                 /* if authorized token should have been set */
                 if (ctx.send_tok) {
+                    zcstring tok{nullptr}, tok2{nullptr};
                     /* send token in header */
                     if (ctx.encode) {
                         /* encode the current json web-token*/
                         ctx.jwt.exp(time(NULL) + expiry);
                         zcstring encoded(ctx.jwt.encode(key));
-                        zcstring token(utils::catstr("Bearer ", encoded));
-                        resp.header("Authorization", token);
+                        tok = utils::catstr("Bearer ", encoded);
+                        tok2 = std::move(encoded);
                     }
                     else {
                         /* move header from request */
-                        resp.header("Authorization", ctx.token_hdr);
+                        tok = std::move(ctx.token_hdr);
+                    }
+
+                    if (use.use == JwtUse::HEADER) {
+                        resp.header(use.key.peek(), std::move(tok));
+                    }
+                    else {
+                        cookie_t cookie(use.key.cstr);
+                        cookie.domain(domain.peek());
+                        cookie.path(path.peek());
+                        if (tok2) {
+                            cookie.value(std::move(tok2));
+                        } else {
+                            cookie.value(std::move(tok));
+                        }
+                        cookie.expires(time(NULL) + expiry);
+                        resp.cookie(cookie);
+                    }
+                } else if(!ctx.logout_url.empty()) {
+                    resp.redirect(status_t::FOUND, ctx.logout_url.cstr);
+                    if (use.use == JwtUse::COOKIE) {
+                        // delete cookie
+                        delete_cookie(resp);
                     }
                 } else if (ctx.request_auth) {
                     /* send authentication request */
@@ -311,6 +371,22 @@ namespace suil {
                 if (tmp) {
                     authenticate = utils::catstr("Bear realm=\"",tmp, "\"");
                 }
+
+                /* configure domain */
+                tmp = opts.get(sym(domain), zcstring());
+                if (tmp) {
+                    domain = tmp.dup();
+                }
+
+                /* configure domain */
+                tmp = opts.get(sym(path), zcstring());
+                if (tmp) {
+                    path = tmp.dup();
+                }
+
+                if (opts.has(sym(jwt_token_use))) {
+                    use = opts.get(sym(jwt_token_use), use);
+                }
             }
 
             template <typename... __A>
@@ -327,6 +403,14 @@ namespace suil {
             }
 
         private:
+            inline void delete_cookie(response& resp) {
+                cookie_t cookie(use.key.cstr);
+                cookie.value("");
+                cookie.domain(domain.peek());
+                cookie.path(path.peek());
+                cookie.expires(time(NULL)-2);
+                resp.cookie(cookie);
+            }
             inline void authrequest(response& resp, const char *msg = "")
             {
                 resp.header("WWW-Authenticate", authenticate);
@@ -336,6 +420,10 @@ namespace suil {
             uint64_t  expiry{3600};
             zcstring  key;
             zcstring  authenticate;
+            JwtUse    use;
+            // cookie attributes
+            zcstring  domain{""};
+            zcstring  path{"/"};
         };
 
         namespace auth {

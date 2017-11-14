@@ -309,7 +309,14 @@ namespace suil {
 
         void router_t::before(request &req, response &resp) {
             char *url;
-            if (api_base.empty() || strncasecmp(req.url, api_base.c_str(), api_base.size()) == 0) {
+            zcstring tmp(req.url);
+            if (tmp.empty() || (tmp == "/")) {
+                // just use find as it
+                static const char *ROOT_URL = "/";
+                url = (char *) ROOT_URL;
+            }
+            else if (api_base.empty() || strncasecmp(req.url, api_base.c_str(), api_base.size()) == 0)
+            {
                 /* the request is an api` rule */
                 size_t index = api_base.empty()? 0: api_base.size();
                 url = &req.url[index];
@@ -384,7 +391,7 @@ namespace suil {
         void system_attrs::before(request &req, response &, Context &) {
             /* check for system attributes and apply appropriate actions */
             const route_attributes_t& attrs = req.route();
-            if (attrs.PARSE_COOKIES) {
+            if (cookies || attrs.PARSE_COOKIES) {
                 /* parse cookies if route uses cookies */
                 req.parse_cookies();
             }

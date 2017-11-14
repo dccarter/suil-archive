@@ -25,9 +25,8 @@ namespace suil {
             request_form_t(const request& req);
             void operator|(form_data_it_t f);
             void operator|(form_file_it_t f);
-            const zcstring&operator[](const char*);
+            const zcstring operator[](const char*);
             const upfile_t&operator()(const char*);
-
         private:
             bool find(zcstring& out, const char *name);
 

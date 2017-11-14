@@ -611,11 +611,11 @@ namespace suil {
             }
         }
 
-        const zcstring& request_form_t::operator[](const char *key) {
+        const zcstring request_form_t::operator[](const char *key) {
             zcstring tmp(key);
             const auto it = req.form.find(tmp);
             if (it != req.form.end()) {
-                return it->second;
+                return std::move(it->second.peek());
             }
             throw error::internal("form data not found in post form");
         }

@@ -535,6 +535,20 @@ namespace suil {
             void before(request& req, response&, Context&);
 
             void after(request&, http::response&, Context&);
+
+            template<typename __T>
+            void configure(__T& opts) {
+                cookies = opts.get(sym(cookies), false);
+            }
+
+            template <typename...__Opts>
+            void setup(__Opts... args) {
+                auto opts = iod::D(args...);
+                configure(opts);
+            }
+
+        private:
+            bool cookies{false};
         };
     }
 }

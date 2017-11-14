@@ -22,6 +22,9 @@ _authdb
 _cmdargs
 _keep_alive
 _data
+_cookies
+_domain
+_jwt_token_use
 
 # event bus
 _type

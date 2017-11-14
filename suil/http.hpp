@@ -68,7 +68,7 @@ namespace suil {
             return name_;
         }
 
-        inline void value(zcstring&& v) {
+        inline void value(zcstring v) {
             if (v != value_) {
                 value_ = std::move(v);
             }
@@ -87,23 +87,30 @@ namespace suil {
             return path_;
         }
 
+        inline void path(zcstring zc) {
+            if (zc != path_) {
+                path_ = std::move(zc);
+            }
+        }
+
         inline void path(const char *p) {
             zcstring zc(p);
-            if (zc != path_) {
-                path_ = zc.dup();
-            }
+            path(std::move(zc.dup()));
         }
 
         inline const zcstring& domain() const {
             return domain_;
         }
 
-        inline void domain(const char *d) {
-            zcstring zc(d);
+        inline void domain(zcstring zc) {
             if (zc != domain_) {
                 // this will destroy the current zc and copy the new one
-                domain_ = zc.dup();
+                domain_ = std::move(zc);
             }
+        }
+        inline void domain(const char* d) {
+            zcstring zc(d);
+            domain(std::move(zc).dup());
         }
 
         inline bool secure() const {
@@ -167,13 +174,17 @@ namespace suil {
             }
         }
 
-        const zcstring&& operator[](const char *name) {
-            zcstring key(name);
+        const zcstring&& operator[](const zcstring& key) {
             auto it = jar.find(key);
             if (it != jar.end()) {
                 return std::move(it->second.peek());
             }
             return std::move(zcstring(nullptr));
+        }
+
+        const zcstring&& operator[](const char *name) {
+            zcstring key{name};
+            return std::move((*this)[key]);
         }
 
     private:

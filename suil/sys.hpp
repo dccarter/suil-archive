@@ -594,6 +594,7 @@ namespace suil {
             len  = s.len;
             own  = s.own;
             hash = s.hash;
+            return *this;
         }
 
         zcstr dup() const {
@@ -602,10 +603,10 @@ namespace suil {
             return std::move(zcstr(utils::strndup(str, len), len, true));
         }
 
-        const zcstr peek() const {
+        zcstr peek() const {
             // this will return a dup of the string but as
             // just a reference or simple not owner
-            return zcstr(cstr, len, false);
+            return std::move(zcstr(cstr, len, false));
         }
 
         inline void toupper() {
@@ -1106,6 +1107,51 @@ namespace suil {
         int64_t ddline{-1};
     };
 
+    namespace __internal {
+        struct defer_ctx {
+            defer_ctx(std::function<void()> fn)
+                    : dctor(fn) {}
+
+            defer_ctx(const defer_ctx &) = delete;
+
+            defer_ctx &operator=(const defer_ctx &) = delete;
+
+            defer_ctx(defer_ctx &&) = delete;
+
+            defer_ctx &operator=(defer_ctx &&) = delete;
+
+            ~defer_ctx() {
+                if (dctor && !once) {
+                    once = true;
+                    dctor();
+                }
+            }
+
+        private:
+            std::function<void()> dctor;
+            bool once{false};
+        };
+
+        template <typename __R>
+        struct scoped_res {
+            scoped_res(__R& res)
+                : res(res)
+            {}
+            scoped_res(const scoped_res&) = delete;
+            scoped_res(scoped_res&&) = delete;
+            scoped_res&operator=(scoped_res&) = delete;
+            scoped_res&operator=(const scoped_res&) = delete;
+            ~scoped_res() {
+                res.close();
+            }
+            __R& res;
+        };
+    }
+
+// function call to end of block
+#define defer(n, x) suil::__internal::defer_ctx __##n {[&]() { x ; } }
+#define scoped(n, x) auto& n = x ; suil::__internal::scoped_res<decltype( n )> _##n { x }
+
     struct file_t {
         file_t(mfile);
         file_t(const char *, int, mode_t);
@@ -1420,7 +1466,7 @@ namespace suil {
             return zcstring(tmp.c_str(), tmp.size(), false).dup();
         }
 
-        inline zcstring tozcstr(const zcstring& str) {
+        inline zcstring&& tozcstr(const zcstring& str) {
             return str.peek();
         }
 
