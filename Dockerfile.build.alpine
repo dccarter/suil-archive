@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM bmv437/flynn-cli
 MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Install dependencies
