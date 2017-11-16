@@ -69,6 +69,7 @@ include_directories(deps)
 
 if (SUIL_BUILD_DEV_PACKAGE)
     configure_file(buildapp.sh ${CMAKE_BINARY_DIR}/buildapp COPYONLY)
+    configure_file(suilteam.ddns.net.crt ${CMAKE_BINARY_DIR}/suilteam.ddns.net.crt COPYONLY)
     install(DIRECTORY deps/libmill
             DESTINATION include
             FILES_MATCHING PATTERN "*.h")
