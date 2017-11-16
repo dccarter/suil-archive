@@ -18,7 +18,7 @@ COPY suilteam.ddns.net.crt /usr/local/share/ca-certificates/
 RUN  update-ca-certificates
 
 # Remove unnecessary installations
-RUN apk remove ca-certificates
+RUN apk del ca-certificates
 
 # User to use for building
 RUN adduser -s /bin/sh -h /home/build/ -D build
