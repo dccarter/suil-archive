@@ -136,7 +136,7 @@ namespace suil {
             return suil_error(ss.str());
         }
 
-        inline static const char* what(std::exception_ptr ex) {
+        inline static const char* msg(std::exception_ptr ex) {
             try {
                 if (ex) {
                     std::rethrow_exception(ex);
