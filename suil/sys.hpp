@@ -139,7 +139,7 @@ namespace suil {
         inline static const char* what(std::exception_ptr ex) {
             try {
                 if (ex) {
-                    throw std::rethrow_exception(ex);
+                    std::rethrow_exception(ex);
                 }
             }
             catch (const std::exception& e) {
