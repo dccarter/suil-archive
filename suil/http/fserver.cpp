@@ -110,7 +110,7 @@ namespace suil {
                     time_t if_mod = datetime(cc.data());
                     if (if_mod >= cf.last_mod) {
                         // file was not modified
-                        resp.end(status_t::NOT_MODIFIED);
+                        resp.end(Status::NOT_MODIFIED);
                         return;
                     }
                 }
@@ -148,7 +148,7 @@ namespace suil {
                     time_t if_mod = datetime(cc.data());
                     if (if_mod >= cf.last_mod) {
                         // file was not modified
-                        resp.end(status_t::NOT_MODIFIED);
+                        resp.end(Status::NOT_MODIFIED);
                         return;
                     }
                 }
@@ -195,7 +195,7 @@ namespace suil {
                 else {
                     resp.chunk(std::move(response::chunk_t(cf.data, cf.len)));
                 }
-                resp.end(status_t::OK);
+                resp.end(Status::OK);
             }
         }
 
@@ -226,7 +226,7 @@ namespace suil {
                 // build partial content chunk
                 if (from > to || from >= cf.len || to > cf.len) {
                     trace("requested range is out of bounds");
-                    resp.end(status_t::REQUEST_RANGE_INVALID);
+                    resp.end(Status::REQUEST_RANGE_INVALID);
                     return;
                 }
                 // add the range to the end of the ranges list
@@ -248,11 +248,11 @@ namespace suil {
                 b.appendf("bytes %lu-%lu/%lu", range.first, range.second-1, cf.len);
                 resp.header("Content-Range", b);
 
-                resp.end(status_t::PARTIAL_CONTENT);
+                resp.end(Status::PARTIAL_CONTENT);
             }
             else if (ranges.size() != 0) {
                 // multiple ranges specified, not supported for now
-                resp.end(status_t::NOT_ACCEPTABLE);
+                resp.end(Status::NOT_ACCEPTABLE);
             }
         }
 

@@ -371,8 +371,8 @@ namespace suil {
             }
         }
 
-        status_t request::receive_headers(server_stats_t& stats) {
-            status_t  status = status_t::OK;
+        Status request::receive_headers(server_stats_t& stats) {
+            Status  status = Status::OK;
             stage.reserve(1023);
 
             char *ptr = (char *) &stage[0];
@@ -383,7 +383,7 @@ namespace suil {
                     trace("%s - receiving headers failed: %s",
                           sock.id(), errno_s);
                     status = (errno == ETIMEDOUT)?
-                             status_t::REQUEST_TIMEOUT : status_t::INTERNAL_ERROR;
+                             Status::REQUEST_TIMEOUT : Status::INTERNAL_ERROR;
                     break;
                 }
                 stats.rx_bytes += len;
@@ -391,13 +391,13 @@ namespace suil {
                 if (!feed(ptr, len)) {
                     trace("%s - parsing headers failed: %s",
                             sock.id(), http_errno_name((enum http_errno) http_errno));
-                    status = status_t::BAD_REQUEST;
+                    status = Status::BAD_REQUEST;
                     break;
                 }
 
             } while(!headers_complete);
 
-            if (status == status_t::OK) {
+            if (status == Status::OK) {
                 // process the completed headers
                 status = process_headers();
             }
@@ -406,12 +406,12 @@ namespace suil {
             return status;
         }
 
-        status_t request::process_headers() {
+        Status request::process_headers() {
             if (headers.count("Content-Length"))
             {
                 if (content_length > config.max_body_len) {
                     trace("%s - body request too large: %d", sock.id(), content_length);
-                    return status_t::REQUEST_ENTITY_TOO_LARGE;
+                    return Status::REQUEST_ENTITY_TOO_LARGE;
                 }
                 has_body = 1;
             }
@@ -429,15 +429,15 @@ namespace suil {
                 if (!offload->valid()) {
                     trace("%s - error opening file(%s) to save body: %s",
                           sock.id(), offload->path.cstr, errno_s);
-                    return status_t::INTERNAL_ERROR;
+                    return Status::INTERNAL_ERROR;
                 }
             }
 
-            return status_t::OK;
+            return Status::OK;
         }
 
-        status_t request::receive_body(server_stats_t& stats) {
-            status_t status = status_t::OK;
+        Status request::receive_body(server_stats_t& stats) {
+            Status status = Status::OK;
             if (!has_body || body_complete) {
                 return status;
             }
@@ -450,8 +450,8 @@ namespace suil {
                 if (!sock.receive(&stage[0], len, config.connection_timeout)) {
                     trace("%s - receive failed: %s", sock.id(), errno_s);
                     status = (errno == ETIMEDOUT)?
-                             status_t::REQUEST_TIMEOUT:
-                             status_t::INTERNAL_ERROR;
+                             Status::REQUEST_TIMEOUT:
+                             Status::INTERNAL_ERROR;
                     break;
                 }
                 stats.rx_bytes += len;
@@ -460,20 +460,20 @@ namespace suil {
                 if (!feed(stage, len)) {
                     trace("%s - parsing failed: %s",
                           sock.id(), http_errno_name((enum http_errno )http_errno));
-                    status = status_t::BAD_REQUEST;
+                    status = Status::BAD_REQUEST;
                     break;
                 }
                 left -= len;
                 // no need to reset buffer
             } while (!body_complete && left > 0);
 
-            if (status == status_t::OK && !body_complete) {
+            if (status == Status::OK && !body_complete) {
                 trace("%s - parsing failed, body not complete",
                          sock.id(), port());
-                status = status_t::BAD_REQUEST;
+                status = Status::BAD_REQUEST;
             }
 
-            if (status == status_t::OK && offload == nullptr) {
+            if (status == Status::OK && offload == nullptr) {
                 body_read = 1;
             }
 

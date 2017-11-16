@@ -204,7 +204,7 @@ namespace suil {
                     request_auth = 0;
                 }
 
-                inline status_t authenticate(status_t status, const char *msg = NULL) {
+                inline Status authenticate(Status status, const char *msg = NULL) {
                     send_tok = 0;
                     encode   = 0;
                     request_auth = 1;
@@ -215,8 +215,8 @@ namespace suil {
                     return status;
                 }
 
-                inline status_t authenticate(const char *msg = NULL) {
-                    return authenticate(status_t::UNAUTHORIZED, msg);
+                inline Status authenticate(const char *msg = NULL) {
+                    return authenticate(Status::UNAUTHORIZED, msg);
                 }
 
                 inline void logout(const char* redirect = NULL) {
@@ -338,7 +338,7 @@ namespace suil {
                         resp.cookie(cookie);
                     }
                 } else if(!ctx.logout_url.empty()) {
-                    resp.redirect(status_t::FOUND, ctx.logout_url.cstr);
+                    resp.redirect(Status::FOUND, ctx.logout_url.cstr);
                     if (use.use == JwtUse::COOKIE) {
                         // delete cookie
                         delete_cookie(resp);

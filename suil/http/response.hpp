@@ -21,79 +21,79 @@ namespace suil {
         define_log_tag(HTTP_RESP);
         struct response : LOGGER(dtag(HTTP_RESP)) {
             response()
-                : response(status_t::OK)
+                : response(Status::OK)
             {}
 
-            response(const status_t status)
+            response(const Status status)
                 : body(0),
                   status(status)
             {}
 
             response(const std::string& resp)
                 : body(resp.size()+2),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body.append(resp.data(), resp.size());
             }
 
             response(const zcstring& resp)
                 : body(resp.len+2),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body.append(resp.cstr, resp.len);
             }
 
             response(const char* resp)
                 : body(0),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body << resp;
             }
 
             response(const int64_t& data)
                 : body(15),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body << data;
             }
 
             response(const int& data)
                 : body(15),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body << data;
             }
 
             response(const unsigned& data)
                 : body(15),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body << data;
             }
 
             response(const uint64_t& data)
                 : body(15),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body << data;
             }
 
             response(const double& data)
                 : body(15),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 body << data;
             }
 
             response(const float& data)
                     : body(15),
-                      status(status_t::OK)
+                      status(Status::OK)
             {
                 body << data;
             }
 
 
-            response(status_t status, buffer_t& body)
+            response(Status status, buffer_t& body)
                 : body(0),
                   status(status)
             {
@@ -103,7 +103,7 @@ namespace suil {
             template<typename _T>
             response(const _T& data)
                 : body(0),
-                  status(status_t::OK)
+                  status(Status::OK)
             {
                 set_content_type("application/json");
                 body << iod::json_encode(data).c_str();
@@ -113,9 +113,9 @@ namespace suil {
 
             response&operator=(response&&);
 
-            void end(status_t status = status_t::OK);
+            void end(Status status = Status::OK);
 
-            void end(status_t status, buffer_t& body);
+            void end(Status status, buffer_t& body);
 
             void set_content_type(const char *type) {
                 header("Content-Type", type);
@@ -215,7 +215,7 @@ namespace suil {
 
             void end(proto_handler_t p);
 
-            inline void redirect(status_t status, const char *location) {
+            inline void redirect(Status status, const char *location) {
                 header("Location", location);
                 end(status);
             }
@@ -275,7 +275,7 @@ namespace suil {
             zcstr_map_t<zcstring>   headers;
             cookie_jar_t            cookies;
             buffer_t                body;
-            status_t                status;
+            Status                status;
             bool                    completed{false};
             proto_handler_t         proto{nullptr};
         };

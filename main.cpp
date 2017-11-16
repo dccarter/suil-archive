@@ -90,7 +90,7 @@ struct http_task : public app_task {
                 f.save("/home/dc/app");
                 return false;
             };
-            return http::status_t::OK;
+            return http::Status::OK;
         });
     }
 

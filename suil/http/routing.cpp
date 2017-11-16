@@ -364,7 +364,7 @@ namespace suil {
                     b += "/";
                     res.header("Location", b);
                 }
-                res.end(status_t::MOVED_PERMANENTLY);
+                res.end(Status::MOVED_PERMANENTLY);
                 return;
             }
 

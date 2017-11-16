@@ -122,7 +122,7 @@ namespace suil {
             friend struct system_attrs;
             friend struct request_form_t;
 
-            status_t process_headers();
+            Status process_headers();
             virtual int handle_body_part(const char *at, size_t length);
             virtual int msg_complete();
             bool parse_cookies();
@@ -142,8 +142,8 @@ namespace suil {
                 return any_method(m) || any_method(mm...);
             }
 
-            status_t receive_headers(server_stats_t& stats);
-            status_t receive_body(server_stats_t& stats);
+            Status receive_headers(server_stats_t& stats);
+            Status receive_body(server_stats_t& stats);
 
             zcstr_map_t<zcstring>    cookies;
             bool                     cookied{false};

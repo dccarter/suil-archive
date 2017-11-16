@@ -136,6 +136,18 @@ namespace suil {
             return suil_error(ss.str());
         }
 
+        inline static const char* what(std::exception_ptr ex) {
+            try {
+                if (ex) {
+                    throw std::rethrow_exception(ex);
+                }
+            }
+            catch (const std::exception& e) {
+                return e.what();
+            }
+            return "";
+        }
+
     private:
         suil_error(std::string str)
             : std::runtime_error(str)

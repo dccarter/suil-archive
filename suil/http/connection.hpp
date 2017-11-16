@@ -233,15 +233,15 @@ namespace suil {
 
             void start() {
 
-                status_t  status = status_t::OK;
+                Status  status = Status::OK;
                 request req(sock, config);
 
                 trace("%s - starting connection handler", sock.id());
                 do {
                     // receive request headers
                     status = req.receive_headers(stats);
-                    if (status != status_t::OK) {
-                        if (status != status_t::REQUEST_TIMEOUT) {
+                    if (status != Status::OK) {
+                        if (status != Status::REQUEST_TIMEOUT) {
                             // receiving headers failed, send back failure
                             response res(status);
                             send_response(req, res, true);
@@ -255,7 +255,7 @@ namespace suil {
 
                     // receive request body
                     status = req.receive_body(stats);
-                    if (status != status_t::OK) {
+                    if (status != Status::OK) {
                         // receiving body failed, send back error
                         response res(status);
                         send_response(req, res, true);
@@ -265,7 +265,7 @@ namespace suil {
                     // handle received request
                     bool err{false};
                     int64_t start = mnow();
-                    response res(status_t::OK);
+                    response res(Status::OK);
                     detail::context<__Mws...> ctx =
                             detail::context<__Mws...>();
 
@@ -301,21 +301,21 @@ namespace suil {
                         err = true;
                     }
                     catch (std::exception& ex) {
-                        res.status = status_t::INTERNAL_ERROR;
+                        res.status = Status::INTERNAL_ERROR;
                         res.body.reset(0, true);
                         res.body.append(ex.what());
                         err = true;
                         debug("request unhandled error: %s", ex.what());
                     }
                     catch (...) {
-                        res.status = status_t::INTERNAL_ERROR;
+                        res.status = Status::INTERNAL_ERROR;
                         res.body.reset(0, true);
                         err = true;
                         debug("request unhandled unknown error");
                     }
 
                     send_response(req, res, err);
-                    if (res.status == status_t::SWITCHING_PROTOCOLS && res()) {
+                    if (res.status == Status::SWITCHING_PROTOCOLS && res()) {
                         // easily switch protocols
                         res()(req, res);
                         close_ = true;
@@ -352,7 +352,7 @@ namespace suil {
 
                 buffer_t hbuf(2047);
 
-                const char *status = status_text(res.status);
+                const char *status = Statusext(res.status);
                 hbuf.append(status);
                 hbuf.append("\r\n", 2);
                 if (!err) {
@@ -381,7 +381,7 @@ namespace suil {
                     close_ = true;
                 }
 
-                if (res.status > status_t::BAD_REQUEST && !res.body) {
+                if (res.status > Status::BAD_REQUEST && !res.body) {
                     res.body.append((status+9));
                 }
                 // flush cookies.

@@ -31,15 +31,15 @@ namespace suil {
             body.clear();
             cookies.clear();
             chunks.clear();
-            status = status_t::OK;
+            status = Status::OK;
         }
 
-        void response::end(status_t status) {
+        void response::end(Status status) {
             this->status = status;
             completed = true;
         }
 
-        void response::end(status_t status, buffer_t& body) {
+        void response::end(Status status, buffer_t& body) {
             if (this->body)
                 this->body << body;
             else
@@ -51,7 +51,7 @@ namespace suil {
 
         void response::end(proto_handler_t p) {
             proto = p;
-            status = status_t::SWITCHING_PROTOCOLS;
+            status = Status::SWITCHING_PROTOCOLS;
         }
 
         void response::flush_cookies() {

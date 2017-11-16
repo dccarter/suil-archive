@@ -25,21 +25,21 @@ namespace suil {
             apis.emplace(id, *this);
         }
 
-        status_t websock::handshake(const request &req, response &res, websock_api &api, size_t size) {
+        Status websock::handshake(const request &req, response &res, websock_api &api, size_t size) {
             SHA_CTX         sctx;
             strview_t  key, version;
 
             key = req.header("Sec-WebSocket-Key");
             if (key.empty()) {
                 // we could throw an error here
-                return status_t::BAD_REQUEST;
+                return Status::BAD_REQUEST;
             }
 
             version = req.header("Sec-WebSocket-Version");
             if (version.empty() || version != "13") {
                 // currently only version 13 supported
                 res.header("Sec-WebSocket-Version", "13");
-                return status_t::BAD_REQUEST;
+                return Status::BAD_REQUEST;
             }
 
             buffer_t     buf(127);
@@ -70,7 +70,7 @@ namespace suil {
             });
 
             // return the switching protocols
-            return status_t::SWITCHING_PROTOCOLS;
+            return Status::SWITCHING_PROTOCOLS;
         }
 
         bool websock::receive_opcode(header& h) {

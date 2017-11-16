@@ -217,7 +217,7 @@ namespace suil {
             Unknown
         };
 
-        enum class status_t : int {
+        enum class Status : int {
             CONTINUE			        = 100,
             SWITCHING_PROTOCOLS		    = 101,
             OK				            = 200,
@@ -261,129 +261,129 @@ namespace suil {
         };
 
         static inline const char *
-        status_text(status_t status)
+        Statusext(Status status)
         {
             const char		*r;
 
             switch (status) {
-                case status_t::CONTINUE:
+                case Status::CONTINUE:
                     r = "HTTP/1.1 100 Continue";
                     break;
-                case status_t::SWITCHING_PROTOCOLS:
+                case Status::SWITCHING_PROTOCOLS:
                     r = "HTTP/1.1 101 Switching Protocols";
                     break;
-                case status_t::OK:
+                case Status::OK:
                     r = "HTTP/1.1 200 OK";
                     break;
-                case status_t::CREATED:
+                case Status::CREATED:
                     r = "HTTP/1.1 201 Created";
                     break;
-                case status_t::ACCEPTED:
+                case Status::ACCEPTED:
                     r = "HTTP/1.1 202 Accepted";
                     break;
-                case status_t::NON_AUTHORITATIVE:
+                case Status::NON_AUTHORITATIVE:
                     r = "HTTP/1.1 203 Non-Authoritative Information";
                     break;
-                case status_t::NO_CONTENT:
+                case Status::NO_CONTENT:
                     r = "HTTP/1.1 204 No Content";
                     break;
-                case status_t::RESET_CONTENT:
+                case Status::RESET_CONTENT:
                     r = "HTTP/1.1 205 Reset Content";
                     break;
-                case status_t::PARTIAL_CONTENT:
+                case Status::PARTIAL_CONTENT:
                     r = "HTTP/1.1 206 Partial Content";
                     break;
-                case status_t::MULTIPLE_CHOICES:
+                case Status::MULTIPLE_CHOICES:
                     r = "HTTP/1.1 300 Multiple Choices";
                     break;
-                case status_t::MOVED_PERMANENTLY:
+                case Status::MOVED_PERMANENTLY:
                     r = "HTTP/1.1 301 Moved Permanently";
                     break;
-                case status_t::FOUND:
+                case Status::FOUND:
                     r = "HTTP/1.1 302 Found";
                     break;
-                case status_t::SEE_OTHER:
+                case Status::SEE_OTHER:
                     r = "HTTP/1.1 303 See Other";
                     break;
-                case status_t::NOT_MODIFIED:
+                case Status::NOT_MODIFIED:
                     r = "HTTP/1.1 304 Not Modified";
                     break;
-                case status_t::USE_PROXY:
+                case Status::USE_PROXY:
                     r = "HTTP/1.1 305 Use Proxy";
                     break;
-                case status_t::TEMPORARY_REDIRECT:
+                case Status::TEMPORARY_REDIRECT:
                     r = "HTTP/1.1 307 Temporary Redirect";
                     break;
-                case status_t::BAD_REQUEST:
+                case Status::BAD_REQUEST:
                     r = "HTTP/1.1 400 Bad Request";
                     break;
-                case status_t::UNAUTHORIZED:
+                case Status::UNAUTHORIZED:
                     r = "HTTP/1.1 401 Unauthorized";
                     break;
-                case status_t::PAYMENT_REQUIRED:
+                case Status::PAYMENT_REQUIRED:
                     r = "HTTP/1.1 402 Payment Required";
                     break;
-                case status_t::FORBIDDEN:
+                case Status::FORBIDDEN:
                     r = "HTTP/1.1 403 Forbidden";
                     break;
-                case status_t::NOT_FOUND:
+                case Status::NOT_FOUND:
                     r = "HTTP/1.1 404 Not Found";
                     break;
-                case status_t::METHOD_NOT_ALLOWED:
+                case Status::METHOD_NOT_ALLOWED:
                     r = "HTTP/1.1 405 method_t Not Allowed";
                     break;
-                case status_t::NOT_ACCEPTABLE:
+                case Status::NOT_ACCEPTABLE:
                     r = "HTTP/1.1 406 Not Acceptable";
                     break;
-                case status_t::PROXY_AUTH_REQUIRED:
+                case Status::PROXY_AUTH_REQUIRED:
                     r = "HTTP/1.1 407 Proxy Authentication Required";
                     break;
-                case status_t::REQUEST_TIMEOUT:
+                case Status::REQUEST_TIMEOUT:
                     r = "HTTP/1.1 408 Request Time-out";
                     break;
-                case status_t::CONFLICT:
+                case Status::CONFLICT:
                     r = "HTTP/1.1 409 Conflict";
                     break;
-                case status_t::GONE:
+                case Status::GONE:
                     r = "HTTP/1.1 410 Gone";
                     break;
-                case status_t::LENGTH_REQUIRED:
+                case Status::LENGTH_REQUIRED:
                     r = "HTTP/1.1 411 Length Required";
                     break;
-                case status_t::PRECONDITION_FAILED:
+                case Status::PRECONDITION_FAILED:
                     r = "HTTP/1.1 412 Precondition Failed";
                     break;
-                case status_t::REQUEST_ENTITY_TOO_LARGE:
+                case Status::REQUEST_ENTITY_TOO_LARGE:
                     r = "HTTP/1.1 413 Request Entity Too Large";
                     break;
-                case status_t::REQUEST_URI_TOO_LARGE:
+                case Status::REQUEST_URI_TOO_LARGE:
                     r = "HTTP/1.1 414 Request-URI Too Large";
                     break;
-                case status_t::UNSUPPORTED_MEDIA_TYPE:
+                case Status::UNSUPPORTED_MEDIA_TYPE:
                     r = "HTTP/1.1 415 Unsupported Media Type";
                     break;
-                case status_t::REQUEST_RANGE_INVALID:
+                case Status::REQUEST_RANGE_INVALID:
                     r = "HTTP/1.1 416 Requested range not satisfiable";
                     break;
-                case status_t::EXPECTATION_FAILED:
+                case Status::EXPECTATION_FAILED:
                     r = "HTTP/1.1 417 Expectation Failed";
                     break;
-                case status_t::INTERNAL_ERROR:
+                case Status::INTERNAL_ERROR:
                     r = "HTTP/1.1 500 Internal Server Error";
                     break;
-                case status_t::NOT_IMPLEMENTED:
+                case Status::NOT_IMPLEMENTED:
                     r = "HTTP/1.1 501 Not Implemented";
                     break;
-                case status_t::BAD_GATEWAY:
+                case Status::BAD_GATEWAY:
                     r = "HTTP/1.1 502 Bad Gateway";
                     break;
-                case status_t::SERVICE_UNAVAILABLE:
+                case Status::SERVICE_UNAVAILABLE:
                     r = "HTTP/1.1 503 Service Unavailable";
                     break;
-                case status_t::GATEWAY_TIMEOUT:
+                case Status::GATEWAY_TIMEOUT:
                     r = "HTTP/1.1 504 Gateway Time-out";
                     break;
-                case status_t::BAD_VERSION:
+                case Status::BAD_VERSION:
                     r = "HTTP/1.1 505 HTTP Version not supported";
                     break;
                 default:
@@ -471,19 +471,19 @@ namespace suil {
 
         struct exception {
 
-            exception(status_t status, const std::string& what)
+            exception(Status status, const std::string& what)
                 : status_(status),
                   what_(what.size())
             {
                 what_ << what;
             }
 
-            exception(status_t status, buffer_t& what)
+            exception(Status status, buffer_t& what)
                 : status_(status),
                   what_(std::move(what))
             {}
             
-            exception(status_t status, const char* what)
+            exception(Status status, const char* what)
                 : status_(status),
                   what_(0)
             {
@@ -504,7 +504,7 @@ namespace suil {
                 return *this;
             }
 
-            status_t status() const {
+            Status status() const {
                 return status_;
             }
             
@@ -513,7 +513,7 @@ namespace suil {
             }
 
         private:
-            status_t    status_;
+            Status    status_;
             buffer_t    what_;
         };
 
@@ -529,12 +529,12 @@ namespace suil {
             }                                               \
             inline auto err() { return exception(code, ""); }
 
-            HTTP_ERROR(status_t::BAD_REQUEST, bad_request)
-            HTTP_ERROR(status_t::UNAUTHORIZED, unauthorized)
-            HTTP_ERROR(status_t::FORBIDDEN, forbiden)
-            HTTP_ERROR(status_t::NOT_FOUND, not_found)
-            HTTP_ERROR(status_t::INTERNAL_ERROR, internal)
-            HTTP_ERROR(status_t::NOT_IMPLEMENTED, not_implemented)
+            HTTP_ERROR(Status::BAD_REQUEST, bad_request)
+            HTTP_ERROR(Status::UNAUTHORIZED, unauthorized)
+            HTTP_ERROR(Status::FORBIDDEN, forbiden)
+            HTTP_ERROR(Status::NOT_FOUND, not_found)
+            HTTP_ERROR(Status::INTERNAL_ERROR, internal)
+            HTTP_ERROR(Status::NOT_IMPLEMENTED, not_implemented)
 
 #undef  HTTP_ERROR
         }

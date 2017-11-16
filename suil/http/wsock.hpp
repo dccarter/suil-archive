@@ -126,7 +126,7 @@ namespace suil {
         protected:
             friend inline void
             ws_handshake(const request&, response&, websock_api& api);
-            static status_t handshake(const request&, response&, websock_api&, size_t);
+            static Status handshake(const request&, response&, websock_api&, size_t);
 
             websock(sock_adaptor& adaptor, websock_api& api, size_t size = 0)
                 : sock(adaptor),
@@ -185,7 +185,7 @@ namespace suil {
 
         template <typename __T = __Void>
         inline void ws_handshake(const request& req, response& res, websock_api& api) {
-            status_t  s = websock::handshake(req, res, api, sizeof(__T));
+            Status  s = websock::handshake(req, res, api, sizeof(__T));
             res.end(s);
         }
 

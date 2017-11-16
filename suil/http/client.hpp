@@ -215,8 +215,8 @@ namespace suil {
                     body >> res;
                 }
 
-                inline status_t status() const {
-                    return (status_t) status_code;
+                inline Status status() const {
+                    return (Status) status_code;
                 }
 
                 zcstring redirect() const {
@@ -242,7 +242,7 @@ namespace suil {
                 }
 
                 operator bool() {
-                    return status() == status_t::OK;
+                    return status() == Status::OK;
                 }
 
                 const strview_t contenttype() const;
@@ -491,7 +491,7 @@ namespace suil {
             inline client::response perform(method_t m, session::handle_t& h, const char *u, request_builder_t b,
                                             response_writer_t rd = nullptr) {
                 auto resp = h.sess.perform(h, m, u, b, rd);
-                if (resp.status() == status_t::TEMPORARY_REDIRECT) {
+                if (resp.status() == Status::TEMPORARY_REDIRECT) {
                 }
 
                 return std::move(resp);

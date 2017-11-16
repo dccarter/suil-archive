@@ -4,7 +4,7 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 # Install dependencies
 RUN apk update
 RUN apk  add openssh bash cmake sqlite sqlite-dev docker && \
-         apk add openssl libressl-dev postgresql-dev && \
+         apk add openssl libressl-dev postgresql-dev ca-certificates && \
          apk add bsd-compat-headers gcc g++ make util-linux-dev
 
 # Copy Binaries
@@ -12,6 +12,13 @@ COPY artifacts/ /usr/
 COPY sut        /usr/local/bin/sut
 COPY buildapp   /usr/local/bin/
 RUN  chmod +x   /usr/local/bin/buildapp
+
+# Add Suilteam certificate
+COPY suilteam.ddns.net.crt /usr/local/share/ca-certificates/
+RUN  update-ca-certificates
+
+# Remove unnecessary installations
+RUN apk remove ca-certificates
 
 # User to use for building
 RUN adduser -s /bin/sh -h /home/build/ -D build

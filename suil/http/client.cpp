@@ -389,10 +389,10 @@ namespace suil {
 
             void session::connect(handle_t &h, zcstr_map_t<zcstring> hdrs) {
                 response resp = std::move(perform(h, method_t::Connect, "/"));
-                if (resp.status() != status_t::OK) {
+                if (resp.status() != Status::OK) {
                     /* connecting to server failed */
                     throw suil_error::create("sending CONNECT to '", host.cstr, "' failed: ",
-                            http::status_text(resp.status()));
+                            http::Statusext(resp.status()));
                 }
 
                 /* cleanup request and return it fresh */
