@@ -7,6 +7,7 @@
 #include <suil/sql/pgsql.hpp>
 #include <suil/app.hpp>
 #include <suil/http/client.hpp>
+#include <suil/email.hpp>
 
 using  namespace suil;
 using  namespace suil::http;
@@ -118,8 +119,8 @@ int main(int argc, const char *argv[])
 
     application app("demo");
     /* setup logging options */
-    log::setup(opt(verbose, opts.verbose),
-               opt(name, "demo"));
+    log::setup(opt(name, "demo"));
+
 
     /*auto browser = client::load("http://browser.dc1.suilteam.com");
     {

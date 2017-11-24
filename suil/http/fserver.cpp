@@ -58,8 +58,8 @@ namespace suil {
             mime(".midi","audio/x-midi");
             mime(".mp3", "audio/mpeg");
             mime(".ogg", "audio/vorbis, application/ogg");
-            mime("ra",   "audio/x-pn-realaudio, audio/vnd.rn-realaudio");
-            mime("ram",  "audio/x-pn-realaudio, audio/vnd.rn-realaudio");
+            mime(".ra",   "audio/x-pn-realaudio, audio/vnd.rn-realaudio");
+            mime(".ram",  "audio/x-pn-realaudio, audio/vnd.rn-realaudio");
             mime(".wav", "audio/wav, audio/x-wav");
 
             // Other common mime types

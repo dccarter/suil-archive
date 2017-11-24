@@ -882,4 +882,61 @@ namespace suil {
 
         return std::move(zcstring(OUT).dup());
     }
+
+    const char *utils::mimetype(const zcstring filename) {
+        const char *ext = strrchr(filename.cstr, '.');
+        static zcstr_map_t<const char*> mimetypes = {
+            {".html", "text/html"},
+            {".css",  "text/css"},
+            {".csv",  "text/csv"},
+            {".txt",  "text/plain"},
+            {".sgml", "text/sgml"},
+            {".tsv",  "text/tab-separated-values"},
+            // add compressed mime types
+            {".bz",   "application/x-bzip"},
+            {".bz2",  "application/x-bzip2"},
+            {".gz",   "application/x-gzip"},
+            {".tgz",  "application/x-tar"},
+            {".tar",  "application/x-tar"},
+            {".zip",  "application/zip, application/x-compressed-zip"},
+            {".7z",   "application/zip, application/x-compressed-zip"},
+            // add image mime types
+            {".jpg",  "image/jpeg"},
+            {".png",  "image/png"},
+            {".svg",  "image/svg+xml"},
+            {".gif",  "image/gif"},
+            {".bmp",  "image/bmp"},
+            {".tiff", "image/tiff"},
+            {".ico",  "image/x-icon"},
+            // add video mime types
+            {".avi",  "video/avi"},
+            {".mpeg", "video/mpeg"},
+            {".mpg",  "video/mpeg"},
+            {".mp4",  "video/mp4"},
+            {".qt",   "video/quicktime"},
+            // add audio mime types
+            {".au",   "audio/basic"},
+            {".midi", "audio/x-midi"},
+            {".mp3",  "audio/mpeg"},
+            {".ogg",  "audio/vorbis, application/ogg"},
+            {".ra",   "audio/x-pn-realaudio, audio/vnd.rn-realaudio"},
+            {".ram",  "audio/x-pn-realaudio, audio/vnd.rn-realaudio"},
+            {".wav",  "audio/wav, audio/x-wav"},
+            // Other common mime types
+            {".json", "application/json"},
+            {".js",   "application/javascript"},
+            {".ttf",  "font/ttf"},
+            {".xhtml","application/xhtml+xml"},
+            {".xml",  "application/xml"}
+        };
+
+        if (ext != nullptr) {
+            zcstring tmp(ext);
+            auto it = mimetypes.find(tmp);
+            if (it != mimetypes.end())
+                return it->second;
+        }
+
+        return "text/plain";
+    }
 }

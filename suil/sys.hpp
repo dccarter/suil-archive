@@ -804,11 +804,11 @@ namespace suil {
     struct base64 {
         static zcstr<> encode(const uint8_t *, size_t);
 
-        static zcstr<> encode(zcstr<>& str) {
+        static zcstr<> encode(const zcstr<>& str) {
             return encode((const uint8_t *) str.cstr, str.len);
         }
 
-        static zcstr<> encode(std::string& str) {
+        static zcstr<> encode(const std::string& str) {
             return encode((const uint8_t *) str.data(), str.size());
         }
 
@@ -1594,6 +1594,8 @@ namespace suil {
         template<typename __C>
         inline void apply_config(__C& /* unsused parameter*/) {
         }
+
+        const char *mimetype(const zcstring filename);
     }
 
     template <typename __F>
