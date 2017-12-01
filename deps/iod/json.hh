@@ -48,6 +48,9 @@ namespace iod {
 
     inline std::string json_encode(const json_string &o);
 
+    struct jsonvalue {
+    };
+
     namespace json_internals {
 
         struct external_char_stream {
@@ -187,9 +190,14 @@ namespace iod {
 
         // Json encoder.
         // =============================================
-        template<typename T, typename S>
+        template<typename T, typename S, typename  std::enable_if<!std::is_base_of<jsonvalue, T>::value>::type* = nullptr>
         inline void json_encode_(const T &t, S &ss) {
             ss << t;
+        }
+
+        template<typename T, typename S, typename  std::enable_if<std::is_base_of<jsonvalue, T>::value>::type* = nullptr>
+        inline void json_encode_(const T &t, S &ss) {
+            t.encjv(ss);
         }
 
         template<typename S>
@@ -238,28 +246,25 @@ namespace iod {
             ss << ']';
         }
 
-        template <typename T>
-        inline bool json_ignore(const typename std::enable_if<std::is_arithmetic<T>::value, T>::type&) {
+        template <typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
+        inline bool json_ignore(const T&) {
             return false;
         }
 
-        template <typename T>
-        inline bool json_is_empty(
-                typename  std::enable_if<(std::is_same<const char*, T>::value||std::is_same<char*, T>::value), T>::type v)
-        {
+        template <typename T,
+                typename std::enable_if<(std::is_same<const char*, T>::value||std::is_same<char*, T>::value)>::type* = nullptr>
+        inline bool json_is_empty(T v) {
             return v == nullptr || strlen(v) == 0;
         }
 
-        template <typename T>
-        inline bool json_is_empty(
-                const typename  std::enable_if<!(std::is_same<const char*, T>::value||std::is_same<char*, T>::value), T>::type& v
-        )
-        {
+        template <typename T,
+                typename std::enable_if<!(std::is_same<const char*, T>::value||std::is_same<char*, T>::value)>::type* = nullptr>
+        inline bool json_is_empty(const T& v) {
             return v.empty();
         }
 
-        template <typename T>
-        inline bool json_ignore(const typename std::enable_if<!std::is_arithmetic<T>::value, T>::type& v) {
+        template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value>::type* = nullptr>
+        inline bool json_ignore(const T& v) {
             return json_is_empty<T>(v);
         }
 
@@ -298,6 +303,13 @@ namespace iod {
         template<typename T>
         inline fill_<T> fill(T &t) { return fill_<T>(t); }
 
+        template <typename T>
+        struct generic_filler{
+            generic_filler(T& t)
+                    : t(t)
+            {}
+            T& t;
+        };
 
         struct json_parser {
             struct spaces_ {
@@ -338,6 +350,86 @@ namespace iod {
                 err << "^^^" << std::endl;
                 format_error(err, message...);
                 return std::runtime_error(err.str());
+            }
+
+            struct jdecit {
+                jdecit(json_internals::json_parser& p)
+                        : p(p),
+                          pos(p.pos)
+                {}
+
+                operator bool() const {
+                    return !empty();
+                }
+
+                operator char() const {
+                    if (!empty()) return p.str[pos];
+                    return '\0';
+                }
+
+                jdecit&operator++() {
+                    if (empty()) pos++;
+                    return *this;
+                }
+
+                char next(char term = '\0') {
+                    char c = p.str[pos];
+                    if (c == term) {
+                        return '\0';
+                    }
+                    pos++;
+                    return c;
+                }
+
+                const char *start() {
+                    return &p.str[p.pos];
+                }
+
+                size_t size() {
+
+                    if (_size == 0) {
+                        int start = p.pos;
+                        int end = p.pos;
+
+                        while (!p.eof()) {
+                            while (p.str[end] != '"')
+                                end++;
+
+                            // Count the prev backslashes.
+                            int sb = end - 1;
+                            while (sb >= 0 and p.str[sb] == '\\')
+                                sb--;
+
+                            if ((end - sb) % 2) break;
+                            else
+                                end++;
+                        }
+                        pos = end;
+                        _size = end-start;
+                    }
+
+                    return _size;
+                }
+
+                bool empty(char c = '\0') const {
+                    return p.str[pos] == '\0' || p.str[pos] != c;
+                }
+
+                ~jdecit() {
+                    p.pos = pos;
+                }
+
+            private:
+                json_internals::json_parser& p;
+                int pos;
+                int _size{0};
+            };
+
+            template<typename T>
+            inline json_parser& fill(generic_filler<T>& gf) {
+                jdecit it(*this);
+                T::decjv(it, gf.t);
+                return *this;
             }
 
             inline json_parser &fill(std::string &t) {
@@ -556,7 +648,6 @@ namespace iod {
                 return *this;
             }
 
-
             // Fill a json_string object with the next json entity.
             inline json_parser &operator>>(json_string &t) {
                 int start = pos;
@@ -603,6 +694,11 @@ namespace iod {
                 return fill(t.r);
             }
 
+            template<typename T>
+            inline json_parser &operator>>(generic_filler<T>&& t) {
+                return fill(t);
+            }
+
             inline json_parser &operator>>(char t) {
                 if (str[pos] == t) {
                     pos++;
@@ -643,9 +739,15 @@ namespace iod {
         inline void iod_attr_from_json(S *, sio<> &, json_parser &) {
         }
 
-        template<typename S, typename T>
+        template<typename S, typename T, typename std::enable_if<!std::is_base_of<jsonvalue, T>::value>::type* = nullptr>
         inline void iod_from_json_(S *, T &t, json_parser &p) {
             p >> fill(t);
+        }
+
+        template<typename S, typename T, typename std::enable_if<std::is_base_of<jsonvalue, T>::value>::type* = nullptr>
+        inline void iod_from_json_(S *, T &t, json_parser &p) {
+            generic_filler<T> gf(t);
+            p >> '"' >> fill(gf) >> '"';
         }
 
         template<typename S>
@@ -795,6 +897,8 @@ namespace iod {
 
     }
 
+    using jdecit = json_internals::json_parser::jdecit;
+
     template<typename ...Tail>
     inline void json_decode(sio<Tail...> &o, const stringview &str, int &n_read) {
         if (o.size() == 0) return;
@@ -852,6 +956,15 @@ namespace iod {
         json_internals::json_parser p(str);
         if (str.size() > 0)
             iod_from_json_((json_string *) 0, o, p);
+        else
+            throw std::runtime_error("Empty string.");
+    }
+
+    template<typename O>
+    inline void json_decode(std::vector<O>&o, const stringview &str) {
+        json_internals::json_parser p(str);
+        if (str.size() > 0)
+            iod_from_json_((std::vector<O> *) 0, o, p);
         else
             throw std::runtime_error("Empty string.");
     }

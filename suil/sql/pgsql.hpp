@@ -13,6 +13,7 @@
 #include <memory>
 
 #include <suil/sql/middleware.hpp>
+#include <suil/sql/orm.hpp>
 
 namespace suil {
     namespace sql {
@@ -45,6 +46,8 @@ namespace suil {
             { return INT2OID; }
             inline Oid type_to_pgsql_oid_type(const int&)
             { return INT4OID; }
+            inline Oid type_to_pgsql_oid_type(const long int&)
+            { return INT8OID; }
             inline Oid type_to_pgsql_oid_type(const long long&)
             { return INT8OID; }
             inline Oid type_to_pgsql_oid_type(const float&)
@@ -69,19 +72,18 @@ namespace suil {
             inline Oid type_to_pgsql_oid_type(const unsigned long long&)
             { return INT8OID; }
 
-            template <typename __T>
+            template <typename __T, typename std::enable_if<std::is_integral<__T>::value>::type* = nullptr>
             inline Oid type_to_pgsql_oid_type_number(
-                    const std::vector<typename std::enable_if<std::is_integral<__T>::value, __T>::type>&)
+                    const std::vector<__T>&)
             { return INT4ARRAYOID; }
 
-            template <typename __T>
+            template <typename __T, typename std::enable_if<std::is_floating_point<__T>::value>::type* = nullptr>
             inline Oid type_to_pgsql_oid_type_number(
-                    const std::vector<typename std::enable_if<std::is_floating_point<__T>::value, __T>::type>&)
+                    const std::vector<__T>&)
             { return FLOAT4ARRAYOID; }
 
             template <typename __T>
-            inline Oid type_to_pgsql_oid_type(
-                    const std::vector<typename std::enable_if<std::is_arithmetic<__T>::value, __T>::type>& n)
+            inline Oid type_to_pgsql_oid_type(std::vector<__T>& n)
             { return type_to_pgsql_oid_type_number(n); }
 
             inline Oid type_to_pgsql_oid_type(const std::vector<zcstring>&)
@@ -431,6 +433,10 @@ namespace suil {
                 return !results.failed();
             }
 
+            inline bool size() const {
+                return results.results.size();
+            }
+
         private:
 
             inline int wait_read() {
@@ -476,19 +482,18 @@ namespace suil {
 
                 int ncols = PQnfields(results.result());
 
-                iod::foreach(o) |
+                iod::foreach(suil::sql::_internals::remove_ignore_fields_t<decltype(o)>()) |
                 [&] (auto &m) {
                     int fnumber = PQfnumber(results.result(), m.symbol().name());
                     if (fnumber != -1) {
                         // column found
-                        results.read(m.value(), fnumber);
+                        results.read(o[m], fnumber);
                     }
                 };
             }
 
-            template <typename __V>
-            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder,
-                       typename std::enable_if<std::is_arithmetic<__V>::value, __V>::type& v) {
+            template <typename __V, typename std::enable_if<std::is_arithmetic<__V>::value>::type* = nullptr>
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, __V& v) {
                 val = _internals::vhod_to_vnod(norder, v);
                 len  =  sizeof(__V);
                 bin  = 1;
@@ -580,7 +585,7 @@ namespace suil {
                     return it != results.end();
                 }
 
-                template <typename __V>
+                template <typename __V, typename std::enable_if<std::is_arithmetic<__V>::value,void>::type* = nullptr>
                 void read(__V& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
@@ -830,7 +835,7 @@ namespace suil {
             template<typename... __Opts>
             void init(const char *con_str, __Opts... opts) {
                 auto options = iod::D(opts...);
-                configure(con_str, options);
+                configure(options, con_str);
             }
 
             template <typename __O>

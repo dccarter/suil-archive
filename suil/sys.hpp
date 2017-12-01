@@ -21,6 +21,7 @@
 
 #include <suil/mem.hpp>
 #include <suil/log.hpp>
+#include <netinet/in.h>
 
 #define errno_s strerror(errno)
 
@@ -311,6 +312,20 @@ namespace suil {
         inline void append(const buffer_t& other) {
             append(other.data(), (uint32_t) other.size());
         }
+
+        template<typename __T>
+        inline size_t hex(__T  v, bool filled = false) {
+            size_t tmp = this->size();
+            char fmt[10];
+            if (filled)
+                sprintf(fmt, "%%0%dx",(int)sizeof(__T)*2);
+            else
+                sprintf(fmt, "%%x");
+
+            appendnf(8, fmt, v);
+            return this->size() - tmp;
+        }
+
         void appendf(const char *fmt, ...);
 
         void appendnf(uint32_t hint, const char *fmt,...);
@@ -477,10 +492,9 @@ namespace suil {
             return *this;
         }
 
-        template <typename _TJson>
-        buffer_t&operator<<(const _TJson& json) {
-            std::string str = iod::json_encode(json);
-            append(str.c_str(), str.size());
+        template <typename __T>
+        buffer_t&operator<<(const __T& data) {
+            data.serialize(*this);
             return *this;
         }
 
@@ -517,7 +531,7 @@ namespace suil {
      * @tparam __Free the callback that will be used to free the memory
      */
     template <typename __Free = zcstr_free>
-    struct zcstr {
+    struct zcstr : iod::jsonvalue {
         union {
             char *str;
             const char *cstr;
@@ -665,8 +679,29 @@ namespace suil {
             return !(*this == s);
         }
 
+        const char* operator()() const {
+            if (cstr == nullptr || len == 0)
+                return "";
+            return cstr;
+        }
+
         template <typename __T>
         explicit inline operator __T() const;
+
+        template <typename S>
+        void encjv(S& ss) const {
+            if (!empty()) {
+                suil::strview_t tmp(cstr, len);
+                ss << '"' << tmp << '"';
+            }
+            else {
+                ss << "\"\"";
+            }
+        }
+
+        static void decjv(iod::jdecit& it, zcstr& out) {
+            out = std::move(zcstr(it.start(), it.size(), false));
+        }
 
         ~zcstr() {
             if (str && own) {
@@ -801,8 +836,8 @@ namespace suil {
         destory_t dctor{nullptr};
     };
 
-    struct base64 {
-        static zcstr<> encode(const uint8_t *, size_t);
+    namespace base64 {
+        zcstr<> encode(const uint8_t *, size_t);
 
         static zcstr<> encode(const zcstr<>& str) {
             return encode((const uint8_t *) str.cstr, str.len);
@@ -812,7 +847,7 @@ namespace suil {
             return encode((const uint8_t *) str.data(), str.size());
         }
 
-        static zcstring decode(const uint8_t* in, size_t len);
+        zcstring decode(const uint8_t* in, size_t len);
 
         static zcstring decode(const char* in) {
             return decode((const uint8_t *)in, strlen(in));
@@ -1550,6 +1585,7 @@ namespace suil {
 
         zcstr<> randbytes(size_t size);
         zcstr<> bytestr(const uint8_t*, size_t);
+        void bytearr(const zcstring& str, uint8_t* out, size_t olen);
         zcstr<> md5Hash(const uint8_t*, size_t);
         zcstr<> HMAC_Sha256(zcstr<>&, const uint8_t*, size_t, bool b64 = false);
 
@@ -1571,6 +1607,16 @@ namespace suil {
 
         static inline zcstr<> md5Hash(buffer_t& b) {
             return std::move(md5Hash((const uint8_t *) b.data(), b.size()));
+        }
+
+        zcstr<> sha256Hash(const uint8_t *data, size_t len, bool b64 = false);
+
+        static inline zcstr<> sha256Hash(const zcstring& data, bool b64 = false) {
+            return sha256Hash((const uint8_t*) data.cstr, data.len, b64);
+        }
+
+        static inline zcstr<> sha256Hash(const buffer_t& data, bool b64 = false) {
+            return sha256Hash((const uint8_t*) data.data(), data.size(), b64);
         }
 
         template<typename __C, typename __Opts>
@@ -1605,6 +1651,72 @@ namespace suil {
         utils::cast(*this, to);
         return to;
     };
+
+    inline uint8_t c2i(const char c) {
+        if (c >= '0' && c <= '9') {
+            return (uint8_t) (c - '0');
+        } else if (c >= 'a' && c <= 'f') {
+            return (uint8_t) (c - 'W');
+        } else if (c >= 'A' && c <= 'F') {
+            return (uint8_t) (c - '7');
+        }
+        throw suil_error::create("invalid hex number");
+    };
+
+    inline char i2c(uint8_t c, bool caps = false) {
+
+        if (c <= 0x9) {
+            return c + '0';
+        }
+        else if (c <= 0xF) {
+            if (caps)
+                return c + '7';
+            else
+                return c + 'W';
+        }
+        throw suil_error::create("invalid hex number");
+    };
+
+    template <int N>
+    struct bytearray: iod::jsonvalue {
+        bytearray()
+            : p({0})
+        {}
+
+        bytearray(std::initializer_list<uint8_t> l)
+        {
+            if (l.size() > N)
+                throw std::out_of_range("the size of the int list cannot be greater than array size");
+            memcpy(p, l.begin(), l.size());
+        }
+
+        template <typename S>
+        void encjv(S& ss) const {
+            ss << '"';
+            for (int i=0; i < N; i++) {
+                ss << i2c(p[i]>>4) << i2c(p[i]&0xF);
+            }
+            ss << '"';
+        }
+
+        static void decjv(iod::jdecit& jit, bytearray<N>& ba) {
+            char c, c1;
+            int i{0};
+            for (i; i < N; i++) {
+                if ((c = jit.next('"')) == '\0') break;
+                c1 = jit.next('"');
+
+                ba.p[i] = (uint8_t) ((c2i(c)<<4) | c2i(c1));
+            }
+        }
+
+        inline bool empty() const {
+            return false;
+        }
+
+    private:
+        uint8_t   p[N];
+    } __attribute__((aligned(1)));
 }
 
 namespace iod {
@@ -1623,15 +1735,6 @@ namespace iod {
     }
 
     namespace json_internals {
-        template<typename S>
-        inline void json_encode_(const suil::zcstring& s, S &ss) {
-            if (s) {
-                ss << '"' << s.cstr << '"';
-            }
-            else {
-                ss << "\"\"";
-            }
-        }
 
         template<typename S>
         inline void json_encode_(const iod::json_string s, S &ss) {
@@ -1641,40 +1744,6 @@ namespace iod {
             else {
                 ss << "{}";
             }
-        }
-
-        template <>
-        inline json_parser& json_parser::fill<suil::zcstring>(suil::zcstring &s) {
-            int start = pos;
-            int end = pos;
-
-            while (true) {
-                while (!eof() and str[end] != '"')
-                    end++;
-
-                // Count the prev backslashes.
-                int sb = end - 1;
-                while (sb >= 0 and str[sb] == '\\')
-                    sb--;
-
-                if ((end - sb) % 2) break;
-                else
-                    end++;
-            }
-            s = suil::zcstring(str.data()+start,
-                               (size_t) (end - start),
-                               false);
-            pos = end;
-            return *this;
-        }
-
-        template<typename S>
-        inline void iod_from_json_(S *, suil::zcstring &s, json_parser &p) {
-            p >> '"' >> fill(s) >> '"';
-        }
-
-        inline bool json_ignore(const suil::zcstring& v) {
-            return v.empty();
         }
     }
 }

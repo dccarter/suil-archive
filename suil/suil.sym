@@ -113,7 +113,7 @@ _claims
 
 #---------------------------------------------------
 # SQL User table
-# { id, username, email, passwd, fullname, salt }
+# { id, username, email, passwd, fullname, salt, roles, verified, locked }
 #---------------------------------------------------
 $_id
 _username
@@ -122,6 +122,8 @@ _passwd
 _fullname
 _salt
 _roles
+_verified
+_locked
 
 #--------------------------------------------------
 # SQL Application Table

@@ -145,7 +145,9 @@ namespace suil {
             prop(passwd,     zcstring),
             s::_salt(var(optional))        = zcstring(),
             prop(fullname,   zcstring),
-            s::_roles(var(optional)) = std::vector<zcstring>()
+            s::_roles(var(optional)) = std::vector<zcstring>(),
+            s::_verified(var(optional)) = bool(),
+            s::_locked(var(optional))   = bool()
         )) user_t;
 
         struct rand_8byte_salt {
@@ -480,7 +482,7 @@ namespace suil {
                 /* generate random salt for user */
                 user.salt   = rand_8byte_salt()(nullptr);
                 user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
-                sql::orm<__C,user_t> orm("users", conn);
+                sql::orm<__C,user_t> orm("suildb.users", conn);
                 return orm.update(user);
             }
 
@@ -518,7 +520,7 @@ namespace suil {
             }
 
             template <typename __C>
-            bool verifyuser(__C& conn, const zcstring& key, user_t& user) {
+            static bool verifyuser(__C& conn, const zcstring& key, user_t& user) {
                 user_t u;
                 u.username = std::move(user.username);
                 if (getuser(conn, u)) {
@@ -527,11 +529,46 @@ namespace suil {
                     if (passwd == u.passwd) {
                         /* user authorized */
                         user = std::move(u);
-                        return true;
+                        return user.verified && !user.locked;
                     }
                 }
 
                 return false;
+            }
+
+            template <typename __C>
+            zcstring reguser(__C& conn, const zcstring& key, user_t& user, bool verified = true) {
+                if (hasuser(conn, user)) {
+                    return utils::catstr("User '", user.username, "' already exists");
+                }
+
+                user.verified = verified;
+                user.locked = false;
+                // add user to database
+                if (!adduser(conn, key, user)) {
+                    // adding user failed.
+                    return "could not register user, contact system admin";
+                }
+
+                // user successfully added
+                return nullptr;
+            }
+
+            template <typename __C, typename __P>
+            bool _setuserprops(__C& conn, user_t& user, __P& props) {
+                if (props.has(sym(verified)))
+                    user.verified = props.get(sym(verified));
+                if (props.has(sym(locked)))
+                    user.locked = props.get(sym(locked));
+
+                sql::orm<__C,user_t> orm("users", conn);
+                return orm.update(user);
+            }
+
+            template <typename __C, typename... Props>
+            inline bool setuserprops(__C& conn, user_t& user, Props... props) {
+                auto opts = iod::D(props...);
+                return _setuserprops(conn, user, opts);
             }
         }
     }

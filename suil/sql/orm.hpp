@@ -42,6 +42,9 @@ namespace suil {
             using remove_auto_increment_t =
             decltype(remove_members_with_attribute(std::declval<T>(), sym(AUTO_INCREMENT)));
             template <typename T>
+            using remove_ignore_fields_t =
+            decltype(remove_members_with_attribute(std::declval<T>(), sym(ignore)));
+            template <typename T>
             using remove_read_only_fields_t =
             decltype(remove_members_with_attribute(std::declval<T>(), sym(READ_ONLY)));
             template <typename T>
@@ -57,6 +60,9 @@ namespace suil {
             typedef __O object_t;
             typedef _internals::remove_auto_increment_t<__O> without_auto_inc_type;
             typedef _internals::extract_primary_keys_t<__O>  primary_keys;
+            template <typename __O2>
+            using without_ignore2 = _internals::remove_ignore_fields_t<__O2>;
+            typedef _internals::remove_ignore_fields_t<__O>  without_ignore;
             static_assert(!std::is_same<primary_keys, void>::value,
                 "ORM requires that at least 1 member of CRUD be a primary key");
 
@@ -72,7 +78,7 @@ namespace suil {
                 bool first = true;
 
                 qb << "select ";
-                iod::foreach(o) |
+                iod::foreach2(without_ignore()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << ", ";
@@ -96,7 +102,8 @@ namespace suil {
 
                 bool first = true;
                 int i = 1;
-                auto values = iod::foreach2(without_auto_inc_type()) |
+                typedef decltype(without_auto_inc_type()) __tmp;
+                auto values = iod::foreach2(without_ignore2<__tmp>()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << ", ";
@@ -135,8 +142,8 @@ namespace suil {
                 qb << "update " << table << " set ";
                 bool first = true;
                 int i = 1;
-
-                auto values = iod::foreach2(o) |
+                typedef decltype(without_auto_inc_type()) __tmp;
+                auto values = iod::foreach2(without_ignore2<__tmp>()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << ", ";

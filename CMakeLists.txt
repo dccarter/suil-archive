@@ -143,6 +143,7 @@ endif()
 
 if (SUIL_DEV_IDE)
     add_subdirectory(apps/suil-web)
+    add_subdirectory(apps/sodoin)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

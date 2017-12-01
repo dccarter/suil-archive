@@ -633,6 +633,32 @@ namespace suil {
         return std::move(tmp);
     }
 
+    inline uint8_t __ctoi(char c) {
+        if (c >= '0' && c <= '9') {
+            return (uint8_t) (c - '0');
+        } else if (c >= 'a' && c <= 'f') {
+            return (uint8_t) (c - '`');
+        } else if (c >= 'A' && c <= 'F') {
+            return (uint8_t) (c - '@');
+        }
+        throw suil_error::create("invalid hex number");
+    };
+
+    void utils::bytearr(const zcstring& str, uint8_t* out, size_t olen) {
+        size_t size = str.len>>1;
+        if (out == nullptr || olen < size) {
+            suil_error::create("utils::bytearr - output buffer invalid");
+        }
+
+        int i{0};
+        char v;
+
+        char *p = str.str;
+        for (i; i < size; i++) {
+            out[i] = (uint8_t) (__ctoi(*p++) << 4 || __ctoi(*p++));
+        }
+    }
+
     zcstr<> utils::urlencode(const zcstring &str) {
         uint8_t *buf((uint8_t *) memory::alloc(str.len*3));
         char *src = str.str, *end = src + str.len;
@@ -682,6 +708,19 @@ namespace suil {
         }
         else {
             return std::move(bytestr(result, SHA256_DIGEST_LENGTH));
+        }
+    }
+
+    zcstr<> utils::sha256Hash(const uint8_t *data, size_t len, bool b64) {
+        if (data == nullptr)
+            return zcstring{nullptr};
+
+        uint8_t *result = SHA256(data, len, nullptr);
+        if (b64) {
+            return base64::encode(bytestr(result, SHA256_DIGEST_LENGTH));
+        }
+        else {
+            return bytestr(result, SHA256_DIGEST_LENGTH);
         }
     }
 
