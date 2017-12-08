@@ -1477,11 +1477,11 @@ namespace suil {
 
         zcstring find(zcstring& src, char what, size_t after = 0);
 
-        const std::vector<char*> strsplit(zcstr<>&, const char *delim);
+        const std::vector<char*> strsplit(zcstring&, const char *delim);
 
-        zcstr<> strstrip(zcstr<>& str, char strip = ' ', bool ends = false);
+        zcstring strstrip(zcstring& str, char strip = ' ', bool ends = false);
 
-        inline zcstr<> strtrim(zcstr<>& str, char what = ' ') {
+        inline zcstring strtrim(zcstring& str, char what = ' ') {
             return strstrip(str, what, true);
         }
 
@@ -1539,16 +1539,16 @@ namespace suil {
 
         template <typename __T>
         inline typename std::enable_if<std::is_arithmetic<__T>::value, void>::type
-        cast(const zcstr<>& data, __T& to) {
+        cast(const zcstring& data, __T& to) {
             to = utils::to_number<__T>(data);
         }
 
-        inline void cast(const zcstr<>& data, std::string& to) {
+        inline void cast(const zcstring& data, std::string& to) {
             to = std::move(std::string(data.cstr, data.len));
         }
 
-        inline void cast(const zcstr<>& data, zcstr<>& to) {
-            to = std::move(zcstr<>(data.cstr, data.len, false));
+        inline void cast(const zcstring& data, zcstring& to) {
+            to = std::move(zcstring(data.cstr, data.len, false));
         }
 
         template <typename __T>
@@ -1568,55 +1568,61 @@ namespace suil {
             return def;
         }
 
-        inline zcstr<> env(const char *name, zcstr<> def = zcstr<>{}) {
+        inline zcstring env(const char *name, zcstring def = zcstring{}) {
             const char *v = std::getenv(name);
             if (v != nullptr) {
-                def = std::move(zcstr<>(v).dup());
+                def = std::move(zcstring(v).dup());
             }
 
             return std::move(def);
         }
 
-        zcstr<> urlencode(const zcstring& str);
-        static inline zcstr<> urlencode(const char* str) {
+        zcstring urlencode(const zcstring& str);
+        static inline zcstring urlencode(const char* str) {
             zcstring tmp(str);
             return urlencode(tmp);
         }
 
-        zcstr<> randbytes(size_t size);
-        zcstr<> bytestr(const uint8_t*, size_t);
-        void bytearr(const zcstring& str, uint8_t* out, size_t olen);
-        zcstr<> md5Hash(const uint8_t*, size_t);
-        zcstr<> HMAC_Sha256(zcstr<>&, const uint8_t*, size_t, bool b64 = false);
+        void     randbytes(uint8_t *out, size_t size);
 
-        static inline zcstr<> HMAC_Sha256(zcstr<>& secret, zcstr<>& msg, bool b64 = false) {
-            return HMAC_Sha256(secret, (const uint8_t*) msg.cstr, msg.len, b64);
+        zcstring randbytes(size_t size);
+
+        zcstring hexstr(const uint8_t *, size_t);
+
+        void bytes(const zcstring &str, uint8_t *out, size_t olen);
+
+        zcstring shaHMAC256(zcstring &, const uint8_t *, size_t, bool b64 = false);
+
+        static inline zcstring shaHMAC256(zcstring &secret, zcstring &msg, bool b64 = false) {
+            return utils::shaHMAC256(secret, (const uint8_t *) msg.cstr, msg.len, b64);
         }
 
-        static inline zcstr<> HMAC_Sha256(zcstr<>& secret, buffer_t& msg, bool b64 = false) {
-            return HMAC_Sha256(secret, (const uint8_t*) msg.data(), msg.size(), b64);
+        static inline zcstring shaHMAC256(zcstring &secret, buffer_t &msg, bool b64 = false) {
+            return shaHMAC256(secret, (const uint8_t *) msg.data(), msg.size(), b64);
         }
 
-        static inline zcstr<> md5Hash(const char *str) {
-            return std::move(md5Hash((const uint8_t *)str, strlen(str)));
+        zcstring md5(const uint8_t *, size_t);
+
+        static inline zcstring md5(const char *str) {
+            return utils::md5((const uint8_t *) str, strlen(str));
         }
 
-        static inline zcstr<> md5Hash(const zcstr<>& zc) {
-            return std::move(md5Hash((const uint8_t *) zc.cstr, zc.len));
+        static inline zcstring md5(const zcstring &zc) {
+            return utils::md5((const uint8_t *) zc.cstr, zc.len);
         }
 
-        static inline zcstr<> md5Hash(buffer_t& b) {
-            return std::move(md5Hash((const uint8_t *) b.data(), b.size()));
+        static inline zcstring md5(buffer_t &b) {
+            return utils::md5((const uint8_t *) b.data(), b.size());
         }
 
-        zcstr<> sha256Hash(const uint8_t *data, size_t len, bool b64 = false);
+        zcstring sha256(const uint8_t *data, size_t len, bool b64 = false);
 
-        static inline zcstr<> sha256Hash(const zcstring& data, bool b64 = false) {
-            return sha256Hash((const uint8_t*) data.cstr, data.len, b64);
+        static inline zcstring sha256(const zcstring &data, bool b64 = false) {
+            return utils::sha256((const uint8_t *) data.cstr, data.len, b64);
         }
 
-        static inline zcstr<> sha256Hash(const buffer_t& data, bool b64 = false) {
-            return sha256Hash((const uint8_t*) data.data(), data.size(), b64);
+        static inline zcstring sha256(const buffer_t &data, bool b64 = false) {
+            return utils::sha256((const uint8_t *) data.data(), data.size(), b64);
         }
 
         template<typename __C, typename __Opts>
@@ -1677,45 +1683,53 @@ namespace suil {
         throw suil_error::create("invalid hex number");
     };
 
-    template <int N>
-    struct bytearray: iod::jsonvalue {
-        bytearray()
-            : p({0})
+
+    template <size_t N>
+    struct blob_t: iod::jsonvalue, std::array<uint8_t, N> {
+        blob_t()
         {}
 
-        bytearray(std::initializer_list<uint8_t> l)
+        blob_t(std::initializer_list<uint8_t> l)
+            : std::array<uint8_t, N>()
         {
             if (l.size() > N)
                 throw std::out_of_range("the size of the int list cannot be greater than array size");
-            memcpy(p, l.begin(), l.size());
+            memcpy(this->begin(), l.begin(), l.size());
+        }
+
+        inline zcstring base64() const {
+            return base64::encode(this->begin(), N);
+        }
+
+        inline zcstring hexstr() const {
+            return utils::hexstr(this->begin(), N);
+        }
+
+        static inline void fromhex(const zcstring& hex, blob_t<N> bout) {
+            utils::bytes(hex, bout.begin(), N);
         }
 
         template <typename S>
         void encjv(S& ss) const {
             ss << '"';
+            const uint8_t *p = (uint8_t *) this->begin();
             for (int i=0; i < N; i++) {
-                ss << i2c(p[i]>>4) << i2c(p[i]&0xF);
+                ss << i2c(p[i]>>4) << i2c((uint8_t) (p[i]&0xF));
             }
             ss << '"';
         }
 
-        static void decjv(iod::jdecit& jit, bytearray<N>& ba) {
+        static void decjv(iod::jdecit& jit, blob_t<N>& ba) {
+            uint8_t *bap = (uint8_t *) ba.begin();
             char c, c1;
             int i{0};
             for (i; i < N; i++) {
                 if ((c = jit.next('"')) == '\0') break;
                 c1 = jit.next('"');
-
-                ba.p[i] = (uint8_t) ((c2i(c)<<4) | c2i(c1));
+                bap[i] = (uint8_t) ((c2i(c)<<4) | c2i(c1));
             }
         }
 
-        inline bool empty() const {
-            return false;
-        }
-
-    private:
-        uint8_t   p[N];
     } __attribute__((aligned(1)));
 }
 

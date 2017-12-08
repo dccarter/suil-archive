@@ -618,13 +618,14 @@ namespace suil {
         return (NULL);
     }
 
-    zcstr<> utils::bytestr(const uint8_t* buf, size_t len) {
+    zcstring utils::hexstr(const uint8_t *buf, size_t len) {
         if (buf == nullptr)
             return zcstring{};
         char *OUT = (char *)memory::alloc((len*2)+2);
         ssize_t rc = 0;
         for (size_t i = 0; i < len; i++) {
-            rc += sprintf(&OUT[rc], "%02x", buf[i]);
+            OUT[rc++] = i2c((uint8_t) (0x0F&(buf[i]>>4)));
+            OUT[rc++] = i2c((uint8_t) (0x0F&buf[i]));
         }
         OUT[rc] = '\0';
 
@@ -633,18 +634,7 @@ namespace suil {
         return std::move(tmp);
     }
 
-    inline uint8_t __ctoi(char c) {
-        if (c >= '0' && c <= '9') {
-            return (uint8_t) (c - '0');
-        } else if (c >= 'a' && c <= 'f') {
-            return (uint8_t) (c - '`');
-        } else if (c >= 'A' && c <= 'F') {
-            return (uint8_t) (c - '@');
-        }
-        throw suil_error::create("invalid hex number");
-    };
-
-    void utils::bytearr(const zcstring& str, uint8_t* out, size_t olen) {
+    void utils::bytes(const zcstring &str, uint8_t *out, size_t olen) {
         size_t size = str.len>>1;
         if (out == nullptr || olen < size) {
             suil_error::create("utils::bytearr - output buffer invalid");
@@ -655,11 +645,11 @@ namespace suil {
 
         char *p = str.str;
         for (i; i < size; i++) {
-            out[i] = (uint8_t) (__ctoi(*p++) << 4 || __ctoi(*p++));
+            out[i] = (uint8_t) (suil::c2i(*p++) << 4 || suil::c2i(*p++));
         }
     }
 
-    zcstr<> utils::urlencode(const zcstring &str) {
+    zcstring utils::urlencode(const zcstring &str) {
         uint8_t *buf((uint8_t *) memory::alloc(str.len*3));
         char *src = str.str, *end = src + str.len;
         uint8_t *dst = buf;
@@ -682,22 +672,26 @@ namespace suil {
         return zcstring((char *)buf, (dst - buf), true);
     }
 
-    zcstr<> utils::randbytes(size_t size) {
-        uint8_t buf[size];
-        RAND_bytes(buf, (int) size);
-        return bytestr(buf, size);
+    void utils::randbytes(uint8_t out[], size_t size) {
+        RAND_bytes(out, (int) size);
     }
 
-    zcstring utils::md5Hash(const uint8_t *data, size_t len) {
+    zcstring utils::randbytes(size_t size) {
+        uint8_t buf[size];
+        RAND_bytes(buf, (int) size);
+        return hexstr(buf, size);
+    }
+
+    zcstring utils::md5(const uint8_t *data, size_t len) {
         if (data == nullptr)
             return zcstring{};
 
         uint8_t RAW[MD5_DIGEST_LENGTH];
         MD5(data, len, RAW);
-        return std::move(bytestr(RAW, MD5_DIGEST_LENGTH));
+        return std::move(hexstr(RAW, MD5_DIGEST_LENGTH));
     }
 
-    zcstr<> utils::HMAC_Sha256(zcstr<> &secret, const uint8_t *data, size_t len, bool  b64) {
+    zcstring utils::shaHMAC256(zcstring &secret, const uint8_t *data, size_t len, bool b64) {
         if (data == nullptr)
             return zcstring{};
 
@@ -707,20 +701,20 @@ namespace suil {
             return base64::encode(result, SHA256_DIGEST_LENGTH);
         }
         else {
-            return std::move(bytestr(result, SHA256_DIGEST_LENGTH));
+            return std::move(hexstr(result, SHA256_DIGEST_LENGTH));
         }
     }
 
-    zcstr<> utils::sha256Hash(const uint8_t *data, size_t len, bool b64) {
+    zcstring utils::sha256(const uint8_t *data, size_t len, bool b64) {
         if (data == nullptr)
             return zcstring{nullptr};
 
         uint8_t *result = SHA256(data, len, nullptr);
         if (b64) {
-            return base64::encode(bytestr(result, SHA256_DIGEST_LENGTH));
+            return base64::encode(hexstr(result, SHA256_DIGEST_LENGTH));
         }
         else {
-            return bytestr(result, SHA256_DIGEST_LENGTH);
+            return hexstr(result, SHA256_DIGEST_LENGTH);
         }
     }
 

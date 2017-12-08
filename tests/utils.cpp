@@ -210,7 +210,7 @@ TEST_CASE("utils::hashing", "[utils][hashing]")
         };
 
         for (int i=0; i < 4; i++) {
-            zcstring out = utils::md5Hash(data[i][0]);
+            zcstring out = utils::md5(data[i][0]);
             REQUIRE(out.compare(data[i][1]) == 0);
         }
     }
@@ -224,7 +224,7 @@ TEST_CASE("utils::hashing", "[utils][hashing]")
         zcstring secret = "awfulSecret12345";
 
         // compute the hash
-        zcstring hashed = utils::HMAC_Sha256(secret, sentence);
+        zcstring hashed = utils::shaHMAC256(secret, sentence);
         REQUIRE(hashed.compare("8559f3e178983e4e83b20b5688f335c133c88015c51f3a9f7fcfde5cd4f613dc") == 0);
     }
 }

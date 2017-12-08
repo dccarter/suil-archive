@@ -23,7 +23,7 @@ namespace suil {
 
             /* get signature hash  */
             zcstring signature =
-                    utils::HMAC_Sha256(secret, data, true);
+                    utils::shaHMAC256(secret, data, true);
             strace("token signature orig:%s, generated %s",
                    tok_sig, signature.cstr);
 
@@ -62,7 +62,7 @@ namespace suil {
 
             /* get signature hash  */
             zcstring signature =
-                    utils::HMAC_Sha256(secret, data);
+                    utils::shaHMAC256(secret, data);
             strace("token signature orig:%s, generated %s",
                    tok_sig, signature.cstr);
 
@@ -83,9 +83,9 @@ namespace suil {
 
             /* 3. HMAC_Sha256 (base64(hdr).base64(payload))*/
             zcstring signature =
-                    utils::HMAC_Sha256(secret,
-                                       (const uint8_t *) tmp.data(),
-                                       tmp.size(), true);
+                    utils::shaHMAC256(secret,
+                                      (const uint8_t *) tmp.data(),
+                                      tmp.size(), true);
 
             /* 4. header.payload.signature */
             tmp << "." << signature;
@@ -98,7 +98,7 @@ namespace suil {
             /* simple generate random bytes */
             uint8_t key[8];
             RAND_bytes(key, 8);
-            return std::move(utils::bytestr(key, 8));
+            return std::move(utils::hexstr(key, 8));
         }
 
         zcstring pbkdf2_sha1_hash::operator()(zcstring &passwd, zcstring& salt) {
@@ -111,7 +111,7 @@ namespace suil {
 
             if (rc) {
                 /* convert buffer to byte string */
-                return std::move(utils::bytestr(out, SHA_DIGEST_LENGTH));
+                return std::move(utils::hexstr(out, SHA_DIGEST_LENGTH));
             }
 
             return zcstring();
