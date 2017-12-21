@@ -82,7 +82,7 @@ namespace suil {
                 trace("parsing url encoded form");
                 const char *boundary = strchr(ctype.data(), '=');
                 if (boundary == nullptr) {
-                    debug("multipart/form-data without boundary: %", ctype.data());
+                    idebug("multipart/form-data without boundary: %", ctype.data());
                     return false;
                 }
                 boundary++;
@@ -148,10 +148,10 @@ namespace suil {
         bool request::parse_multipart_form(const zcstring& boundary) {
             buffer_t rb((uint32_t) content_length+2);
             if (read_body(rb.data(), content_length) <= 0) {
-                debug("reading body failed");
+                idebug("reading body failed");
                 return false;
             }
-            debug("%s", rb.data());
+            idebug("%s", rb.data());
 
             enum {
                 state_begin, state_is_boundary,
@@ -164,7 +164,7 @@ namespace suil {
             char *p = rb.data(), *end = p + content_length;
             char *name = nullptr, *filename = nullptr, *data = nullptr, *dend = nullptr;
             bool cap{false};
-            debug("start parse multipart form %d", mnow());
+            idebug("start parse multipart form %d", mnow());
             while (cap || (p != end)) {
                 switch (next_state) {
                     case state_begin:
@@ -188,7 +188,7 @@ namespace suil {
                         trace("multipart/form-data state_boundary");
                         if (strncmp(p, boundary.cstr, boundary.len) != 0) {
                             /* invalid boundary */
-                            debug("multipart/form-data invalid boundary");
+                            idebug("multipart/form-data invalid boundary");
                             next_state = state_error;
                         }
                         else {
@@ -211,7 +211,7 @@ namespace suil {
                                     next_state = state_end;
                             }
                             else {
-                                debug("multipart/form-data invalid state %d %d", el, eb);
+                                idebug("multipart/form-data invalid state %d %d", el, eb);
                                 next_state = state_error;
                             }
                         }
@@ -260,7 +260,7 @@ namespace suil {
                             trace("multipart/form-data content disposition: %s", val);
                             if (strncasecmp(val, "form-data", 9)) {
                                 /* unsupported disposition */
-                                debug("multipart/form-data not content disposition: %s",
+                                idebug("multipart/form-data not content disposition: %s",
                                       val);
                                 continue;
                             }
@@ -273,10 +273,10 @@ namespace suil {
                                 name, filename);
                                 next_state = state_header;
                             } else {
-                                debug("multipart/form-data invalid disposition: %s", val);
+                                idebug("multipart/form-data invalid disposition: %s", val);
                             }
                         } else {
-                            debug("multipart/form-data missing disposition");
+                            idebug("multipart/form-data missing disposition");
                         }
                         break;
 
@@ -294,7 +294,7 @@ namespace suil {
                                   field, value);
                         }
                         else {
-                            debug("multipart/form-data parsing header failed");
+                            idebug("multipart/form-data parsing header failed");
                             next_state = state_error;
                         }
                         break;
@@ -309,7 +309,7 @@ namespace suil {
 
                     case state_end:
                         state = state_end;
-                        debug("multipart/form-data state machine done %d fields, %d files %d",
+                        idebug("multipart/form-data state machine done %d fields, %d files %d",
                                 form.size(), files.size(), mnow());
                         if (form.size() || files.size()) {
                             // cache the buffer for later references
@@ -320,7 +320,7 @@ namespace suil {
 
                     case state_error:
                     default:
-                        debug("multipart/form-data error in state machine");
+                        idebug("multipart/form-data error in state machine");
                         return false;
                 }
             }
@@ -512,7 +512,7 @@ namespace suil {
                 // read all body
                 body.reserve(content_length+2);
                 if (read_body(&body[0], content_length) < 0) {
-                    debug("%s - reading body failed: %s", sock.id(), errno_s);
+                    idebug("%s - reading body failed: %s", sock.id(), errno_s);
                     body.clear();
                     body_error = 1;
                 }

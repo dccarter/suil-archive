@@ -365,7 +365,7 @@ namespace suil {
                 /* configure key */
                 if (tmp) {
                     key = std::move(tmp.dup());
-                    debug("jwt key changed to %s", key.cstr);
+                    idebug("jwt key changed to %s", key.cstr);
                 }
 
                 /* configure authenticate header string */
@@ -401,7 +401,7 @@ namespace suil {
                 : key(rand_8byte_salt()("")),
                   authenticate(zcstring("Bearer").dup())
             {
-                debug("generated secret is %s", key.cstr);
+                idebug("generated secret is %s", key.cstr);
             }
 
         private:

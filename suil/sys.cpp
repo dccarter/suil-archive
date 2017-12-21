@@ -25,16 +25,18 @@ namespace suil {
     };
 
     namespace __internal {
-        bool init() {
+        bool init(bool si) {
             static bool initialized{false};
             if (initialized) return false;
             //signal(SIGPIPE, SIG_IGN);
-
-            console::println("");
-            console::println("Powered by suil C++1y web framework");
-            console::printred("v" SUIL_VERSION_STRING "\n");
-            console::printblue("http://suil.suilteam.com\n");
-            console::println("---------------------------------------\n");
+            if (si) {
+                // display version only if explicitly requested
+                console::println("");
+                console::println("Powered by suil C++1y web framework");
+                console::printred("v" SUIL_VERSION_STRING "\n");
+                console::printblue("http://suil.suilteam.com\n");
+                console::println("---------------------------------------\n");
+            }
             memory::init();
             initialized = true;
 
@@ -232,12 +234,12 @@ namespace suil {
 
     void buffer_t::grow(uint32_t add) {
         // check if the current buffer_t fits
-        data_ = (uint8_t *)memory::realloc(data_,(offset_+add+1));
+        data_ = (uint8_t *)memory::realloc(data_,(size_+add+1));
         if (data_ == nullptr)
             throw std::runtime_error(
                     "buffer_t::grow(): error: " + std::string(errno_s));
         // change the size of the memory
-        size_ = (uint32_t) memory::fits(data_, (offset_+add+1));
+        size_ = (uint32_t) memory::fits(data_, (size_+add+1));
     }
 
     void buffer_t::reset(size_t size, bool keep) {
@@ -248,9 +250,9 @@ namespace suil {
         }
     }
 
-    void buffer_t::seek(off_t off) {
+    void buffer_t::seek(off_t off = 0) {
         off_t to = offset_ + off;
-        if (to < 0 || to > size_) {
+        if (off <= 0 || to > size_) {
             offset_ = 0;
         }
         else {
@@ -618,26 +620,37 @@ namespace suil {
         return (NULL);
     }
 
+    size_t utils::hexstr(const uint8_t *in, size_t ilen, char *out, size_t olen) {
+        if (in == nullptr || out == nullptr || olen < (ilen<<1))
+            return 0;
+
+        size_t rc = 0;
+        for (size_t i = 0; i < ilen; i++) {
+            out[rc++] = i2c((uint8_t) (0x0F&(in[i]>>4)));
+            out[rc++] = i2c((uint8_t) (0x0F&in[i]));
+        }
+        return rc;
+    }
+
     zcstring utils::hexstr(const uint8_t *buf, size_t len) {
         if (buf == nullptr)
             return zcstring{};
-        char *OUT = (char *)memory::alloc((len*2)+2);
-        ssize_t rc = 0;
-        for (size_t i = 0; i < len; i++) {
-            OUT[rc++] = i2c((uint8_t) (0x0F&(buf[i]>>4)));
-            OUT[rc++] = i2c((uint8_t) (0x0F&buf[i]));
-        }
-        OUT[rc] = '\0';
+        size_t rc = 2+(len<<1);
+        char *OUT = (char *)memory::alloc(rc);
 
-        // the memory now belong to caller
-        zcstring tmp(OUT, (size_t)rc, true);
+        zcstring tmp{nullptr};
+        rc = hexstr(buf, len, OUT, rc);
+        if (rc) {
+            OUT[rc] = '\0';
+            tmp = zcstring(OUT, (size_t)rc, true);
+        }
         return std::move(tmp);
     }
 
     void utils::bytes(const zcstring &str, uint8_t *out, size_t olen) {
         size_t size = str.len>>1;
         if (out == nullptr || olen < size) {
-            suil_error::create("utils::bytearr - output buffer invalid");
+            suil_error::create("utils::bytes - output buffer invalid");
         }
 
         int i{0};
@@ -645,7 +658,7 @@ namespace suil {
 
         char *p = str.str;
         for (i; i < size; i++) {
-            out[i] = (uint8_t) (suil::c2i(*p++) << 4 || suil::c2i(*p++));
+            out[i] = (uint8_t) (suil::c2i(*p++) << 4 | suil::c2i(*p++));
         }
     }
 
@@ -749,7 +762,7 @@ namespace suil {
     void utils::fs::mkdir(const char *path, bool recursive, mode_t mode) {
 
         bool status;
-        zcstring tmp = zcstring(path).dup();
+        zcstring tmp = zcstring{path}.dup();
         if (!tmp) {
             /* creating directory failed */
             throw suil_error::create("mkdir '", path, "' failed: ",  errno_s);
@@ -866,7 +879,7 @@ namespace suil {
             throw suil_error::create("stat('", path, "') failed: ", errno_s);
         }
 
-        if (st.st_size > 8910) {
+        if (st.st_size > 8188) {
             /* size too large to be read by this API */
             throw suil_error::create("file '", path, "' to large (",
                                      st.st_size, " bytes) to be read by fs::read_all");
@@ -906,14 +919,29 @@ namespace suil {
         if (id == nullptr) {
             id = uuid(UUID);
         }
+        size_t olen{(size_t)(10+(sizeof(uuid_t)<1))};
+        char out[olen];
+        int i{0}, rc{0};
+        for(i; i<4; i++) {
+            out[rc++] = i2c((uint8_t) (0x0F&(UUID[i]>>4)));
+            out[rc++] = i2c((uint8_t) (0x0F& UUID[i]));
+        }
+        out[rc++] = '-';
 
-        char OUT[(sizeof(uuid_t)*2+4)];
-        ssize_t rc = 0;
-        for (size_t i = 0; i < sizeof(uuid_t); i++) {
-            rc += sprintf(&OUT[rc], "%02x", id[i]);
+        for (i; i < 10; i++) {
+            out[rc++] = i2c((uint8_t) (0x0F&(UUID[i]>>4)));
+            out[rc++] = i2c((uint8_t) (0x0F& UUID[i]));
+            if (i&0x1) {
+                out[rc++] = '-';
+            }
         }
 
-        return std::move(zcstring(OUT).dup());
+        for(i; i<sizeof(uuid_t); i++) {
+            out[rc++] = i2c((uint8_t) (0x0F&(UUID[i]>>4)));
+            out[rc++] = i2c((uint8_t) (0x0F& UUID[i]));
+        }
+
+        return zcstring{out, (size_t) rc, false}.dup();
     }
 
     const char *utils::mimetype(const zcstring filename) {

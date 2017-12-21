@@ -301,14 +301,14 @@ namespace suil {
 
             ipaddr addr = ipremote(server.cstr, port, 0, utils::after(timeout));
             if (errno != 0) {
-                error("server address '%s:%d' could not be resolved: %",
+                ierror("server address '%s:%d' could not be resolved: %",
                             server.cstr, port, errno_s);
                 return false;
             }
 
             // open connection to server using underlying protocol (either raw TCP or SSL)
             if (!proto.connect(addr, timeout)) {
-                error("connecting to server '%s:%d' failed: %s",
+                ierror("connecting to server '%s:%d' failed: %s",
                           server.cstr, port, errno_s);
                 return false;
             }

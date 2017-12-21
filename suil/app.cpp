@@ -33,13 +33,13 @@ namespace suil {
     }
 
     int application::start() {
-        debug("starting application with %d tasks", tasks.size());
+        idebug("starting application with %d tasks", tasks.size());
         if (started) {
             throw suil_error::create("application aleady started");
         }
 
         if (pipe(__notifyfd)) {
-            error("opening notification pipe failed: %s", errno_s);
+            ierror("opening notification pipe failed: %s", errno_s);
             return EXIT_FAILURE;
         }
 
@@ -70,11 +70,11 @@ namespace suil {
         int code = EXIT_SUCCESS;
         if (started) {
             /* wait for tasks to exit */
-            debug("%u application tasks started", started);
+            idebug("%u application tasks started", started);
             wait_notify(*this);
         }
 
-        debug("application exited, {code=%d}", code);
+        idebug("application exited, {code=%d}", code);
         return code;
     }
 
@@ -113,16 +113,16 @@ namespace suil {
         }
 
         if (requested > 0) {
-            debug("{%ld} waiting for stopped %u tasks",
+            idebug("{%ld} waiting for stopped %u tasks",
                   mnow(), requested);
             bool status;
             status = stopsync[timeout](requested) |
             [&](bool, app_task *task) {
-                debug("task-%s exited {exitcode:%d}",
+                idebug("task-%s exited {exitcode:%d}",
                       task->name.cstr, task->exitcode);
             };
 
-            debug("{%ld} %u tasks exited", mnow(), requested);
+            idebug("{%ld} %u tasks exited", mnow(), requested);
             if (!status) {
                 throw suil_error::create(
                         "stopping tasks timed out");
@@ -176,11 +176,11 @@ namespace suil {
                 tasks.erase(it++);
             }
             catch (suil_error& ex) {
-                warn("delete task unhandled suil_error: %s",
+                iwarn("delete task unhandled suil_error: %s",
                      ex.what());
             }
             catch (...) {
-                error("delete task unknown error");
+                ierror("delete task unknown error");
             }
         }
     }

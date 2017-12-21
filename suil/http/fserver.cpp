@@ -285,7 +285,7 @@ namespace suil {
 
                     cf.fd = open(path.str, O_RDONLY);
                     if (cf.fd < 0) {
-                        warn("opening static resource(%s) failed: %s",
+                        iwarn("opening static resource(%s) failed: %s",
                              path.str, errno_s);
                         return cached_files_.end();
                     }
@@ -322,7 +322,7 @@ namespace suil {
 
                     cf.fd = open(cf.path.str, O_RDONLY);
                     if (cf.fd < 0) {
-                        warn("opening static resource(%s) failed: %s",
+                        iwarn("opening static resource(%s) failed: %s",
                              cf.path.str, errno_s);
                         cached_files_.erase(it);
                         return cached_files_.end();
@@ -362,7 +362,7 @@ namespace suil {
                 total += page_sz-(total % page_sz);
                 cf.data = mmap(NULL, total, PROT_READ, MAP_SHARED , cf.fd, 0);
                 if (cf.data == MAP_FAILED) {
-                    warn("mapping static resource (%d) of size %d failed: %s",
+                    iwarn("mapping static resource (%d) of size %d failed: %s",
                          cf.fd, total, errno_s);
                     return false;
                 }
@@ -379,7 +379,7 @@ namespace suil {
                 do {
                     cread = read(cf.fd, (ptr + nread), toread - nread);
                     if (cread < 0) {
-                        warn("reading file %d failed: %s", cf.fd, errno_s);
+                        iwarn("reading file %d failed: %s", cf.fd, errno_s);
                         return false;
                     }
                     nread += cread;
@@ -407,14 +407,14 @@ namespace suil {
 
             if (tmp != www_dir) {
                 // path violation
-                debug("requested path has back references: %s", rel.str);
+                idebug("requested path has back references: %s", rel.str);
                 return false;
             }
 
             struct stat st;
             if (stat(absolute, &st) != 0 || !S_ISREG(st.st_mode)) {
                 // file does not exist
-                debug("request path does not exist: %s", absolute);
+                idebug("request path does not exist: %s", absolute);
                 return false;
             }
 

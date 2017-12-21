@@ -54,17 +54,20 @@ if (OpenSSL_FOUND)
 endif()
 
 find_package(PostgreSQL ${SUIL_PGSQL_VERSION} REQUIRED)
+find_package(Protobuf REQUIRED)
 
 set(SUIL_LIBRARIES
         uuid sqlite3 mill
         ${OpenSSL_LIBRARIES}
-        ${PostgreSQL_LIBRARIES})
+        ${PostgreSQL_LIBRARIES}
+        ${PROTOBUF_LIBRARIES})
 
 add_definitions(${SUIL_DEFINES})
 
 # add dependencies projects
 add_subdirectory(deps/libmill)
 add_subdirectory(deps/iod)
+add_subdirectory(deps/hiredis)
 include_directories(deps)
 
 if (SUIL_BUILD_DEV_PACKAGE)
@@ -75,7 +78,7 @@ if (SUIL_BUILD_DEV_PACKAGE)
             FILES_MATCHING PATTERN "*.h")
 
     # Packaging
-    set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil)
+    set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil_s sabci_s)
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})
     set(SUIL_PACKAGE_DEFINES   ${SUIL_DEFINES})
 
@@ -142,7 +145,7 @@ else()
 endif()
 
 if (SUIL_DEV_IDE)
-    add_subdirectory(apps/suil-web)
+#    add_subdirectory(apps/suil-web)
     add_subdirectory(apps/sodoin)
 endif()
 

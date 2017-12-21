@@ -74,6 +74,18 @@ namespace suil {
             : raw(s)
         {}
 
+        ssl_sock(ssl_sock &&other)
+        : raw(other.raw)
+        {
+            other.raw = nullptr;
+        }
+
+        ssl_sock &operator=(ssl_sock &&other) {
+            raw = other.raw;
+            other.raw = nullptr;
+            return *this;
+        }
+
         virtual int port() const {
             if (raw) return sslport(raw);
             return -1;
@@ -86,7 +98,7 @@ namespace suil {
 
         virtual bool connect(ipaddr addr, int64_t timeout = -1) {
             if (isopen()) {
-                warn("attempting connect on an open socket");
+                iwarn("attempting connect on an open socket");
                 return false;
             }
 
@@ -103,7 +115,7 @@ namespace suil {
 
         virtual size_t send(const void *buf, size_t len, int64_t timeout = -1) {
             if (!isopen()) {
-                warn("writing to a closed socket not supported");
+                iwarn("writing to a closed socket not supported");
                 errno = ENOTSUP;
                 return 0;
             }
@@ -127,14 +139,14 @@ namespace suil {
 
         virtual bool flush(int64_t timeout = -1) {
             if (!isopen()) {
-                warn("writing to a closed socket not supported");
+                iwarn("writing to a closed socket not supported");
                 errno = ENOTSUP;
                 return false;
             }
 
             sslflush(raw, utils::after(timeout));
             if (errno != 0) {
-                warn("flushing socket failed: %s", errno_s);
+                iwarn("flushing socket failed: %s", errno_s);
                 if (errno == ECONNRESET) {
                     // close the socket
                     close();
@@ -147,7 +159,7 @@ namespace suil {
 
         virtual bool receive(void *buf, size_t &len, int64_t timeout = -1) {
             if (!isopen()) {
-                warn("writing to a closed socket not supported");
+                iwarn("writing to a closed socket not supported");
                 errno = ENOTSUP;
                 return false;
             }
@@ -169,7 +181,7 @@ namespace suil {
                                   size_t ndelims, int64_t timeout = -1)
         {
             if (!isopen()) {
-                warn("writing to a closed socket not supported");
+                iwarn("writing to a closed socket not supported");
                 errno = ENOTSUP;
                 return false;
             }
@@ -189,7 +201,7 @@ namespace suil {
 
         virtual bool read(void *buf, size_t &len, int64_t timeout = -1) {
             if (!isopen()) {
-                warn("writing to a closed socket not supported");
+                iwarn("writing to a closed socket not supported");
                 errno = ENOTSUP;
                 return false;
             }
@@ -261,7 +273,7 @@ namespace suil {
 
         virtual bool connect(ipaddr addr, int64_t timeout = -1) {
             if (isopen()) {
-                warn("attempting connect on an open socket");
+                iwarn("attempting connect on an open socket");
                 return false;
             }
 
@@ -329,7 +341,7 @@ namespace suil {
 
         virtual bool receive(void *buf, size_t &len, int64_t timeout = -1) {
             if (!isopen()) {
-                warn("receiving from a closed socket not supported");
+                iwarn("receiving from a closed socket not supported");
                 errno = ENOTSUP;
                 len = 0;
                 return false;
@@ -351,7 +363,7 @@ namespace suil {
                                   size_t ndelims, int64_t timeout = -1)
         {
             if (!isopen()) {
-                warn("receiving from a closed socket not supported");
+                iwarn("receiving from a closed socket not supported");
                 errno = ENOTSUP;
                 len = 0;
                 return false;
@@ -370,7 +382,7 @@ namespace suil {
 
         virtual bool read(void *buf, size_t &len, int64_t timeout = -1) {
             if (!isopen()) {
-                warn("reading from a closed socket not supported");
+                iwarn("reading from a closed socket not supported");
                 errno = ENOTSUP;
                 len = 0;
                 return false;
@@ -430,7 +442,7 @@ namespace suil {
 
         virtual bool listen(ipaddr addr, int backlog) {
             if (raw != nullptr) {
-                warn("server socket already listening");
+                iwarn("server socket already listening");
                 errno = EINPROGRESS;
                 return false;
             }
@@ -439,7 +451,7 @@ namespace suil {
                              config.cert.c_str(), backlog);
 
             if (raw == nullptr) {
-                warn("listening failed: %s", errno_s);
+                iwarn("listening failed: %s", errno_s);
                 return false;
             }
             return true;
@@ -486,14 +498,14 @@ namespace suil {
 
         virtual bool listen(ipaddr addr, int backlog) {
             if (raw != nullptr) {
-                warn("server socket already listening");
+                iwarn("server socket already listening");
                 errno = EINPROGRESS;
                 return false;
             }
 
             raw = tcplisten(addr, backlog);
             if (raw == nullptr) {
-                warn("listening failed: %s", errno_s);
+                iwarn("listening failed: %s", errno_s);
                 return false;
             }
             return true;

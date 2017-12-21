@@ -305,13 +305,13 @@ namespace suil {
                         res.body.reset(0, true);
                         res.body.append(ex.what());
                         err = true;
-                        debug("request unhandled error: %s", ex.what());
+                        idebug("request unhandled error: %s", ex.what());
                     }
                     catch (...) {
                         res.status = Status::INTERNAL_ERROR;
                         res.body.reset(0, true);
                         err = true;
-                        debug("request unhandled unknown error");
+                        idebug("request unhandled unknown error");
                     }
 
                     send_response(req, res, err);
@@ -321,7 +321,7 @@ namespace suil {
                         close_ = true;
                     }
 
-                    debug("\"%s %s HTTP/%u.%u\" %u - %lu ms",
+                    idebug("\"%s %s HTTP/%u.%u\" %u - %lu ms",
                           http::method_name((http::method_t) req.method), req.url,
                           req.http_major, req.http_minor, res.status, (mnow()-start));
 
@@ -426,7 +426,7 @@ namespace suil {
                 }
 
                 if (!write_response(obuf)) {
-                    warn("(%p:%s) - sending data to socket failed: %s",
+                    iwarn("(%p:%s) - sending data to socket failed: %s",
                          this, sock.isopen(), errno_s);
                     close_ = true;
                     res.clear();

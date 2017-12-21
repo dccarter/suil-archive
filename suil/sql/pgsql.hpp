@@ -299,7 +299,7 @@ namespace suil {
                             bins,
                             0);
                     if (!status) {
-                        error("ASYNC QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
+                        ierror("ASYNC QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
                         throw std::runtime_error("executing async query failed");
                     }
 
@@ -307,7 +307,7 @@ namespace suil {
                     while (!err && PQflush(conn)) {
                         trace("ASYNC QUERY: %s wait write %ld", stmt.cstr, timeout);
                         if (wait_write()) {
-                            error("ASYNC QUERY: % wait write failed: %s", stmt.cstr, errno_s);
+                            ierror("ASYNC QUERY: % wait write failed: %s", stmt.cstr, errno_s);
                             err  = true;
                             continue;
                         }
@@ -317,7 +317,7 @@ namespace suil {
                         if (PQisBusy(conn)) {
                             trace("ASYNC QUERY: %s wait read %ld", stmt.cstr, timeout);
                             if (wait_read()) {
-                                error("ASYNC QUERY: %s wait read failed: %s", stmt.cstr, errno_s);
+                                ierror("ASYNC QUERY: %s wait read failed: %s", stmt.cstr, errno_s);
                                 err = true;
                                 continue;
                             }
@@ -325,7 +325,7 @@ namespace suil {
 
                         // asynchronously wait for results
                         if (!PQconsumeInput(conn)) {
-                            error("ASYNC QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
+                            ierror("ASYNC QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
                             err = true;
                             continue;
                         }
@@ -354,7 +354,7 @@ namespace suil {
                                 break;
 
                             default:
-                                error("ASYNC QUERY: % failed: %s",
+                                ierror("ASYNC QUERY: % failed: %s",
                                       stmt.cstr, PQerrorMessage(conn));
                                 wait = false;
                         }
@@ -380,12 +380,12 @@ namespace suil {
                     ExecStatusType status = PQresultStatus(result);
 
                     if ((status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)) {
-                        error("QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
+                        ierror("QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
                         PQclear(result);
                         results.fail();
                     }
                     else if ((PQntuples(result) == 0)) {
-                        debug("QUERY: %s has zero entries: %s",
+                        idebug("QUERY: %s has zero entries: %s",
                               stmt.cstr, PQerrorMessage(conn));
                         PQclear(result);
                     }
@@ -442,7 +442,7 @@ namespace suil {
             inline int wait_read() {
                 int sock = PQsocket(conn);
                 if (sock < 0) {
-                    error("invalid PGSQL socket");
+                    ierror("invalid PGSQL socket");
                     return -EINVAL;
                 }
 
@@ -460,7 +460,7 @@ namespace suil {
             inline int wait_write() {
                 int sock = PQsocket(conn);
                 if (sock < 0) {
-                    error("invalid PGSQL socket");
+                    ierror("invalid PGSQL socket");
                     return -EINVAL;
                 }
 
@@ -852,7 +852,7 @@ namespace suil {
 
                 if (keep_alive > 0 && keep_alive < 3000) {
                     /* limit cleanup to 3 seconds */
-                    warn("changing db connection keep alive from %ld ms to 3 seconds", keep_alive);
+                    iwarn("changing db connection keep alive from %ld ms to 3 seconds", keep_alive);
                     keep_alive = 3000;
                 }
 
@@ -886,14 +886,14 @@ namespace suil {
                 PGconn *conn;
                 conn = PQconnectdb(conn_str.cstr);
                 if (conn == nullptr || (PQstatus(conn) != CONNECTION_OK)) {
-                    error("CONNECT: %s", PQerrorMessage(conn));
+                    ierror("CONNECT: %s", PQerrorMessage(conn));
                     throw std::runtime_error("connecting to database failed");
                 }
 
                 if (async) {
                     /* connection should be set to non blocking */
                     if (PQsetnonblocking(conn, 1)) {
-                        error("CONNECT: %s", PQerrorMessage(conn));
+                        ierror("CONNECT: %s", PQerrorMessage(conn));
                         throw std::runtime_error("connecting to database failed");
                     }
                 }

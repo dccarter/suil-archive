@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <sys/param.h>
 
-#include <suil/http/client.hpp>
+#include <suil/http/clientapi.hpp>
 #include <sys/mman.h>
 
 namespace suil {

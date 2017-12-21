@@ -43,6 +43,8 @@ namespace suil {
         va_end(args);
     }
 
+    void backtrace();
+
     namespace console {
 
         inline void println(const char *fmt, ...) {
@@ -214,6 +216,7 @@ namespace suil {
 
             if (l == level::CRITICAL) {
                 // print stack trace
+                backtrace();
                 exit(EXIT_FAILURE);
             }
         }
@@ -265,22 +268,22 @@ namespace suil {
         (sub)->log(suil::log::level:: l , fmt , ##__VA_ARGS__)
 
 #define ldebug(sub, fmt, ...)    __LOG(sub, DEBUG, fmt, ##__VA_ARGS__)
-#define debug(fmt, ...)          __LOG(this, DEBUG, fmt, ##__VA_ARGS__)
+#define idebug(fmt, ...)         __LOG(this, DEBUG, fmt, ##__VA_ARGS__)
 #define sdebug(fmt, ...)         __LOG(&suil::__log, DEBUG, fmt, ##__VA_ARGS__)
 #define lwarn(sub, fmt, ...)     __LOG(sub, WARNING, fmt, ##__VA_ARGS__)
-#define warn(fmt, ...)           __LOG(this, WARNING, fmt, ##__VA_ARGS__)
+#define iwarn(fmt, ...)           __LOG(this, WARNING, fmt, ##__VA_ARGS__)
 #define swarn(fmt, ...)          __LOG(&suil::__log, WARNING, fmt, ##__VA_ARGS__)
 #define linfo(sub, fmt, ...)     __LOG(sub, INFO, fmt, ##__VA_ARGS__)
-#define info(fmt, ...)           __LOG(this, INFO, fmt, ##__VA_ARGS__)
+#define iinfo(fmt, ...)           __LOG(this, INFO, fmt, ##__VA_ARGS__)
 #define sinfo(fmt, ...)          __LOG(&suil::__log, INFO, fmt, ##__VA_ARGS__)
 #define lnotice(sub, fmt, ...)   __LOG(sub, NOTICE, fmt, ##__VA_ARGS__)
-#define notice(fmt, ...)         __LOG(this, NOTICE, fmt, ##__VA_ARGS__)
+#define inotice(fmt, ...)         __LOG(this, NOTICE, fmt, ##__VA_ARGS__)
 #define snotice(fmt, ...)        __LOG(&suil::__log, NOTICE, fmt, ##__VA_ARGS__)
 #define lerror(sub, fmt, ...)    __LOG(sub, ERROR, fmt, ##__VA_ARGS__)
-#define error(fmt, ...)          __LOG(this, ERROR, fmt, ##__VA_ARGS__)
+#define ierror(fmt, ...)          __LOG(this, ERROR, fmt, ##__VA_ARGS__)
 #define serror(fmt, ...)         __LOG(&suil::__log, ERROR, fmt, ##__VA_ARGS__)
 #define lcritical(sub, fmt, ...) __LOG(sub, CRITICAL, fmt, ##__VA_ARGS__)
-#define critical(fmt, ...)       __LOG(this, CRITICAL, fmt, ##__VA_ARGS__)
+#define icritical(fmt, ...)       __LOG(this, CRITICAL, fmt, ##__VA_ARGS__)
 #define scritical(fmt, ...)      __LOG(&suil::__log, CRITICAL, fmt, ##__VA_ARGS__)
 
 #ifndef SUIL_ENABLE_TRACE

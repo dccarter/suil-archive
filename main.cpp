@@ -6,7 +6,7 @@
 #include <suil/sql/sqlite.hpp>
 #include <suil/sql/pgsql.hpp>
 #include <suil/app.hpp>
-#include <suil/http/client.hpp>
+#include <suil/http/clientapi.hpp>
 #include <suil/email.hpp>
 
 using  namespace suil;

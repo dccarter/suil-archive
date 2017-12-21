@@ -12,31 +12,7 @@
 namespace suil {
     namespace sql {
 
-        namespace _internals {
-
-            auto remove_members_with_attribute = [](const auto& o, const auto& a)
-            {
-                typedef std::decay_t<decltype(a)> A;
-                return iod::foreach2(o) | [&] (auto& m) {
-                    typedef typename std::decay_t<decltype(m)>::attributes_type attrs;
-                    return iod::static_if<!iod::has_symbol<attrs,A>::value>(
-                            [&](){ return m; },
-                            [&](){}
-                    );
-                };
-            };
-
-            auto extract_members_with_attribute = [](const auto& o, const auto& a)
-            {
-                typedef std::decay_t<decltype(a)> A;
-                return iod::foreach2(o) | [&] (auto& m) {
-                    typedef typename std::decay_t<decltype(m)>::attributes_type attrs;
-                    return iod::static_if<iod::has_symbol<attrs,A>::value>(
-                            [&](){ return m; },
-                            [&](){}
-                    );
-                };
-            };
+        namespace __internal {
 
             template <typename T>
             using remove_auto_increment_t =
@@ -58,11 +34,11 @@ namespace suil {
         template<typename __C, typename __O>
         struct orm {
             typedef __O object_t;
-            typedef _internals::remove_auto_increment_t<__O> without_auto_inc_type;
-            typedef _internals::extract_primary_keys_t<__O>  primary_keys;
+            typedef __internal::remove_auto_increment_t<__O> without_auto_inc_type;
+            typedef __internal::extract_primary_keys_t<__O>  primary_keys;
             template <typename __O2>
-            using without_ignore2 = _internals::remove_ignore_fields_t<__O2>;
-            typedef _internals::remove_ignore_fields_t<__O>  without_ignore;
+            using without_ignore2 = __internal::remove_ignore_fields_t<__O2>;
+            typedef __internal::remove_ignore_fields_t<__O>  without_ignore;
             static_assert(!std::is_same<primary_keys, void>::value,
                 "ORM requires that at least 1 member of CRUD be a primary key");
 

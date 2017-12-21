@@ -83,12 +83,12 @@ namespace suil {
             }
 
             if (!h.mask) {
-                debug("%s - received frame does not have op code mask", sock.id());
+                idebug("%s - received frame does not have op code mask", sock.id());
                 return false;
             }
 
             if (h.rsv1 || h.rsv2 || h.rsv3) {
-                debug("%s - receive has RSV bits set %d:%d:%d",
+                idebug("%s - receive has RSV bits set %d:%d:%d",
                       sock.id(), h.rsv1, h.rsv2, h.rsv3);
                 return false;
             }
@@ -102,13 +102,13 @@ namespace suil {
                 case ws_op_t::PING:
                 case ws_op_t::PONG:
                     if (h.len > WS_PAYLOAD_SINGLE || !h.fin) {
-                        debug("%s - frame (%hX) to large or fragmented",
+                        idebug("%s - frame (%hX) to large or fragmented",
                               sock.id(), h.u16All);
                         return false;
                     }
                     break;
                 default:
-                    debug("%s - unrecognised op code (%hX)",
+                    idebug("%s - unrecognised op code (%hX)",
                           sock.id(), h.u16All);
                     return false;
             }
@@ -147,7 +147,7 @@ namespace suil {
             // receive the mask
             nbytes = WS_MASK_LEN;
             if (!sock.receive(h.v_mask, nbytes, api.timeout)) {
-                debug("%s - receiving mask failed: %s", sock.id(), errno_s);
+                idebug("%s - receiving mask failed: %s", sock.id(), errno_s);
                 return false;
             }
 
@@ -156,7 +156,7 @@ namespace suil {
 
         bool websock::receive_frame(header& h, buffer_t& b) {
             if (!receive_opcode(h)) {
-                debug("%s - receiving op code failed", sock.id());
+                idebug("%s - receiving op code failed", sock.id());
                 return false;
             }
 
@@ -190,7 +190,7 @@ namespace suil {
             api.websocks.emplace(key, *this);
             api.nsocks++;
 
-            debug("%s - entering connection loop %lu", key.str, api.nsocks);
+            idebug("%s - entering connection loop %lu", key.str, api.nsocks);
 
             buffer_t b(0);
             while (!end_session && sock.isopen()) {
@@ -207,7 +207,7 @@ namespace suil {
                     switch (h.opcode) {
                         case PONG:
                         case CONT:
-                            error("%s - web socket op (%02X) not supported",
+                            ierror("%s - web socket op (%02X) not supported",
                                   sock.id(), h.opcode);
                             end_session = true;
 
@@ -305,7 +305,7 @@ namespace suil {
 
         bool websock::bsend(const void *data, size_t len) {
             if (!sock.isopen()) {
-                warn("attempting to send to a closed websocket");
+                iwarn("attempting to send to a closed websocket");
                 return false;
             }
             ssize_t nsent = 0, tsent = 0;

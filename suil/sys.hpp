@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <endian.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <uuid/uuid.h>
@@ -30,16 +31,52 @@ namespace suil {
     typedef uint8_t spid_t;
     extern const spid_t& spid;
 
-    namespace __internal{
-        bool init();
+    template <typename _Free>
+    struct zcstr;
+    template <size_t N>
+    struct blob_t;
+
+#define Ego (*this)
+
+    namespace __internal {
+        auto remove_members_with_attribute = [](const auto& o, const auto& a)
+        {
+            typedef std::decay_t<decltype(a)> A;
+            return iod::foreach2(o) | [&] (auto& m) {
+                typedef typename std::decay_t<decltype(m)>::attributes_type attrs;
+                return iod::static_if<!iod::has_symbol<attrs,A>::value>(
+                        [&](){ return m; },
+                        [&](){}
+                );
+            };
+        };
+
+        auto extract_members_with_attribute = [](const auto& o, const auto& a)
+        {
+            typedef std::decay_t<decltype(a)> A;
+            return iod::foreach2(o) | [&] (auto& m) {
+                typedef typename std::decay_t<decltype(m)>::attributes_type attrs;
+                return iod::static_if<iod::has_symbol<attrs,A>::value>(
+                        [&](){ return m; },
+                        [&](){}
+                );
+            };
+        };
+
+        template<typename T>
+        using remove_unwired =
+        decltype(remove_members_with_attribute(std::declval<T>(), sym(unwire)));
+
+        bool init(bool si =  true);
         void chwdir(const std::string& to);
         void daemonize(const std::string& wdir);
     }
 
     template <typename... __A>
     void init(__A... args) {
-        if (__internal::init()) {
-            auto opts = iod::D(args...);
+        auto opts = iod::D(args...);
+        bool showinfo = opts.get(var(printinfo), true);
+        if (__internal::init(showinfo)) {
 
             std::string wdir = opts.get(var(wdir), "");
 
@@ -137,7 +174,7 @@ namespace suil {
             return suil_error(ss.str());
         }
 
-        inline static const char* msg(std::exception_ptr ex) {
+        inline static const char* getmsg(std::exception_ptr ex) {
             try {
                 if (ex) {
                     std::rethrow_exception(ex);
@@ -161,6 +198,9 @@ namespace suil {
         inline static void msg(std::stringstream& ss, __A& a) {
             ss << a;
         }
+
+        template <typename __F>
+        inline static void msg(std::stringstream& ss, suil::zcstr<__F>& a);
 
         template <typename __A, typename... __O>
         inline static void msg(std::stringstream& ss, __A& a, __O&... args) {
@@ -243,14 +283,97 @@ namespace suil {
         }
     }
 
-    template <typename _Free>
-    struct zcstr;
+    struct wire;
+    struct current {
+    };
+
+    struct wire {
+
+        inline bool push(const uint8_t e[], size_t es) {
+            return forward(e, es) == es;
+        }
+
+        inline bool pull(uint8_t e[], size_t es) {
+            return reverse(e, es) == es;
+        }
+
+        template <typename __T, typename std::enable_if<std::is_arithmetic<__T>::value>::type* = nullptr>
+        inline wire& operator<<(const __T val) {
+            forward((uint8_t *)&val, sizeof(val));
+            return Ego;
+        };
+
+        template <typename __T, typename std::enable_if<std::is_arithmetic<__T>::value>::type* = nullptr>
+        inline wire& operator>>(__T& val) {
+            reverse((uint8_t *)&val, sizeof(val));
+            return Ego;
+        };
+
+        template <typename __T, typename std::enable_if<!std::is_arithmetic<__T>::value>::type* = nullptr>
+        inline wire& operator<<(const __T& curr) {
+            curr.out(Ego);
+            return Ego;
+        };
+
+        template <typename __T, typename std::enable_if<!std::is_arithmetic<__T>::value>::type* = nullptr>
+        inline wire& operator>>(__T& curr) {
+            curr.in(Ego);
+            return Ego;
+        };
+
+        template <typename... __T>
+        inline wire& operator<<(const iod::sio<__T...>& o);
+
+        template <typename... __T>
+        inline wire& operator>>(iod::sio<__T...>& o);
+
+        template <typename __T>
+        inline wire& operator<<(const std::vector<__T>& curr);
+
+        template <typename __T>
+        inline wire& operator>>(std::vector<__T>& curr);
+
+        template <typename... __T>
+        inline wire& operator<<(const std::vector<iod::sio<__T...>>& curr);
+
+        template <typename... __T>
+        inline wire& operator>>(std::vector<iod::sio<__T...>>& curr);
+
+        inline wire& operator<<(const char* str);
+
+        inline wire& operator<<(const std::string& str);
+
+        inline wire& operator>>(std::string& str);
+
+        inline wire& operator()(bool always) {
+            Ego.always = always;
+            return Ego;
+        }
+
+    protected:
+        virtual size_t forward(const uint8_t e[], size_t es) = 0;
+        virtual size_t reverse(uint8_t e[], size_t es) = 0;
+        bool           always{false};
+    };
 
     /**
      * A dynamic auto-grow buffer which can be used for
      * for various memory manipulation
      */
     struct buffer_t {
+
+        struct fmter {
+            fmter(size_t reqsz)
+                : reqsz{reqsz}
+            {}
+
+            virtual size_t fmt(char *raw) { return 0; };
+
+        private:
+            friend struct buffer_t;
+            size_t reqsz{0};
+        };
+
         buffer_t(size_t init_size);
         buffer_t()
             : buffer_t(0)
@@ -375,11 +498,11 @@ namespace suil {
         char *data() const {
             if (data_)
                 return (char *) data_;
-            return (char *) data_;
+            return nullptr;
         }
 
         size_t capacity() const {
-            return size_;
+            return size_-offset_;
         }
 
         operator const void*() {
@@ -398,6 +521,11 @@ namespace suil {
 
         buffer_t&operator+=(const strview_t& sv) {
             append(sv.data(), sv.size());
+            return *this;
+        }
+
+        buffer_t& operator<<(const bool u) {
+            appendf("%d", u);
             return *this;
         }
 
@@ -471,11 +599,26 @@ namespace suil {
             return *this;
         }
 
+        template <typename __T, typename std::enable_if<std::is_base_of<suil::buffer_t::fmter, __T>::value>::type* = nullptr>
+        buffer_t& operator<<(__T fmt) {
+            reserve(fmt.reqsz);
+            size_t tmp = fmt.fmt(&data()[offset_]);
+            if (tmp > fmt.reqsz) tmp = fmt.reqsz;
+            offset_ += tmp;
+            return *this;
+        }
+
         template <typename _Free>
         buffer_t& operator<<(const zcstr<_Free>& s);
 
         template <typename _Free>
         buffer_t& operator<<(zcstr<_Free>& s);
+
+        template <size_t N>
+        buffer_t& operator<<(const blob_t<N>& s);
+
+        template <size_t N>
+        buffer_t& operator<<(blob_t<N>& s);
 
         buffer_t& operator<<(const std::string &str) {
             append(str.c_str());
@@ -492,7 +635,7 @@ namespace suil {
             return *this;
         }
 
-        template <typename __T>
+        template <typename __T, typename std::enable_if<!std::is_base_of<suil::buffer_t::fmter, __T>::value>::type* = nullptr>
         buffer_t&operator<<(const __T& data) {
             data.serialize(*this);
             return *this;
@@ -508,6 +651,9 @@ namespace suil {
             throw std::runtime_error("index out of bounds");
         }
 
+        void in(wire& w);
+        void out(wire& w) const;
+
     private:
         void grow(uint32_t);
         uint8_t         *data_{nullptr};
@@ -522,6 +668,40 @@ namespace suil {
             memory::free(str);
         }
     };
+
+    template <typename __T>
+    struct __fmtnum : buffer_t::fmter {
+        __fmtnum(const char* fs, __T t)
+            : buffer_t::fmter(32),
+              val(t),
+              fs(fs)
+        {}
+
+        virtual size_t fmt(char *raw) {
+            return (size_t) snprintf(raw, 32, fs, val);
+        }
+
+        __T val;
+        const char *fs{"%x"};
+    };
+
+    template <typename __T, typename std::enable_if<std::is_arithmetic<__T>::value>::type * = nullptr>
+    static inline __fmtnum<__T> fmtnum(const char* fs, __T t) {
+        return __fmtnum<__T>(fs, t);
+    };
+
+    struct fmtbool : buffer_t::fmter {
+        fmtbool(bool b)
+            : buffer_t::fmter(6),
+              val(b)
+        {}
+
+        virtual size_t fmt(char *raw) {
+            return (size_t) snprintf(raw, 6, "%s", (val? "True" : "False"));
+        }
+        bool val{false};
+    };
+
 
     /**
      * this is basically just like a string view but with added
@@ -574,7 +754,7 @@ namespace suil {
         zcstr(buffer_t& b, bool own = true)
         {
             len = (uint32_t ) b.size();
-            this->own = (uint8_t) (own? 1 : 0);
+            this->own = (uint8_t) ((own && b.data() != nullptr)? 1 : 0);
             if (this->own) {
                 str = b.release();
             }
@@ -680,8 +860,12 @@ namespace suil {
         }
 
         const char* operator()() const {
+            return Ego("");
+        }
+
+        const char* operator()(const char* nil) const {
             if (cstr == nullptr || len == 0)
-                return "";
+                return nil;
             return cstr;
         }
 
@@ -700,7 +884,10 @@ namespace suil {
         }
 
         static void decjv(iod::jdecit& it, zcstr& out) {
-            out = std::move(zcstr(it.start(), it.size(), false));
+            // WARN!!! Copying data might not be efficiet but
+            // necessary for decoding objects that are going outta
+            // memory.
+            out = std::move(zcstr(it.start(), it.size(), false).dup());
         }
 
         ~zcstr() {
@@ -713,6 +900,9 @@ namespace suil {
 
         template<typename __F>
         friend buffer_t& operator>>(buffer_t&, zcstr<__F>&);
+
+        void in(wire& w);
+        void out(wire& w) const;
     };
 
     using zcstring = zcstr<>;
@@ -721,6 +911,11 @@ namespace suil {
     buffer_t& operator>>(buffer_t& buf, zcstr<__Free>& out) {
         out = std::move(zcstring(buf.data(), buf.size(), false));
         return buf;
+    }
+
+    template <typename __F>
+    inline void suil_error::msg(std::stringstream& ss, suil::zcstr<__F>& a) {
+        ss.write(a.str, a.len);
     }
 
     struct hasher {
@@ -1354,6 +1549,18 @@ namespace suil {
             return id;
         }
 
+        inline bool parseuuid(const zcstring& str, uuid_t& out) {
+            if (!str.empty() && uuid_parse(str.cstr, out)) {
+                return true;
+            }
+            return false;
+        }
+
+        inline bool uuidvalid(const zcstring& str) {
+            uuid_t tmp;
+            return parseuuid(str, tmp);
+        }
+
         zcstring uuidstr(uuid_t uuid = nullptr);
 
         namespace fs {
@@ -1543,6 +1750,15 @@ namespace suil {
             to = utils::to_number<__T>(data);
         }
 
+        inline void cast(const zcstring& data, bool& to) {
+            to = utils::to_number<int>(data) != 0;
+        }
+
+        inline void cast(const zcstring& data, const char*& to) {
+            to = data();
+        }
+
+
         inline void cast(const zcstring& data, std::string& to) {
             to = std::move(std::string(data.cstr, data.len));
         }
@@ -1586,6 +1802,8 @@ namespace suil {
         void     randbytes(uint8_t *out, size_t size);
 
         zcstring randbytes(size_t size);
+
+        size_t   hexstr(const uint8_t *, size_t, char *out, size_t len);
 
         zcstring hexstr(const uint8_t *, size_t);
 
@@ -1687,36 +1905,88 @@ namespace suil {
     template <size_t N>
     struct blob_t: iod::jsonvalue, std::array<uint8_t, N> {
         blob_t()
+            : blob_t(true)
         {}
+
+        blob_t(bool zero)
+        {
+            if (zero) memset(Ego.begin(),0, N);
+        }
 
         blob_t(std::initializer_list<uint8_t> l)
             : std::array<uint8_t, N>()
         {
             if (l.size() > N)
                 throw std::out_of_range("the size of the int list cannot be greater than array size");
-            memcpy(this->begin(), l.begin(), l.size());
+            memcpy(Ego.begin(), l.begin(), l.size());
         }
 
         inline zcstring base64() const {
-            return base64::encode(this->begin(), N);
+            return base64::encode(Ego.begin(), N);
         }
 
         inline zcstring hexstr() const {
-            return utils::hexstr(this->begin(), N);
+            return utils::hexstr(Ego.begin(), N);
         }
 
-        static inline void fromhex(const zcstring& hex, blob_t<N> bout) {
-            utils::bytes(hex, bout.begin(), N);
+        inline void fromhex(const zcstring& hex) {
+            utils::bytes(hex, Ego.begin(), MIN(hex.len/2, N));
         }
 
         template <typename S>
         void encjv(S& ss) const {
             ss << '"';
-            const uint8_t *p = (uint8_t *) this->begin();
+            const uint8_t *p = (uint8_t *) Ego.begin();
             for (int i=0; i < N; i++) {
                 ss << i2c(p[i]>>4) << i2c((uint8_t) (p[i]&0xF));
             }
             ss << '"';
+        }
+
+        template<size_t NN>
+        size_t copyfrom(const blob_t<NN>& blob) {
+            size_t n = MIN(N, NN);
+            memcpy(Ego.begin(), blob.begin(), n);
+            return n;
+        }
+
+        template <size_t S=0>
+        bool copy(const char* str) {
+            size_t len{strlen(str)};
+            if ((S+len) > N)
+                return false;
+            memcpy(&Ego.begin()[S], str, len);
+            return true;
+        };
+
+        template <size_t S, size_t NN>
+        bool copy(const blob_t<NN> bb) {
+            if ((S+bb.size())>N)
+                return false;
+            memcpy(&Ego.begin()[S], bb.begin(), bb.size());
+            return true;
+        };
+
+        template <size_t S = 0, size_t E = N>
+        suil::blob_t<E-S> slice() const {
+            static_assert(((E>S)&&(E<=N)), "invalid slicing indices");
+
+            suil::blob_t<E-S> blob;
+            uint8_t *p = (uint8_t *) Ego.begin();
+            memcpy(blob.begin(), &p[S], E);
+            return std::move(blob);
+        };
+
+        template <size_t S=0, size_t E = N>
+        void szero() {
+            static_assert(((E>S)&&(E<=N)), "invalid zeroing indices");
+            memset(&Ego.begin()[S], 0, E-S);
+        }
+
+        void zero(size_t s=0, size_t e = N) {
+            if ((e > s) && (e <= N)) {
+                memset(&Ego.begin()[s], 0, e-s);
+            }
         }
 
         static void decjv(iod::jdecit& jit, blob_t<N>& ba) {
@@ -1730,7 +2000,238 @@ namespace suil {
             }
         }
 
+        template <size_t S=0, size_t C=N>
+        inline bool isnill() const {
+            static_assert((C<=N)&&((C+S)<=N), "null check range ins invalid");
+            size_t offset{S};
+            for(; offset < S+C; offset++)
+                if (Ego.begin()[offset] != 0)
+                    return false;
+            return true;
+        }
+
+        template <size_t I=0>
+        inline uint8_t& bin() {
+            static_assert(I<N, "index should be less than size");
+            return Ego.begin()[I];
+        }
+
+        template <size_t I=0>
+        inline const uint8_t& cbin() const {
+            static_assert(I<N, "index should be less than size");
+            return Ego.begin()[I];
+        }
+
+        void in(wire& w);
+        void out(wire& w) const;
+
     } __attribute__((aligned(1)));
+
+    // overhead is 0 byte
+    static_assert(sizeof(blob_t<1>) == 1);
+
+    template <size_t N>
+    inline buffer_t& buffer_t::operator<<(blob_t<N> &bb) {
+        bb.encjv(Ego);
+        return Ego;
+    }
+
+    template <size_t N>
+    inline buffer_t& buffer_t::operator<<(const blob_t<N> &bb) {
+        bb.encjv(Ego);
+        return Ego;
+    }
+
+    struct varint : blob_t<8> {
+        varint(uint64_t v)
+            : blob_t()
+        {
+            write(v);
+        }
+
+        varint()
+            : varint(0)
+        {}
+
+        template <typename __T>
+        __T read() const {
+            return (__T) be64toh(*((uint64_t *) Ego.begin()));
+        }
+
+        template <typename __T>
+        void write(__T v) {
+            *((uint64_t *) Ego.begin()) = htobe64((uint64_t) v);
+        }
+
+        uint8_t *raw() {
+            return (uint8_t *) Ego.begin();
+        }
+
+        uint8_t length() const {
+            uint8_t sz{0};
+            auto tmp = Ego.read<uint64_t>();
+            while (tmp > 0) {
+                tmp >>= 7;
+                sz++;
+            }
+            return sz;
+        }
+
+        void in(wire& w) {
+            uint8_t sz{0};
+            if (w.pull(&sz, 1)) {
+                // read actual size
+                uint64_t tmp{0};
+                if (w.pull((uint8_t *)&tmp, sz)) {
+                    Ego.write<uint64_t>(tmp);
+                    return;
+                }
+            }
+            suil_error::create("pulling varint failed");
+        }
+
+        void out(wire& w) const {
+            uint8_t sz{Ego.length()};
+            if (w.push(&sz, 1)) {
+                uint64_t val = Ego.read<uint64_t>();
+                if (w.push((uint8_t *)&val, sz))
+                    return;
+            }
+            suil_error::create("pushing varint failed");
+        }
+    };
+
+    template<typename __F>
+    void zcstr<__F>::in(wire &w) {
+        buffer_t b;
+        w >> b;
+        Ego = std::move(zcstring(b));
+    }
+
+    template<typename __F>
+    void zcstr<__F>::out(wire &w) const {
+        varint sz(Ego.len);
+        w << sz;
+        if (!w.push((uint8_t *) Ego.str, Ego.len)) {
+            suil_error::create("pushing zcstring failed");
+        }
+    }
+
+    template <size_t N>
+    void blob_t<N>::in(wire &w) {
+        if (!w.pull(Ego.begin(), Ego.size())) {
+            suil_error::create("pulling blob failed");
+        }
+    }
+
+    template <size_t N>
+    void blob_t<N>::out(wire &w) const {
+        if (!w.push(Ego.begin(), Ego.size())) {
+            suil_error::create("pushing blob failed");
+        }
+    }
+
+    wire& wire::operator<<(const char *str) {
+        zcstring tmp{str};
+        Ego << tmp;
+        return Ego;
+    }
+
+    wire& wire::operator<<(const std::string &str) {
+        zcstring tmp{str.data(), str.size(), false};
+        Ego << tmp;
+        return Ego;
+    }
+
+    wire& wire::operator>>(std::string &str) {
+        varint v{0};
+        Ego >> v;
+        uint64_t tmp{v.read<uint64_t>()};
+        if (tmp > 0) {
+            str.resize(tmp, '\0');
+            if (!reverse((uint8_t *)str.data(), tmp)) {
+                suil_error::create("pulling string from wire failed");
+            }
+        }
+
+        return Ego;
+    }
+
+    template <typename __T>
+    wire& wire::operator<<(const std::vector<__T> &vec) {
+        varint sz{vec.size()};
+        Ego << sz;
+        for (auto& e: vec) {
+            Ego << e;
+        }
+
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator<<(const std::vector<iod::sio<__T...>> &vec) {
+        varint sz{vec.size()};
+        Ego << sz;
+        for (const iod::sio<__T...>& e: vec) {
+            Ego << e;
+        }
+
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator>>(std::vector<iod::sio<__T...>> &vec) {
+        varint sz{0};
+        Ego >> sz;
+        uint64_t entries{sz.read<uint64_t>()};
+        for (int i = 0; i < entries; i++) {
+            iod::sio<__T...> entry;
+            Ego >> entry;
+            vec.emplace_back(std::move(entry));
+        }
+
+        return Ego;
+    }
+
+    template <typename __T>
+    wire& wire::operator>>(std::vector<__T> &vec) {
+        varint sz{0};
+        Ego >> sz;
+        uint64_t entries{sz.read<uint64_t>()};
+        for (int i = 0; i < entries; i++) {
+            __T entry{};
+            Ego >> entry;
+            vec.emplace_back(std::move(entry));
+        }
+
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator<<(const iod::sio<__T...> &o) {
+        //typedef __internal::remove_unwired<decltype(o)> wireble;
+        iod::foreach2(o) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || Ego.always) {
+                /* use given metadata to to set options */
+                Ego << m.symbol().member_access(o);
+            }
+        };
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator>>(iod::sio<__T...> &o) {
+        //typedef __internal::remove_unwired<decltype(o)> wireble;
+        iod::foreach2(o) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || Ego.always) {
+                /* use given metadata to to set options */
+                Ego >> m.symbol().member_access(o);
+            }
+        };
+        return Ego;
+    }
 }
 
 namespace iod {

@@ -1,0 +1,16 @@
+# UUID
+-debian:uuid-dev
+
+# SQlite
+-debian:libsqlite3-dev
+
+# OpenSSL
+-debian:libssl-dev
+
+# Postgres (9.5)
+-debian:libpq-dev postgres postgres-server-dev-9.5
+
+# Boost 1.61 Included in source
+# Use ./bootstrap.sh to make b2
+# ./b2 tools/bcp
+# ./dist/bin/bcp boost/<header>.hpp output_folder

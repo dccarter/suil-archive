@@ -25,6 +25,8 @@ _data
 _cookies
 _domain
 _jwt_token_use
+_unwire
+_printinfo
 
 # event bus
 _type
@@ -151,3 +153,13 @@ _STATIC
 _AUTHORIZE
 _PARSE_FORM
 _PARSE_COOKIES
+
+# ABCI
+_host
+_commit
+_option
+_check
+_deliver
+_query
+#_key
+#_val

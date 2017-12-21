@@ -146,6 +146,11 @@ namespace iod {
                 return *this;
             }
 
+            inline my_ostringstream &operator<<(const unsigned char t) {
+                (*this) << (int) t;
+                return *this;
+            }
+
             inline my_ostringstream &operator<<(const stringview &t) {
                 S::append(t);
                 return *this;
@@ -627,6 +632,13 @@ namespace iod {
                 }
 
                 val = sign * res;
+                return *this;
+            }
+
+            inline json_parser &fill(unsigned char &val) {
+                int tmp{0};
+                fill_int<int, 10>(tmp);
+                val = (unsigned char) tmp;
                 return *this;
             }
 

@@ -41,13 +41,15 @@ namespace suil {
         {}
 
         int run() {
-            notice("starting http server at %s:%d", config.name.c_str(), config.port);
+            idebug("starting socket server");
             ipaddr addr = iplocal(config.name.c_str(), config.port, 0);
 
             if (!adaptor.listen(addr, config.accept_backlog)) {
-                error("listening on adaptor failed: %s", errno_s);
+                ierror("listening on adaptor failed: %s", errno_s);
                 return errno;
             }
+
+            idebug("socket server listening at %s:%d", config.name.c_str(), config.port);
 
             int  status = EXIT_SUCCESS;
 
@@ -59,7 +61,7 @@ namespace suil {
                     // timeout's are allowed
                     if (errno != ETIMEDOUT) {
                         if (!exiting) {
-                            error("accepting next connection failed: %s", errno_s);
+                            ierror("accepting next connection failed: %s", errno_s);
                             status = errno;
                         }
 
@@ -72,7 +74,7 @@ namespace suil {
                 }
             }
 
-            notice("server exiting...");
+            idebug("socket server exiting...");
 
             return status;
         }
@@ -83,7 +85,7 @@ namespace suil {
 
         inline void stop() {
             /* set the exiting flag and close the adaptor */
-            debug("stopping server...");
+            idebug("stopping server...");
             exiting = true;
             adaptor.shutdown();
         }

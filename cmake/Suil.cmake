@@ -87,9 +87,10 @@ endfunction()
 # @param {DEFINES:list}  a list of extra defines
 # @param {INCLUDES:list} a list of extra include directories
 # @param {LIBRARIES:list} a list of extra libraries
-# @param {INSTALL_FILES:list} a list of files to install
-# @param {INSTALL_DIRS:list}  a list of directories to install
-#
+# @param {INSTALL_FILES:list} a list of files to install (if INSTALL is enabled)
+# @param {INSTALL_DIRS:list}  a list of directories to install (if INSTALL is enabled)
+# @param {DEPENDS:list} a list of other target that the application depends on
+# @param {INSTALL:ON|OFF} enable install targets, files & directories
 ##
 function(SuilApp name)
     if (NOT SUIL_PROJECT_CREATED)
@@ -100,14 +101,20 @@ function(SuilApp name)
     # parse function arguments
     set(options DEBUG IODSYMS_PATHBIN)
     set(kvargs)
-    set(kvvargs VERSION SOURCES DEFINES LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
+    set(kvvargs LIBRARY DEPENDS INSTALL VERSION SOURCES TEST DEFINES
+                LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
     cmake_parse_arguments(SUIL_APP "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
     # get the source files
     set(${name}_SOURCES ${SUIL_APP_SOURCES})
     if (NOT SUIL_APP_SOURCES)
-        file(GLOB_RECURSE ${name}_SOURCES src/*.c src/*.cpp)
+        if (NOT SUIL_APP_TEST)
+            file(GLOB_RECURSE ${name}_SOURCES src/*.c src/*.cpp src/*.cc)
+        else()
+            file(GLOB_RECURSE ${name}_SOURCES test/*.c test/*.cpp test/*.cc)
+        endif()
     endif()
+
     if (NOT ${name}_SOURCES)
         message(FATAL_ERROR "adding application '${name}' without sources")
     else()
@@ -120,9 +127,17 @@ function(SuilApp name)
         set(${name}_VERSION "0.0.0")
     endif()
 
-    # add the target
-    add_executable(${name} ${${name}_SOURCES})
-
+    if (SUIL_APP_LIBRARY)
+        message(STATUS "configuring target ${name} as a ${SUIL_APP_LIBRARY} library")
+        add_library(${name} ${SUIL_APP_LIBRARY} ${${name}_SOURCES})
+        target_compile_definitions(${name} PUBLIC "-DLIB_VERSION=\"${${name}_VERSION}\"")
+    else()
+        # add the target
+        message(STATUS "configuring target ${name} as ${SUIL_APP_LIBRARY} an executable")
+        add_executable(${name} ${${name}_SOURCES})
+        target_compile_definitions(${name} PUBLIC "-DAPP_VERSION=\"${${name}_VERSION}\"")
+        target_compile_definitions(${name} PUBLIC "-DAPP_NAME=\"${name}\"")
+    endif()
     # generate symbols
     set(${name}_SYMBOLS ${CMAKE_CURRENT_SOURCE_DIR}/${name}.sym)
     if (NOT ${name}_SYMBOLS)
@@ -146,13 +161,16 @@ function(SuilApp name)
     message(STATUS "target '${name}' libraries: ${${name}_LIBRARIES}")
     target_link_libraries(${name} ${${name}_LIBRARIES})
 
+    if (SUIL_APP_DEPENDS)
+        message(STATUS "adding dependencies to ${name}: ${SUIL_APP_DEPENDS}")
+        add_dependencies(${name} ${SUIL_APP_DEPENDS})
+    endif()
+
     # add custom definitions if provided
     if (SUIL_APP_DEFINES)
         message(STATUS "target '${name}' extra defines: ${SUIL_APP_DEFINES}")
         target_compile_definitions(${name} PUBLIC ${SUIL_APP_DEFINES})
     endif()
-    target_compile_definitions(${name} PUBLIC "-DAPP_VERSION=\"${${name}_VERSION}\"")
-    target_compile_definitions(${name} PUBLIC "-DAPP_NAME=\"${name}\"")
 
     # add target include directories
     set(${name}_INCLUDES src includes)
@@ -163,30 +181,56 @@ function(SuilApp name)
     target_include_directories(${name} PUBLIC ${${name}_INCLUDES})
     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-    # Get the artifacts directory
-    set(${name}_ARTIFACTS_DIR ${SUIL_APP_ARTIFACTS_DIR})
-    if (NOT SUIL_APP_ARTIFACTS_DIR)
-        set(${name}_ARTIFACTS_DIR ${name})
-    endif ()
+    if (SUIL_APP_INSTALL)
+        message(STATUS "target install is enabled")
+        # Get the artifacts directory
+        set(${name}_ARTIFACTS_DIR ${SUIL_APP_ARTIFACTS_DIR})
+        if (NOT SUIL_APP_ARTIFACTS_DIR)
+            set(${name}_ARTIFACTS_DIR ${name})
+        endif ()
 
-    # install the files
-    if (SUIL_APP_INSTALL_FILES)
-        message(STATUS "target '${name} install files: ${SUIL_APP_INSTALL_FILES}")
-        install(FILES ${SUIL_APP_INSTALL_FILES}
-                DESTINATION ${${name}_ARTIFACTS_DIR})
-    endif()
+        # install the files
+        if (SUIL_APP_INSTALL_FILES)
+            message(STATUS "target '${name} install files: ${SUIL_APP_INSTALL_FILES}")
+            install(FILES ${SUIL_APP_INSTALL_FILES}
+                    DESTINATION ${${name}_ARTIFACTS_DIR})
+        endif()
 
-    message(STATUS "target '${name} install target")
-    install(TARGETS ${name}
-            ARCHIVE DESTINATION targets/lib
-            LIBRARY DESTINATION targets/lib
-            RUNTIME DESTINATION targets/bin)
+        message(STATUS "target '${name} install target")
+        install(TARGETS ${name}
+                ARCHIVE DESTINATION targets/lib
+                LIBRARY DESTINATION targets/lib
+                RUNTIME DESTINATION targets/bin)
 
 
-    set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})
-    if (${name}_INSTALL_DIRS)
-        message(STATUS "target '${name} install directories: ${${name}_INSTALL_DIRS}")
-        install(DIRECTORY ${${name}_INSTALL_DIRS}
-                DESTINATION ${${name}_ARTIFACTS_DIR})
+        set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})
+        if (${name}_INSTALL_DIRS)
+            message(STATUS "target '${name} install directories: ${${name}_INSTALL_DIRS}")
+            install(DIRECTORY ${${name}_INSTALL_DIRS}
+                    DESTINATION ${${name}_ARTIFACTS_DIR})
+        endif()
+    else()
+        message(STATUS "target install is disabled")
     endif()
 endfunction()
+
+macro(SuilTest name)
+    SuilApp(${name}-test
+            ${ARGN}
+            TEST    ON
+            INSTALL OFF
+            DEPENDS ${name}
+            LIBRARIES ${name})
+endmacro()
+
+macro(SuilStatic name)
+    SuilApp(${name}
+            ${ARGN}
+            LIBRARY STATIC)
+endmacro()
+
+macro(SuilShared name)
+    SuilApp(${name}
+            ${ARGN}
+            LIBRARY SHARED)
+endmacro()

@@ -81,3 +81,6 @@ suil/symbols.h
 
 # Application projects
 apps
+
+# Ignore protobuf files
+*.pb.*

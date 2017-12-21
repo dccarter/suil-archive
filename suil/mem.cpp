@@ -32,7 +32,7 @@ namespace suil {
         memory_priv_t(const char *name, size_t len, size_t elm) {
             trace("new pool: name %s, len %lu elm %lu", name, len, elm);
             if ((this->name = strdup(name)) == nullptr) {
-                critical("new pool, strdup: %s", errno_s);
+                icritical("new pool, strdup: %s", errno_s);
             }
             lock = 0;
             elms = 0;
@@ -55,13 +55,13 @@ namespace suil {
             trace("create_regions(%p, %zu)", this, nelms);
 
             if ((reg = (region *) ::calloc(1, sizeof(region))) == NULL) {
-                critical("create_region: calloc: %s", errno_s);
+                icritical("create_region: calloc: %s", errno_s);
             }
 
             LIST_INSERT_HEAD(&regions, reg, list);
 
             if (SIZE_MAX / nelms < slen) {
-                critical("create_region: overflow");
+                icritical("create_region: overflow");
             }
 
             reg->length = nelms * slen;
@@ -69,7 +69,7 @@ namespace suil {
                                           MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 
             if (reg->start == NULL) {
-                critical("mmap: %s", errno_s);
+                icritical("mmap: %s", errno_s);
             }
 
             p = reg->start;

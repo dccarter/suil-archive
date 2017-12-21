@@ -88,7 +88,7 @@ namespace suil {
 
         // get the server line
         if ((code = getresponse(5000)) != 220) {
-            error("stmp connect error: %d - %s", showerror(code));
+            ierror("stmp connect error: %d - %s", showerror(code));
             goto client_login_do_quit;
         }
 
@@ -96,7 +96,7 @@ namespace suil {
         if (!sendline(5000, "HELO ", domain)) goto client_login_exit;
 
         if ((code = getresponse(5000)) != 250) {
-            error("stmp HELO error: %d - %s"), showerror(code);
+            ierror("stmp HELO error: %d - %s"), showerror(code);
             goto client_login_do_quit;
         }
 
@@ -105,7 +105,7 @@ namespace suil {
 
         code = getresponse(5000);
         if (code != 334) {
-            error("stmp AUTH LOGIN error: %d - %s\n", code, showerror(code));
+            ierror("stmp AUTH LOGIN error: %d - %s\n", code, showerror(code));
             goto client_login_do_quit;
         }
 
@@ -114,17 +114,17 @@ namespace suil {
         code = getresponse(5000);
         if (code != 334) {
             // sending email username failed
-            error("stmp AUTH username rejected: %d %s", code, showerror(code));
+            ierror("stmp AUTH username rejected: %d %s", code, showerror(code));
             goto client_login_do_quit;
         }
         if (!sendline(5000, passwd_b64)) goto client_login_exit;
         code = getresponse(5000);
         if (code != 235){
             // login failure
-            error("stmp AUTH password rejected: %d %s", code, showerror(500));
+            ierror("stmp AUTH password rejected: %d %s", code, showerror(500));
         } else {
             // logged in to server
-            debug("Successfully logged in to server");
+            idebug("Successfully logged in to server");
             status = true;
             goto client_login_exit;
         }
@@ -149,13 +149,13 @@ namespace suil {
             utils::cast(tmp, code);
             if (resp.len > 6) {
                 resp.str[resp.len - 2] = '\0';
-                debug("smtp_resp: %s", resp.cstr);
+                idebug("smtp_resp: %s", resp.cstr);
             }
             else {
-                debug("smtp_resp: %d", code);
+                idebug("smtp_resp: %d", code);
             }
         } else {
-            error("failed to receive response from server");
+            ierror("failed to receive response from server");
         }
 
         return code;
@@ -278,13 +278,13 @@ namespace suil {
         int code = 0;
         for (auto &addr : addrs) {
             if (!sendline(timeout, "RCPT TO: <", addr.email, ">")) {
-                error("sending messaged failed 'RCPT TO: %s'", addr.email.cstr);
+                ierror("sending messaged failed 'RCPT TO: %s'", addr.email.cstr);
                 return false;
             }
 
             code = getresponse(timeout);
             if (code != 250) {
-                error("stmp RCPT TO: <%s> failed: %s", addr.email.cstr, showerror(code));
+                ierror("stmp RCPT TO: <%s> failed: %s", addr.email.cstr, showerror(code));
             }
         }
 

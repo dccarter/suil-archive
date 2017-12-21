@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.5)
 project(libsuil C CXX)
 
-file(GLOB_RECURSE LIB_SUIL_SOURCES *.cpp *.c)
+file(GLOB LIB_SUIL_BASE_SOURCES *.cpp *.c)
+file(GLOB_RECURSE LIB_SUIL_HTTP_SOURCES http/*.cpp http/*.c)
+file(GLOB_RECURSE LIB_SUIL_SQL_SOURCES  sql/*.cpp  sql/*.c)
+set(LIB_SUIL_SOURCES
+        ${LIB_SUIL_BASE_SOURCES}
+        ${LIB_SUIL_HTTP_SOURCES}
+        ${LIB_SUIL_SQL_SOURCES})
+
 add_library(suil STATIC ${LIB_SUIL_SOURCES})
 target_link_libraries(suil ${SUIL_LIBRARIES})
 add_library(suil_s SHARED ${LIB_SUIL_SOURCES})
@@ -27,3 +34,5 @@ install(FILES suil.sql suil.pgsql.sql
         DESTINATION share/suil/db/)
 install(FILES suil.sqlite
         DESTINATION share/suil/sqlite/)
+
+add_subdirectory(abci)
