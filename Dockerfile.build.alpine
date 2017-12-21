@@ -4,7 +4,7 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 # Install dependencies
 RUN apk update
 RUN apk  add openssh bash cmake sqlite sqlite-dev docker && \
-         apk add openssl libressl-dev postgresql-dev ca-certificates && \
+         apk add openssl-dev postgresql-dev ca-certificates && \
          apk add bsd-compat-headers gcc g++ make util-linux-dev protobuf-dev
 
 # Copy Binaries
