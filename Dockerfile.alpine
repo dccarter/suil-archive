@@ -4,7 +4,8 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 # Install dependencies
 RUN apk update
 RUN apk  add openssl libressl postgresql && \
-         apk add sqlite musl libstdc++ libuuid protobuf
+         apk add sqlite musl libstdc++ libuuid protobuf &&
+         apk add libexecinfo
 
 # Copy Binaries
 COPY artifacts/ /usr/local/
