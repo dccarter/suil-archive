@@ -54,7 +54,7 @@ void cmd_goodbye(cmdl::parser& parser) {
     parser.add(std::move(hello));
 }
 
-int main(int argc, const char *argv[])
+int main(int argc, char *argv[])
 {
     suil::init(opt(printinfo, false));
 
