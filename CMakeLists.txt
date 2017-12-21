@@ -67,7 +67,6 @@ add_definitions(${SUIL_DEFINES})
 # add dependencies projects
 add_subdirectory(deps/libmill)
 add_subdirectory(deps/iod)
-add_subdirectory(deps/hiredis)
 include_directories(deps)
 
 if (SUIL_BUILD_DEV_PACKAGE)
