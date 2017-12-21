@@ -3,7 +3,7 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Install dependencies
 RUN apk update
-RUN apk  add openssl postgresql && \
+RUN apk  add libressl postgresql && \
          apk add sqlite musl libstdc++ libuuid protobuf
 
 # Copy Binaries
