@@ -57,7 +57,7 @@ find_package(PostgreSQL ${SUIL_PGSQL_VERSION} REQUIRED)
 find_package(Protobuf REQUIRED)
 
 set(SUIL_LIBRARIES
-        uuid sqlite3 mill
+        uuid sqlite3 mill dl
         ${OpenSSL_LIBRARIES}
         ${PostgreSQL_LIBRARIES}
         ${PROTOBUF_LIBRARIES})

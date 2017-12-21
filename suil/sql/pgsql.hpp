@@ -7,7 +7,6 @@
 
 
 #include <libpq-fe.h>
-//#include <catalog/pg_type.h>
 #include <netinet/in.h>
 #include <deque>
 #include <memory>
@@ -39,7 +38,7 @@ namespace suil {
             FLOAT4ARRAYOID = 1021
         };
 
-        namespace _internals {
+        namespace __internal {
             inline Oid type_to_pgsql_oid_type(const char&)
             { return CHAROID; }
             inline Oid type_to_pgsql_oid_type(const short int&)
@@ -482,7 +481,7 @@ namespace suil {
 
                 int ncols = PQnfields(results.result());
 
-                iod::foreach(suil::sql::_internals::remove_ignore_fields_t<decltype(o)>()) |
+                iod::foreach(suil::sql::__internal::remove_ignore_fields_t<decltype(o)>()) |
                 [&] (auto &m) {
                     int fnumber = PQfnumber(results.result(), m.symbol().name());
                     if (fnumber != -1) {
@@ -494,10 +493,10 @@ namespace suil {
 
             template <typename __V, typename std::enable_if<std::is_arithmetic<__V>::value>::type* = nullptr>
             void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, __V& v) {
-                val = _internals::vhod_to_vnod(norder, v);
+                val = __internal::vhod_to_vnod(norder, v);
                 len  =  sizeof(__V);
                 bin  = 1;
-                oid  = _internals::type_to_pgsql_oid_type(v);
+                oid  = __internal::type_to_pgsql_oid_type(v);
                 return nullptr;
             }
 
@@ -552,8 +551,8 @@ namespace suil {
             template <typename __V>
             void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const std::vector<__V>& v) {
                 buffer_t b(32);
-                val  = _internals::vhod_to_vnod(b, v);
-                oid  = _internals::type_to_pgsql_oid_type(v);
+                val  = __internal::vhod_to_vnod(b, v);
+                oid  = __internal::type_to_pgsql_oid_type(v);
                 len  = (int) b.size();
                 bin  = 0;
                 return b.release();
@@ -589,7 +588,7 @@ namespace suil {
                 void read(__V& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
-                        //_internals::vnod_to_vhod(data, v);
+                        //__internal::vnod_to_vhod(data, v);
                         zcstring tmp(data);
                         utils::cast(data, v);
                     }
@@ -600,7 +599,7 @@ namespace suil {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
                         int len = PQgetlength(*it, row, col);
-                        _internals::parse_array(v, data);
+                        __internal::parse_array(v, data);
                     }
                 }
 
