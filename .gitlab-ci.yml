@@ -16,7 +16,7 @@ build:dev:
     - apk add openssl docker
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
     - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add libressl-dev postgresql-dev
+    - apk add libressl-dev postgresql-dev protobuf
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
@@ -56,7 +56,7 @@ build:prod:
     - apk add openssl docker
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
     - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add libressl-dev postgresql-dev
+    - apk add libressl-dev postgresql-dev protobuf
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
@@ -96,7 +96,7 @@ build:release:devel:
     - apk add openssl docker
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
     - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add libressl-dev postgresql-dev
+    - apk add libressl-dev postgresql-dev protobuf 
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
@@ -147,7 +147,7 @@ build:release:prod:
     - apk add openssl docker
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
     - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add libressl-dev postgresql-dev
+    - apk add libressl-dev postgresql-dev protobuf
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
 
   script:
