@@ -3,9 +3,12 @@
 //
 #include <stdio.h>
 #include <unistd.h>
+
+#ifdef SUIL_BACKTRACE
 #include <execinfo.h> // for backtrace
 #include <dlfcn.h>    // for dladdr
 #include <cxxabi.h>   // for __cxa_demangle
+#endif
 
 #include <suil/sys.hpp>
 #include <suil/log.hpp>
@@ -23,6 +26,7 @@ namespace suil {
             printf("\033[0m");
     }
 
+#ifdef SUIL_BACKTRACE
     void backtrace() {
         void *callstack[128];
         const int nMaxFrames = sizeof(callstack) / sizeof(callstack[0]);
@@ -55,7 +59,9 @@ namespace suil {
         free(symbols);
         printf("%s\n", trace_buf.str().data());
     }
-
+#else
+    void backtrace() {}
+#endif
 
     namespace log {
 
