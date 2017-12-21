@@ -13,9 +13,9 @@ build:dev:
   # Install all the required dependencies before proceeding to build
   before_script: 
     - apk update
-    - apk add openssl docker
+    - apk add openssl-dev docker
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
-    - apk add openssh-dev bash cmake sqlite sqlite-dev
+    - apk add openssh bash cmake sqlite sqlite-dev
     - apk add postgresql-dev protobuf-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
@@ -53,9 +53,9 @@ build:prod:
   # Install all the required dependencies before proceeding to build
   before_script: 
     - apk update
-    - apk add openssl docker
+    - apk add openssl-dev docker
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
-    - apk add openssh-dev bash cmake sqlite sqlite-dev
+    - apk add openssh bash cmake sqlite sqlite-dev
     - apk add postgresql-dev protobuf-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
@@ -93,9 +93,9 @@ build:release:devel:
 # Install all the required dependencies before proceeding to build
   before_script: 
     - apk update
-    - apk add openssl docker
+    - apk add openssl-dev docker
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
-    - apk add openssh-dev bash cmake sqlite sqlite-dev
+    - apk add openssh bash cmake sqlite sqlite-dev
     - apk add postgresql-dev protobuf-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
@@ -144,9 +144,9 @@ build:release:prod:
 # Install all the required dependencies before proceeding to build
   before_script:
     - apk update
-    - apk add openssl docker
+    - apk add openssl-dev docker
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
-    - apk add openssh-dev bash cmake sqlite sqlite-dev
+    - apk add openssh bash cmake sqlite sqlite-dev
     - apk add postgresql-dev protobuf-dev
     - apk add bsd-compat-headers gcc g++ make util-linux-dev
 
