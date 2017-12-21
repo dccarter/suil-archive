@@ -22,9 +22,9 @@ suil_iod_symbols(suil
         DEPENDS iodsyms)
 add_dependencies(suil_s suil-gensyms)
 
-set(suil_INSTALL_TARGETS suil_s)
+set(suil_INSTALL_TARGETS suil)
 if (SUIL_BUILD_DEV_PACKAGE)
-    list(APPEND suil_INSTALL_TARGETS suil)
+    list(APPEND suil_INSTALL_TARGETS suil_s)
 endif()
 install(TARGETS ${suil_INSTALL_TARGETS}
     ARCHIVE DESTINATION lib

@@ -18,5 +18,18 @@ add_executable(sabci ${LIB_SUIL_ABCI_SOURCES} main.cc)
 target_link_libraries(sabci suil_s ${SUIL_LIBRARIES})
 add_library(sabci_s STATIC ${LIB_SUIL_ABCI_SOURCES})
 target_link_libraries(sabci suil_s ${SUIL_LIBRARIES})
-add_dependencies(sabci suil_s)
+add_dependencies(sabci   suil_s)
 add_dependencies(sabci_s suil_s)
+
+set(sabci_INSTALL_TARGETS sabci)
+if (SUIL_BUILD_DEV_PACKAGE)
+    list(APPEND sabci_INSTALL_TARGETS sabci_s)
+endif()
+install(TARGETS ${sabci_INSTALL_TARGETS}
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin)
+install(FILES suil.sql suil.pgsql.sql
+        DESTINATION share/suil/db/)
+install(FILES suil.sqlite
+        DESTINATION share/suil/sqlite/)

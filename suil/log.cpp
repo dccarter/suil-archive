@@ -1,8 +1,8 @@
 //
 // Created by dc on 31/05/17.
 //
-#include <stdio.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #ifdef SUIL_BACKTRACE
 #include <execinfo.h> // for backtrace
@@ -11,7 +11,6 @@
 #endif
 
 #include <suil/sys.hpp>
-#include <suil/log.hpp>
 
 namespace suil {
 
