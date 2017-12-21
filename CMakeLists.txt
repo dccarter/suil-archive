@@ -91,6 +91,12 @@ if (SUIL_BUILD_DEV_PACKAGE)
     install(DIRECTORY deps/iod
             DESTINATION include
             FILES_MATCHING PATTERN "*.hpp")
+    install(DIRECTORY deps/catch
+            DESTINATION include
+            FILES_MATCHING PATTERN "*.hh")
+    install(DIRECTORY deps/catch
+            DESTINATION include
+            FILES_MATCHING PATTERN "*.hpp")
     install(DIRECTORY deps/boost
             DESTINATION include
             FILES_MATCHING PATTERN "*.h")
