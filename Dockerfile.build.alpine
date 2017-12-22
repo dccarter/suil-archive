@@ -1,12 +1,5 @@
-FROM bmv437/flynn-cli:alpine
+FROM suilteam/mecury:latest
 MAINTAINER "Carter Mbotho <carter@suilteam.com>"
-
-# Install dependencies
-RUN apk update
-RUN apk  add openssh bash cmake sqlite sqlite-dev docker && \
-         apk add libressl-dev postgresql-dev ca-certificates && \
-         apk add bsd-compat-headers gcc g++ make util-linux-dev && \
-         apk add libressl2.6-libcrypto protobuf-dev
 
 # Copy Binaries
 COPY artifacts/ /usr/
