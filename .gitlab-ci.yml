@@ -1,5 +1,5 @@
 # Build Pipeline for Suil Project
-image: alpine:latest
+image: suilteam/mecury:latest
 
 variables:
   SUIL_BUILD_VERSION: $SUIL_MAJOR_VERSION.$SUIL_MINOR_VERSION.$SUIL_PATCH_VERSION-$SUIL_VERSION_TAG
@@ -11,13 +11,8 @@ build:dev:
   only:
     - master
   # Install all the required dependencies before proceeding to build
-  before_script: 
-    - apk update
-    - apk add libressl-dev libressl2.6-libcrypto docker
+  before_script:
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
-    - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add postgresql-dev protobuf-dev
-    - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
@@ -51,13 +46,8 @@ build:prod:
   only:
     - master
   # Install all the required dependencies before proceeding to build
-  before_script: 
-    - apk update
-    - apk add libressl-dev docker
+  before_script:
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
-    - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add postgresql-dev libressl2.6-libcrypto protobuf-dev
-    - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
@@ -92,12 +82,7 @@ build:release:devel:
     - tags
 # Install all the required dependencies before proceeding to build
   before_script: 
-    - apk update
-    - apk add libressl-dev docker
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
-    - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add postgresql-dev libressl2.6-libcrypto protobuf-dev
-    - apk add bsd-compat-headers gcc g++ make util-linux-dev
     
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
@@ -143,12 +128,7 @@ build:release:prod:
     - tags
 # Install all the required dependencies before proceeding to build
   before_script:
-    - apk update
-    - apk add libressl-dev docker
     - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
-    - apk add openssh bash cmake sqlite sqlite-dev
-    - apk add postgresql-dev libressl2.6-libcrypto protobuf-dev
-    - apk add bsd-compat-headers gcc g++ make util-linux-dev
 
   script:
     # Build release binaries
@@ -181,8 +161,6 @@ test:devel:
   only:
     - master
   before_script:
-    - apk update
-    - apk add docker
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
   script:
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:latest /usr/local/bin/sut
@@ -194,8 +172,6 @@ test:production:
   only:
     - tags
   before_script:
-    - apk update
-    - apk add docker
     - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
   script:
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:$SUIL_BUILD_VERSION /usr/local/bin/sut
