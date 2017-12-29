@@ -77,7 +77,7 @@ if (SUIL_BUILD_DEV_PACKAGE)
             FILES_MATCHING PATTERN "*.h")
 
     # Packaging
-    set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil sabci)
+    set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil sabci_s)
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})
     set(SUIL_PACKAGE_DEFINES   ${SUIL_DEFINES})
 
@@ -151,7 +151,8 @@ endif()
 
 if (SUIL_DEV_IDE)
 #    add_subdirectory(apps/suil-web)
-    add_subdirectory(apps/sodoin)
+#    add_subdirectory(apps/sodoin)
+    add_subdirectory(apps/suilchain)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

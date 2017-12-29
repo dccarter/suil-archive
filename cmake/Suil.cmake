@@ -234,3 +234,29 @@ macro(SuilShared name)
             ${ARGN}
             LIBRARY SHARED)
 endmacro()
+
+function(ProtoGen proto)
+    # parse function arguments
+    set(options)
+    set(kvargs)
+    set(kvvargs OUTDIR WORKINGDIR)
+    cmake_parse_arguments(PROTOC "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
+
+    if (NOT PROTOC_OUTDIR)
+        set(PROTOC_OUTDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    endif()
+
+    if (NOT PROTOC_WORKINGDIR)
+        set(PROTOC_WORKINGDIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    endif()
+
+    execute_process(
+            COMMAND protoc --cpp_out ${PROTOC_OUTDIR} ${proto}
+            WORKING_DIRECTORY ${PROTOC_WORKINGDIR}
+            RESULT_VARIABLE PROTOGEN_RESULT
+            OUTPUT_VARIABLE PROTOGEN_OUTPUT)
+
+    if (RESULT_VARIABLE)
+        message(FATAL_ERROR "protogen: ${PROTOGEN_OUTPUT}")
+    endif()
+endfunction()
