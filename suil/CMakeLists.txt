@@ -9,11 +9,14 @@ set(LIB_SUIL_SOURCES
         ${LIB_SUIL_HTTP_SOURCES}
         ${LIB_SUIL_SQL_SOURCES})
 
-add_library(suil STATIC ${LIB_SUIL_SOURCES})
+add_library(suil_s STATIC ${LIB_SUIL_SOURCES})
 target_link_libraries(suil ${SUIL_LIBRARIES})
-add_library(suil_s SHARED ${LIB_SUIL_SOURCES})
+add_library(suil SHARED ${LIB_SUIL_SOURCES})
 target_link_libraries(suil_s ${SUIL_LIBRARIES})
 set_target_properties(suil_s PROPERTIES OUTPUT_NAME suil)
+if (NOT SUIL_BUILD_DEV_PACKAGE)
+     target_compile_options(suil PUBLIC "$<$<CONFIG:RELEASE>:-Os>")
+endif()
 
 suil_iod_symbols(suil
         BINARY  ${CMAKE_BINARY_DIR}/deps/iod/iodsyms
@@ -21,6 +24,7 @@ suil_iod_symbols(suil
         OUTPUT  ${CMAKE_SOURCE_DIR}/suil/symbols.h
         DEPENDS iodsyms)
 add_dependencies(suil_s suil-gensyms)
+add_dependencies(suil   suil-gensyms)
 
 set(suil_INSTALL_TARGETS suil)
 if (SUIL_BUILD_DEV_PACKAGE)
