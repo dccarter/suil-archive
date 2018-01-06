@@ -10,13 +10,10 @@ set(LIB_SUIL_SOURCES
         ${LIB_SUIL_SQL_SOURCES})
 
 add_library(suil_s STATIC ${LIB_SUIL_SOURCES})
-target_link_libraries(suil_s ${SUIL_LIBRARIES})
+target_link_libraries(suil_s ${SUIL_LIBRARIES} mill_s)
 add_library(suil SHARED ${LIB_SUIL_SOURCES})
-target_link_libraries(suil ${SUIL_LIBRARIES})
-set_target_properties(suil_s PROPERTIES OUTPUT_NAME suil)
-if (NOT SUIL_BUILD_DEV_PACKAGE)
-     target_compile_options(suil PUBLIC "$<$<CONFIG:RELEASE>:-Os>")
-endif()
+target_link_libraries(suil ${SUIL_LIBRARIES} mill_s)
+#set_target_properties(suil_s PROPERTIES OUTPUT_NAME suil)
 
 suil_iod_symbols(suil
         BINARY  ${CMAKE_BINARY_DIR}/deps/iod/iodsyms
@@ -41,5 +38,4 @@ install(FILES suil.sqlite
 
 if (SUIL_BUILD_ABCI)
     add_subdirectory(abci)
-
 endif()

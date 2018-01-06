@@ -28,10 +28,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
-if (NOT SUIL_BUILD_DEV_PACKAGE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
-    set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Os")
-endif()
 
 set(SUIL_DEFINES)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -59,15 +55,21 @@ endif()
 
 find_package(PostgreSQL ${SUIL_PGSQL_VERSION} REQUIRED)
 
+set(SUIL_LIBRARIES
+        uuid sqlite3
+        ${PostgreSQL_LIBRARIES}
+        ${OpenSSL_LIBRARIES})
+
+set(SUIL_STATIC_LIBRARIES
+        uuid.a sqlite3.a pq ssl.a crypto.a)
+
 if (SUIL_BUILD_ABCI)
     find_package(Protobuf REQUIRED)
+    set(SUIL_LIBRARIES ${SUIL_LIBRARIES} ${PROTOBUF_LIBRARIES})
+    set(SUIL_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} protobuf.a)
 endif()
 
-set(SUIL_LIBRARIES
-        uuid sqlite3 mill
-        ${OpenSSL_LIBRARIES}
-        ${PostgreSQL_LIBRARIES}
-        ${PROTOBUF_LIBRARIES})
+message(STATUS "Suil dependecies ${SUIL_LIBRARIES}")
 
 add_definitions(${SUIL_DEFINES})
 
@@ -85,10 +87,13 @@ if (SUIL_BUILD_DEV_PACKAGE)
 
     # Packaging
     if (SUIL_BUILD_ABCI)
-        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil)
+        set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s sabci_s)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil sabci_s)
     else()
-        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil sabci_s)
+        set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil sabci_s)
     endif()
+
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})
     set(SUIL_PACKAGE_DEFINES   ${SUIL_DEFINES})
 
@@ -139,12 +144,14 @@ include_directories(SYSTEM ${PROJECT_SOURCE_DIR})
 add_subdirectory(suil)
 
 add_executable(scrap main.cpp)
-target_link_libraries(scrap ${SUIL_LIBRARIES} suil)
+add_dependencies(scrap suil_s)
+target_link_libraries(scrap ${SUIL_LIBRARIES} mill_s suil_s)
 
 if (SUIL_BUILD_UNIT_TEST)
     file(GLOB_RECURSE SUIL_TEST_SOURCES tests/*.cpp test/*.c)
     add_executable(sut ${SUIL_TEST_SOURCES})
-    target_link_libraries(sut ${SUIL_LIBRARIES} suil)
+    add_dependencies(sut suil_s)
+    target_link_libraries(sut ${SUIL_LIBRARIES} mill_s suil_s)
     target_compile_definitions(sut PUBLIC -DSUIL_TESTING)
 endif()
 

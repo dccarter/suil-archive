@@ -6,9 +6,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 # static and shared libs
 file(GLOB sources *.c dns/*.c)
 set_source_files_properties(dns/dns.c PROPERTIES COMPILE_FLAGS -std=c99)
-add_library(mill STATIC ${sources})
-add_library(mill_s SHARED ${sources})
-set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
+add_library(mill_s STATIC ${sources})
+add_library(mill   SHARED ${sources})
+#set_target_properties(mill_s PROPERTIES OUTPUT_NAME mill)
 set_target_properties(
         mill_s PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -23,7 +23,7 @@ if(HAVE_CLOCK_GETTIME)
   target_link_libraries(mill_s rt)
 endif()
 if (OpenSSL_FOUND)
-    target_link_libraries(mill ${OPENSSL_LIBRARIES})
+    target_link_libraries(mill   ${OPENSSL_LIBRARIES})
     target_link_libraries(mill_s ${OPENSSL_LIBRARIES})
 endif()
 

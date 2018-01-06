@@ -41,7 +41,7 @@ function(SuilProject name)
     else ()
         set(options "")
         set(kvargs  VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
-        set(kvvargs "")
+        set(kvvargs STATIC_LINK LINK_DIR)
         cmake_parse_arguments(SUIL_PROJECT "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
         # initialize project
@@ -53,7 +53,6 @@ function(SuilProject name)
         # find required packages
         find_package(PostgreSQL REQUIRED)
         find_package(OpenSSL REQUIRED)
-        set(SUIL_LIBRARIES mill sqlite3 uuid ${PostgreSQL_LIBRARIES})
 
         # include all source
         include_directories(${SUIL_PACKAGE_INCLUDES})
@@ -66,9 +65,23 @@ function(SuilProject name)
         add_definitions(${SUIL_PACKAGE_DEFINES})
         set(SUIL_PROJECT_DEFINES ${SUIL_PACKAGE_DEFINES} PARENT_SCOPE)
 
-        # push suil libraries to parent scope
-        set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_LIBRARIES} PARENT_SCOPE)
+        ## push suil libraries to parent scope
 
+        # Executable linking mode
+        if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
+            set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Os")
+            if (SUIL_PROJECT_STATIC_LINK)
+                link_directories(${SUIL_PROJECT_LINK_DIR})
+                set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_STATIC_LIBRARIES} PARENT_SCOPE)
+                set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
+                set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
+            else()
+                set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_LIBRARIES} PARENT_SCOPE)
+            endif()
+        else()
+            set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_LIBRARIES} PARENT_SCOPE)
+        endif()
         # Some basic project definitions
         set(SUIL_PROJECT_NAME ${name} PARENT_SCOPE)
         set(SUIL_PROJECT_CREATED ON PARENT_SCOPE)
