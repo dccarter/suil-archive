@@ -56,7 +56,7 @@ namespace suil {
 
         protected:
 
-            base_client(sock_adaptor& adaptor)
+            base_client(SocketAdaptor& adaptor)
                 : adaptor(adaptor)
             {}
 
@@ -67,10 +67,10 @@ namespace suil {
             void process(Result& res,  types::Request &req, Response &resp);
             void sendreq(Result& res,  types::Request& req);
             void recvresp(Result& res, types::Response& resp);
-            sock_adaptor& adaptor;
+            SocketAdaptor& adaptor;
         };
 
-        template <typename Proto = tcp_sock>
+        template <typename Proto = TcpSock>
         struct client : base_client {
             client(zcstring&& host, int port)
                 : base_client(sock),
@@ -81,7 +81,7 @@ namespace suil {
                 trace("connecting application at %s", ipstr(appaddr));
                 Result res;
                 if (!sock.connect(appaddr, 3000)) {
-                    // connection to application failed
+                    // Connection to application failed
                     res(CodeType::InternalError)
                         .appendf("connecting to application failed: %s", errno_s);
                     return std::move(res);

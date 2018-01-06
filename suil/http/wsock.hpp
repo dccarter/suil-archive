@@ -11,7 +11,7 @@
 namespace suil {
     namespace http {
 
-        enum ws_op_t : uint8_t  {
+        enum WsOp : uint8_t  {
             CONT    = 0x00,
             TEXT    = 0x01,
             BINARY  = 0x02,
@@ -20,16 +20,16 @@ namespace suil {
             PONG    = 0x0A
         };
 
-        struct websock;
-        struct websock_api {
-            websock_api();
-            typedef std::function<bool(websock&)> connect_handler_t;
+        struct WebSock;
+        struct WebSockApi {
+            WebSockApi();
+            typedef std::function<bool(WebSock&)> connect_handler_t;
 
-            typedef std::function<void(websock&)> close_handler_t;
+            typedef std::function<void(WebSock&)> close_handler_t;
 
             typedef std::function<void()>         disconnect_handler_t;
 
-            typedef std::function<void(websock&, const buffer_t&, ws_op_t)> msg_handler_t;
+            typedef std::function<void(WebSock&, const zbuffer&, WsOp)> msg_handler_t;
 
             connect_handler_t       on_connect{nullptr};
 
@@ -42,24 +42,22 @@ namespace suil {
             int64_t                 timeout{-1};
 
         private:
-            friend struct websock;
+            friend struct WebSock;
 
-            void broadcast(websock* src, const void *data, size_t size);
+            void broadcast(WebSock* src, const void *data, size_t size);
 
-            static coroutine void   send(chan ch, websock& ws, const void *data, size_t sz, ws_op_t op);
+            static coroutine void   send(chan ch, WebSock& ws, const void *data, size_t sz, WsOp op);
 
-            static coroutine void   bsend(async_t<int>&, websock& ws, const void *data, size_t len);
+            static coroutine void   bsend(Async<int>&, WebSock& ws, const void *data, size_t len);
 
-            zcstr_map_t<websock&>   websocks{};
-
-            size_t                  nsocks{0};
-
-            uint8_t                 id;
+            zmap<WebSock&>   websocks{};
+            size_t           nsocks{0};
+            uint8_t          id;
         };
 
-        inline void ws_handshake(const request&, response&, websock_api& api);
+        inline void ws_handshake(const Request&, Response&, WebSockApi& api);
 
-        struct wsock_bcast_msg {
+        struct WsockBcastMsg {
             uint8_t         api_id;
             size_t          len;
             uint8_t         payload[0];
@@ -69,50 +67,50 @@ namespace suil {
         #define IPC_WSOCK_CONN  ipc_msg(2)
 
         /**
-         * The web socket connection message. This message is sent to other
-         * worker whenever a worker receives a new web socket connection and
+         * The web socket Connection message. This message is sent to other
+         * worker whenever a worker receives a new web socket Connection and
          * whenever a socket disconnects
          */
-        struct wsock_conn_msg {
+        struct WsockConnMsg {
             uint8_t         api_id;
             uint8_t         conn;
         } __attribute((packed));
 
         define_log_tag(WEB_SOCKET);
-        struct websock : LOGGER(dtag(WEB_SOCKET)) {
+        struct WebSock : LOGGER(dtag(WEB_SOCKET)) {
 
-            bool send(const void *, size_t, ws_op_t);
+            bool send(const void *, size_t, WsOp);
             bool send(const void *data, size_t size) {
-                return send(data, size, ws_op_t::BINARY);
+                return send(data, size, WsOp::BINARY);
             }
-            bool send(const zcstr<>& zc, ws_op_t op = ws_op_t::TEXT) {
-                return send(zc.str, zc.len, op);
+            bool send(const zcstring& zc, WsOp op = WsOp::TEXT) {
+                return send(zc.data(), zc.size(), op);
             }
             inline bool send(const char *str) {
-                return send(str, strlen(str), ws_op_t::TEXT);
+                return send(str, strlen(str), WsOp::TEXT);
             }
 
-            inline bool send(const buffer_t& b, ws_op_t op = ws_op_t::BINARY) {
+            inline bool send(const zbuffer& b, WsOp op = WsOp::BINARY) {
                 return send(b.data(), b.size(), op);
             }
 
-            void broadcast(const void *data, size_t sz, ws_op_t op);
+            void broadcast(const void *data, size_t sz, WsOp op);
 
-            inline void broadcast(const zcstr<>& zc, ws_op_t op = ws_op_t::TEXT) {
-                broadcast(zc.cstr, zc.len, op);
+            inline void broadcast(const zcstring& zc, WsOp op = WsOp::TEXT) {
+                broadcast(zc.data(), zc.size(), op);
             }
 
-            inline void broadcast(const buffer_t& b, ws_op_t op = ws_op_t::BINARY) {
+            inline void broadcast(const zbuffer& b, WsOp op = WsOp::BINARY) {
                 broadcast(b.data(), b.size(), op);
             }
 
             inline void broadcast(const char *str) {
-                broadcast(str, strlen(str), ws_op_t::TEXT);
+                broadcast(str, strlen(str), WsOp::TEXT);
             }
 
             void close();
 
-            ~websock() {
+            ~WebSock() {
                 if (data_) {
                     memory::free(data_);
                     data_ = nullptr;
@@ -125,10 +123,10 @@ namespace suil {
 
         protected:
             friend inline void
-            ws_handshake(const request&, response&, websock_api& api);
-            static Status handshake(const request&, response&, websock_api&, size_t);
+            ws_handshake(const Request&, Response&, WebSockApi& api);
+            static Status handshake(const Request&, Response&, WebSockApi&, size_t);
 
-            websock(sock_adaptor& adaptor, websock_api& api, size_t size = 0)
+            WebSock(SocketAdaptor& adaptor, WebSockApi& api, size_t size = 0)
                 : sock(adaptor),
                   api(api)
             {
@@ -139,7 +137,7 @@ namespace suil {
             }
 
             template <typename __H, typename ...Mws>
-            friend struct connection;
+            friend struct Connection;
             struct  header {
                 header()
                     : u16All(0),
@@ -169,29 +167,29 @@ namespace suil {
             } __attribute__((packed));
 
             virtual bool receive_opcode(header& h);
-            virtual bool receive_frame(header& h, buffer_t& b);
+            virtual bool receive_frame(header& h, zbuffer& b);
 
-            sock_adaptor&       sock;
-            websock_api&        api;
+            SocketAdaptor&       sock;
+            WebSockApi&        api;
             bool                end_session{false};
             void                *data_{nullptr};
         private:
-            friend struct websock_api;
+            friend struct WebSockApi;
             void handle();
             bool bsend(const void *data, size_t len);
             static coroutine void broadcast(
-                    websock& ws, websock_api& api, void *data, size_t size);
+                    WebSock& ws, WebSockApi& api, void *data, size_t size);
         };
 
         template <typename __T = __Void>
-        inline void ws_handshake(const request& req, response& res, websock_api& api) {
-            Status  s = websock::handshake(req, res, api, sizeof(__T));
+        inline void ws_handshake(const Request& req, Response& res, WebSockApi& api) {
+            Status  s = WebSock::handshake(req, res, api, sizeof(__T));
             res.end(s);
         }
 
         template <typename... _Opts>
-        static inline websock_api ws_api(_Opts... opts) {
-            websock_api api{};
+        static inline WebSockApi ws_api(_Opts... opts) {
+            WebSockApi api{};
             utils::apply_config(api, opts...);
             return api;
         }

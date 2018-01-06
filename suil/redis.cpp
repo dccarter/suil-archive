@@ -6,9 +6,11 @@
 namespace suil {
     namespace redis {
 
-        response& transaction::execute() {
+
+
+        Response& transaction::execute() {
             // send MULTI command
-            command multi("MULTI");
+            Commmand multi("MULTI");
 
             cachedresp = client.send(multi);
             if (!cachedresp.status()) {
@@ -43,7 +45,7 @@ namespace suil {
             }
 
             // send MULTI command
-            command exec("EXEC");
+            Commmand exec("EXEC");
             cachedresp = client.send(exec);
             if (!cachedresp) {
                 // there is an error on the reply
@@ -54,23 +56,23 @@ namespace suil {
             return cachedresp;
         }
 
-        response base_client::dosend(command &cmd, size_t nrps) {
+        Response base_client::dosend(Commmand &cmd, size_t nrps) {
             // send the command to the server
             zcstring data = cmd.prepared();
-            size_t size = adaptor.send(data.cstr, data.len, config.timeout);
-            if (size != data.len) {
+            size_t size = adaptor.send(data.data(), data.size(), config.timeout);
+            if (size != data.size()) {
                 // sending failed somehow
-                return response{reply('-', utils::catstr("sending failed: ", errno_s))};
+                return Response{Reply('-', utils::catstr("sending failed: ", errno_s))};
             }
             adaptor.flush(config.timeout);
 
-            response resp;
-            std::vector<reply> stage;
+            Response resp;
+            std::vector<Reply> stage;
             do {
                 if (!recvresp(resp.buffer, stage)) {
                     // receiving data failed
-                    return response{reply('-',
-                                          utils::catstr("receiving response failed: ", errno_s))};
+                    return Response{Reply('-',
+                                          utils::catstr("receiving Response failed: ", errno_s))};
                 }
             } while (--nrps > 0);
 
@@ -78,15 +80,15 @@ namespace suil {
             return std::move(resp);
         }
 
-        zcstring base_client::commit(response &resp) {
+        zcstring base_client::commit(Response &resp) {
             // send all the commands at once and read all the responses in one go
-            command *last = batched.back();
+            Commmand *last = batched.back();
             batched.pop_back();
 
             for (auto& cmd: batched) {
                 zcstring data = cmd->prepared();
-                size_t size = adaptor.send(data.str, data.len, config.timeout);
-                if (size != data.len) {
+                size_t size = adaptor.send(data.data(), data.size(), config.timeout);
+                if (size != data.size()) {
                     // sending command failure
                     return utils::catstr("sending '", (*cmd)(), "' failed: ", errno_s);
                 }
@@ -100,7 +102,7 @@ namespace suil {
             return zcstring{nullptr};
         }
 
-        bool base_client::recvresp(buffer_t& out, std::vector<reply>& stagging) {
+        bool base_client::recvresp(zbuffer& out, std::vector<Reply>& stagging) {
             size_t rxd{1}, offset{out.size()};
             char prefix;
             if (!adaptor.read(&prefix, rxd, config.timeout)) {
@@ -116,7 +118,7 @@ namespace suil {
                     }
                     zcstring tmp{(char *)&out[offset], out.size()-offset, false};
                     out << '\0';
-                    stagging.emplace_back(reply(prefix, std::move(tmp)));
+                    stagging.emplace_back(Reply(prefix, std::move(tmp)));
                     return true;
                 }
                 case SUIL_REDIS_PREFIX_STRING: {
@@ -141,7 +143,7 @@ namespace suil {
                             out << '\0';
                         }
                     }
-                    stagging.emplace_back(reply(SUIL_REDIS_PREFIX_STRING, std::move(tmp)));
+                    stagging.emplace_back(Reply(SUIL_REDIS_PREFIX_STRING, std::move(tmp)));
                     return true;
                 }
 
@@ -170,24 +172,24 @@ namespace suil {
                 }
 
                 default: {
-                    ierror("received response with unsupported type: %c", out[0]);
+                    ierror("received Response with unsupported type: %c", out[0]);
                     return false;
                 }
             }
         }
 
         bool base_client::readlen(int64_t &len) {
-            buffer_t out{16};
+            zbuffer out{16};
             if (!readline(out)) {
                 return false;
             }
             zcstring tmp{(char *) &out[0], out.size(), false};
-            tmp.str[tmp.len] = '\0';
+            tmp.data()[tmp.size()] = '\0';
             utils::cast(tmp, len);
             return true;
         }
 
-        bool base_client::readline(buffer_t &out) {
+        bool base_client::readline(zbuffer &out) {
             out.reserve(255);
             size_t cap{out.capacity()};
             do {
@@ -215,15 +217,15 @@ namespace suil {
         }
 
         bool base_client::info(server_info& out) {
-            command cmd("INFO");
-            response resp = send(cmd);
+            Commmand cmd("INFO");
+            Response resp = send(cmd);
             if (!resp) {
-                // couldn't receive response
+                // couldn't receive Response
                 ierror("failed to receive server information");
                 return false;
             }
 
-            reply& rp = resp.entries[0];
+            Reply& rp = resp.entries[0];
             auto parts = utils::strsplit(rp.data, "\r");
             for (auto& part: parts) {
                 if (*part == '\n') part++;

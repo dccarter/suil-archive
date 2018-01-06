@@ -13,9 +13,9 @@
 
 namespace suil {
 
-    struct cookie_t {
+    struct Cookie {
 
-        cookie_t(const char *name, const char *value)
+        Cookie(const char *name, const char *value)
             : name_(name? zcstring(name).dup() : nullptr),
               value_(value? zcstring(value).dup() : nullptr),
               path_(nullptr),
@@ -23,11 +23,11 @@ namespace suil {
               expires_(0)
         {}
 
-        cookie_t(const char *name)
-            : cookie_t(name, nullptr)
+        Cookie(const char *name)
+            : Cookie(name, nullptr)
         {}
 
-        cookie_t(cookie_t&& ck)
+        Cookie(Cookie&& ck)
             : name_(std::move(ck.name_)),
               value_(std::move(ck.value_)),
               path_(std::move(ck.path_)),
@@ -38,10 +38,10 @@ namespace suil {
             ck.expires_ = -1;
         }
 
-        cookie_t(const cookie_t&) = delete;
-        cookie_t&operator=(const cookie_t&) = delete;
+        Cookie(const Cookie&) = delete;
+        Cookie&operator=(const Cookie&) = delete;
 
-        cookie_t& operator=(cookie_t&& ck) {
+        Cookie& operator=(Cookie&& ck) {
             name_   = std::move(ck.name_);
             value_  = std::move(ck.value_);
             path_   = std::move(ck.path_);
@@ -52,11 +52,11 @@ namespace suil {
             return *this;
         }
 
-        inline bool operator==(const cookie_t& other) {
+        inline bool operator==(const Cookie& other) {
             return name_ == other.name_;
         }
 
-        inline bool operator!=(const cookie_t& other) {
+        inline bool operator!=(const Cookie& other) {
             return name_ != other.name_;
         }
 
@@ -142,7 +142,7 @@ namespace suil {
             return maxage_;
         }
 
-        ~cookie_t() {
+        ~Cookie() {
         }
 
     private:
@@ -159,11 +159,11 @@ namespace suil {
             return name_.empty();
         }
     };
-    using cookie_jar_t = zcstr_map_t<cookie_t>;
+    using cookie_jar_t = zmap<Cookie>;
 
-    struct cookie_it {
-        typedef zcstr_map_t<zcstring> __jar_t;
-        cookie_it(const __jar_t& j)
+    struct CookieIterator {
+        typedef zmap<zcstring> __jar_t;
+        CookieIterator(const __jar_t& j)
             : jar(j)
         {}
 
@@ -191,7 +191,7 @@ namespace suil {
         const __jar_t&  jar;
     };
 
-    struct http_config_t : public server_config {
+    struct HttpConfig : public ServerConfig {
         int64_t         connection_timeout{5000};
         bool            disk_offload{false};
         size_t          disk_offload_min{2048};
@@ -205,7 +205,7 @@ namespace suil {
 
     namespace http {
 
-        enum class method_t : unsigned char {
+        enum class Method : unsigned char {
             Delete = 0,
             Get,
             Head,
@@ -330,7 +330,7 @@ namespace suil {
                     r = "HTTP/1.1 404 Not Found";
                     break;
                 case Status::METHOD_NOT_ALLOWED:
-                    r = "HTTP/1.1 405 method_t Not Allowed";
+                    r = "HTTP/1.1 405 Method Not Allowed";
                     break;
                 case Status::NOT_ACCEPTABLE:
                     r = "HTTP/1.1 406 Not Acceptable";
@@ -393,25 +393,25 @@ namespace suil {
             return (r);
         }
 
-        static inline const char* method_name(method_t method)
+        static inline const char* method_name(Method method)
         {
             switch(method)
             {
-                case method_t::Delete:
+                case Method::Delete:
                     return "DELETE";
-                case method_t::Get:
+                case Method::Get:
                     return "GET";
-                case method_t::Head:
+                case Method::Head:
                     return "HEAD";
-                case method_t::Post:
+                case Method::Post:
                     return "POST";
-                case method_t::Put:
+                case Method::Put:
                     return "PUT";
-                case method_t::Connect:
+                case Method::Connect:
                     return "CONNECT";
-                case method_t::Options:
+                case Method::Options:
                     return "OPTIONS";
-                case method_t::Trace:
+                case Method::Trace:
                     return "TRACE";
                 default:
                     return "Invalid";
@@ -478,7 +478,7 @@ namespace suil {
                 what_ << what;
             }
 
-            exception(Status status, buffer_t& what)
+            exception(Status status, zbuffer& what)
                 : status_(status),
                   what_(std::move(what))
             {}
@@ -508,19 +508,19 @@ namespace suil {
                 return status_;
             }
             
-            const buffer_t& what() const {
+            const zbuffer& what() const {
                 return what_;
             }
 
         private:
             Status    status_;
-            buffer_t    what_;
+            zbuffer    what_;
         };
 
         namespace error {
 #define HTTP_ERROR(code, err)                               \
             inline exception err(const char *fmt, ...) {  \
-                buffer_t what(0);                           \
+                zbuffer what(0);                           \
                 va_list args;                               \
                 va_start(args, fmt);                        \
                 what.appendv(fmt, args);                    \
@@ -539,7 +539,7 @@ namespace suil {
 #undef  HTTP_ERROR
         }
 
-        struct upfile_t {
+        struct UploadedFile {
 
             void save(const char *dir, int64_t timeout = -1) const;
 
@@ -556,10 +556,10 @@ namespace suil {
             }
 
         private:
-            friend struct request;
-            zcstring name_;
-            void    *data_;
-            size_t  len_;
+            friend struct Request;
+            zcstring name_{nullptr};
+            void    *data_{nullptr};
+            size_t  len_{0};
         };
 
         typedef decltype(iod::D(
@@ -568,7 +568,7 @@ namespace suil {
             prop(tx_bytes, uint64_t),
             prop(total_requests, uint64_t),
             prop(open_requests, uint64_t)
-        )) server_stats_t;
+        )) ServerStats;
     }
 
     static auto parse_cmd(int argc, const char *argv[]) {
@@ -589,16 +589,16 @@ namespace suil {
     }
 }
 
-constexpr suil::http::method_t operator "" _method(const char* str, size_t /*len*/) {
+constexpr suil::http::Method operator "" _method(const char* str, size_t /*len*/) {
     return
-            suil::magic::is_equ_p(str, "GET", 3) ?     suil::http::method_t::Get :
-            suil::magic::is_equ_p(str, "DELETE", 6) ?  suil::http::method_t::Delete :
-            suil::magic::is_equ_p(str, "HEAD", 4) ?    suil::http::method_t::Head :
-            suil::magic::is_equ_p(str, "POST", 4) ?    suil::http::method_t::Post :
-            suil::magic::is_equ_p(str, "PUT", 3) ?     suil::http::method_t::Put :
-            suil::magic::is_equ_p(str, "OPTIONS", 7) ? suil::http::method_t::Options :
-            suil::magic::is_equ_p(str, "CONNECT", 7) ? suil::http::method_t::Connect :
-            suil::magic::is_equ_p(str, "TRACE", 5) ?   suil::http::method_t::Trace :
+            suil::magic::is_equ_p(str, "GET", 3) ?     suil::http::Method::Get :
+            suil::magic::is_equ_p(str, "DELETE", 6) ?  suil::http::Method::Delete :
+            suil::magic::is_equ_p(str, "HEAD", 4) ?    suil::http::Method::Head :
+            suil::magic::is_equ_p(str, "POST", 4) ?    suil::http::Method::Post :
+            suil::magic::is_equ_p(str, "PUT", 3) ?     suil::http::Method::Put :
+            suil::magic::is_equ_p(str, "OPTIONS", 7) ? suil::http::Method::Options :
+            suil::magic::is_equ_p(str, "CONNECT", 7) ? suil::http::Method::Connect :
+            suil::magic::is_equ_p(str, "TRACE", 5) ?   suil::http::Method::Trace :
             throw std::runtime_error("invalid http method");
 }
 

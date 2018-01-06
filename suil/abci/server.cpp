@@ -16,12 +16,12 @@ namespace suil {
                 if (msglen <= 0) {
                     // violation abort connect
                     if (!msglen != -EPROTO && msglen != -ECONNRESET)
-                        ierror("%s - invalid request length", addr());
+                        ierror("%s - invalid Request length", addr());
                     break;
                 }
 
                 // receive message
-                buffer_t rxb((uint32_t)(msglen+2));
+                zbuffer rxb((uint32_t)(msglen+2));
                 if (!recvmsg(rxb, msglen, addr())) {
                     // receiving message  fail, continue
                     break;
@@ -32,7 +32,7 @@ namespace suil {
 
                 if (!req.ParseFromArray(rxb.data(), msglen)) {
                     // parsing received buffer failed
-                    ierror("%s - invalid request data", addr());
+                    ierror("%s - invalid Request data", addr());
                     break;
                 }
 
@@ -50,8 +50,8 @@ namespace suil {
                 msglen = resp.ByteSize();
                 rxb.reset((uint32_t)(msglen+2), true);
                 if (!resp.SerializeToArray(rxb.data(), (int) rxb.capacity())) {
-                    // serializing response buffer failed
-                    ierror("%s - serializing response failed", addr());
+                    // serializing Response buffer failed
+                    ierror("%s - serializing Response failed", addr());
                     break;
                 }
                 rxb.seek(msglen);
@@ -85,7 +85,7 @@ namespace suil {
                     break;
                 }
                 case types::Request::ValueCase::kSetOption: {
-                    // pass request to application
+                    // pass Request to application
                     types::ResponseSetOption &rsopt = *resp.mutable_set_option();
                     const types::RequestSetOption &rqopt = req.set_option();
                     zcstring  key{rqopt.key().data(), rqopt.key().size(), false};
@@ -145,7 +145,7 @@ namespace suil {
                 }
                 default: {
                     serror("unknown message type %d", req.value_case());
-                    resp.mutable_exception()->set_error("Unknown request");
+                    resp.mutable_exception()->set_error("Unknown Request");
                     break;
                 }
             }
@@ -181,7 +181,7 @@ namespace suil {
             return len.read<int>();
         }
 
-        bool abci_conn::recvmsg(buffer_t& rxb, int len, const char *dbg) {
+        bool abci_conn::recvmsg(zbuffer& rxb, int len, const char *dbg) {
             char *data = rxb.data();
             size_t trd = 0, total = 0;
             do {
@@ -198,7 +198,7 @@ namespace suil {
             return true;
         }
 
-        bool abci_conn::sendmsg(buffer_t& rxb, const char *dbg) {
+        bool abci_conn::sendmsg(zbuffer& rxb, const char *dbg) {
             char *data = rxb.data();
             size_t tsd = 0, total = 0, sent = 0;
             varint vit(rxb.size());
@@ -208,14 +208,14 @@ namespace suil {
             sent = sock.send(&vitlen, 1, 500);
             if (sent != 1) {
                 // failed to size of variable size buffer
-                trace("%s - sending response header failed: ", dbg, errno_s);
+                trace("%s - sending Response header failed: ", dbg, errno_s);
                 return false;
             }
 
             sent = sock.send(&vit.raw()[8-vitlen], vitlen, 500);
             if (sent != vitlen) {
                 // failed to send variable size
-                trace("%s - sending response header failed %lu/%lu: ",
+                trace("%s - sending Response header failed %lu/%lu: ",
                       dbg, sent, vitlen, errno_s);
                 return false;
             }

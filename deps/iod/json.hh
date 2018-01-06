@@ -416,6 +416,22 @@ namespace iod {
                     return _size;
                 }
 
+                size_t remaining() const {
+                    p.str.size() - pos;
+                }
+
+                void eat(char c) {
+                    p >> c;
+                    pos += 1;
+                }
+
+                void consume(size_t n) {
+                    this->pos += n;
+                    if (p.pos > p.str.size()) {
+                        throw std::runtime_error("custom iterator overflowed");
+                    }
+                }
+
                 bool empty(char c = '\0') const {
                     return p.str[pos] == '\0' || p.str[pos] != c;
                 }
@@ -759,7 +775,7 @@ namespace iod {
         template<typename S, typename T, typename std::enable_if<std::is_base_of<jsonvalue, T>::value>::type* = nullptr>
         inline void iod_from_json_(S *, T &t, json_parser &p) {
             generic_filler<T> gf(t);
-            p >> '"' >> fill(gf) >> '"';
+            p >>  fill(gf) ;
         }
 
         template<typename S>
@@ -1019,7 +1035,7 @@ namespace iod {
         json_internals::json_encode_(v, ss);
         return ss.move_str();
     }
-
+    using encode_stream = json_internals::my_ostringstream<json_internals::stringstream>;
 }
 
 #endif

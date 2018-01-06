@@ -15,13 +15,13 @@ namespace suil {
 
         define_log_tag(HTTP_SERVER);
 
-        template<typename __H, typename __B = tcp_ss, typename... __Mws>
-        struct base_server : LOGGER(dtag(HTTP_SERVER)) {
-            typedef base_server<__H, __B, __Mws...> server_t;
+        template<typename __H, typename __B = TcpSs, typename... __Mws>
+        struct BaseServer : LOGGER(dtag(HTTP_SERVER)) {
+            typedef BaseServer<__H, __B, __Mws...> server_t;
 
             struct socket_handler {
-                void operator()(sock_adaptor &sock, server_t *s) {
-                    connection<__H, __Mws...> conn(
+                void operator()(SocketAdaptor &sock, server_t *s) {
+                    Connection<__H, __Mws...> conn(
                             sock, s->config, s->handler, &s->mws, s->stats);
 
                     conn.start();
@@ -33,12 +33,12 @@ namespace suil {
                 backend.stop();
             }
 
-            typedef server<socket_handler, __B, server_t> raw_server_t;
+            typedef Server<socket_handler, __B, server_t> raw_server_t;
             typedef std::tuple<__Mws...> middlewares_t;
 
         protected:
             template<typename... __Opts>
-            base_server(__H &h, __Opts&... opts)
+            BaseServer(__H &h, __Opts&... opts)
                 : backend(config, config, this),
                   handler(h)
             {
@@ -46,7 +46,7 @@ namespace suil {
                 initialize();
             }
 
-            base_server(__H &h)
+            BaseServer(__H &h)
                     : backend(config, config, this),
                       handler(h)
             {
@@ -68,29 +68,29 @@ namespace suil {
             }
 
             raw_server_t        backend;
-            http_config_t       config;
+            HttpConfig       config;
             __H&                handler;
             middlewares_t       mws;
-            server_stats_t      stats;
+            ServerStats      stats;
         };
 
         #define eproute(app, url) \
             app.route<magic::get_parameter_tag(magic::const_str(url))>(url)
 
-        template <typename __B = tcp_ss, typename... __Mws>
-        struct endpoint_t : public base_server<router_t, __B, __Mws...> {
-            typedef base_server<router_t, __B, __Mws...> basesrv_t;
+        template <typename __B = TcpSs, typename... __Mws>
+        struct Endpoint : public BaseServer<Router, __B, __Mws...> {
+            typedef BaseServer<Router, __B, __Mws...> basesrv_t;
             /**
              * creates a new http endpoint which handles http requests
              * @param conf the configuration
              */
-            endpoint_t(std::string api)
+            Endpoint(std::string api)
                     : router(api),
                       basesrv_t(router)
             {}
 
             template <typename... __Opts>
-            endpoint_t(std::string api, __Opts... opts)
+            Endpoint(std::string api, __Opts... opts)
                 : router(api),
                   basesrv_t(router, opts...)
             {}
@@ -138,39 +138,39 @@ namespace suil {
                 utils::apply_options(this->config, opts);
             }
 
-            dynamic_rule& dynamic(std::string&& rule) {
+            DynamicRule& dynamic(std::string&& rule) {
                 return router.new_rule_dynamic(std::move(rule));
             }
 
             template<uint64_t Tag>
             auto route(std::string&& rule)
-            -> typename std::result_of<decltype(&router_t::new_rule_tagged<Tag>)(router_t, std::string&&)>::type
+            -> typename std::result_of<decltype(&Router::new_rule_tagged<Tag>)(Router, std::string&&)>::type
             {
                 return router.new_rule_tagged<Tag>(std::move(rule));
             }
 
-            dynamic_rule&  operator()(std::string&& rule)
+            DynamicRule&  operator()(std::string&& rule)
             {
                 return dynamic(std::move(rule));
             }
 
             using context_t = detail::context<__Mws...>;
             template <typename T>
-            typename T::Context& context(const request& req)
+            typename T::Context& context(const Request& req)
             {
-                static_assert(magic::contains<T, __Mws...>::value, "not middleware in endpoint");
+                static_assert(magic::contains<T, __Mws...>::value, "not Middleware in endpoint");
                 auto& ctx = *reinterpret_cast<context_t*>(req.middleware_context);
                 return ctx.template get<T>();
             }
 
             template <typename T>
-            T& middleware()
+            T& Middleware()
             {
                 return get_element_by_type<T, __Mws...>(basesrv_t::mws);
             }
 
         private:
-            router_t   router;
+            Router   router;
         };
 
         namespace opts {
@@ -181,9 +181,9 @@ namespace suil {
         }
 
         template <typename... __Mws>
-        using endpoint = endpoint_t<tcp_ss, __Mws...>;
+        using TcpEndpoint = Endpoint<TcpSs, __Mws...>;
         template <typename... __Mws>
-        using ssl_endpoint = endpoint_t<ssl_ss, __Mws...>;
+        using SslEndpoint = Endpoint<SslSs, __Mws...>;
     }
 }
 

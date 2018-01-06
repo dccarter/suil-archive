@@ -6,7 +6,7 @@
 
 namespace suil {
 
-    void buffer_t::in(wire &w) {
+    void zbuffer::in(wire &w) {
         varint sz(0);
         w >> sz;
         uint64_t tmp{sz.read<uint64_t>()};
@@ -19,7 +19,7 @@ namespace suil {
         suil_error::create("pulling buffer failed");
     }
 
-    void buffer_t::out(wire &w) const {
+    void zbuffer::out(wire &w) const {
         zcstring tmp{(const char *)Ego.data_, Ego.size(), false};
         w << tmp;
     }

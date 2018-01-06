@@ -17,15 +17,15 @@ namespace suil {
     namespace http {
 
         static uint8_t api_index{0};
-        static std::unordered_map<uint8_t, websock_api&> apis{};
+        static std::unordered_map<uint8_t, WebSockApi&> apis{};
 
-        websock_api::websock_api()
+        WebSockApi::WebSockApi()
         {
             id = api_index++;
             apis.emplace(id, *this);
         }
 
-        Status websock::handshake(const request &req, response &res, websock_api &api, size_t size) {
+        Status WebSock::handshake(const Request &req, Response &res, WebSockApi &api, size_t size) {
             SHA_CTX         sctx;
             strview_t  key, version;
 
@@ -42,7 +42,7 @@ namespace suil {
                 return Status::BAD_REQUEST;
             }
 
-            buffer_t     buf(127);
+            zbuffer     buf(127);
             uint8_t         digest[SHA_DIGEST_LENGTH];
             buf += key;
             buf.append(WS_SERVER_RESPONSE, sizeof(WS_SERVER_RESPONSE)-1);
@@ -56,13 +56,13 @@ namespace suil {
             res.header("Connection", "Upgrade");
             res.header("Sec-WebSocket-Accept", std::move(base64));
 
-            // end the response by the handler
-            res.end([&api,&size](request &rq, response &rs) {
-                // clear the request to free resources
+            // end the Response by the handler
+            res.end([&api,&size](Request &rq, Response &rs) {
+                // clear the Request to free resources
                 rq.clear();
 
                 // Create a web socket
-                websock ws(rq.adator(), api, size);
+                WebSock ws(rq.adator(), api, size);
 
                 ws.handle();
 
@@ -73,7 +73,7 @@ namespace suil {
             return Status::SWITCHING_PROTOCOLS;
         }
 
-        bool websock::receive_opcode(header& h) {
+        bool WebSock::receive_opcode(header& h) {
             size_t  len{0};
             size_t  nbytes = WS_FRAME_HDR;
 
@@ -94,13 +94,13 @@ namespace suil {
             }
 
             switch (h.opcode) {
-                case ws_op_t::CONT:
-                case ws_op_t::TEXT:
-                case ws_op_t::BINARY:
+                case WsOp::CONT:
+                case WsOp::TEXT:
+                case WsOp::BINARY:
                     break;
-                case ws_op_t::CLOSE:
-                case ws_op_t::PING:
-                case ws_op_t::PONG:
+                case WsOp::CLOSE:
+                case WsOp::PING:
+                case WsOp::PONG:
                     if (h.len > WS_PAYLOAD_SINGLE || !h.fin) {
                         idebug("%s - frame (%hX) to large or fragmented",
                               sock.id(), h.u16All);
@@ -154,7 +154,7 @@ namespace suil {
             return true;
         }
 
-        bool websock::receive_frame(header& h, buffer_t& b) {
+        bool WebSock::receive_frame(header& h, zbuffer& b) {
             if (!receive_opcode(h)) {
                 idebug("%s - receiving op code failed", sock.id());
                 return false;
@@ -176,12 +176,12 @@ namespace suil {
             return true;
         }
 
-        void websock::handle() {
-            // first let the user know of the connection
+        void WebSock::handle() {
+            // first let the user know of the Connection
             if (api.on_connect) {
                 if (api.on_connect(*this)) {
-                    // connection rejected
-                    trace("%s - websocket connection rejected", sock.id());
+                    // Connection rejected
+                    trace("%s - websocket Connection rejected", sock.id());
                     return;
                 }
             }
@@ -190,16 +190,16 @@ namespace suil {
             api.websocks.emplace(key, *this);
             api.nsocks++;
 
-            idebug("%s - entering connection loop %lu", key.str, api.nsocks);
+            idebug("%s - entering Connection loop %lu", key(), api.nsocks);
 
-            buffer_t b(0);
+            zbuffer b(0);
             while (!end_session && sock.isopen()) {
                 header h;
                 b.clear();
 
                 // while the adaptor is still open
                 if (!receive_frame(h, b)) {
-                    // receiving frame failed, abort connection
+                    // receiving frame failed, abort Connection
                     trace("%s - receive frame failed", ipstr(sock.addr()));
                     end_session = true;
                 }
@@ -211,22 +211,22 @@ namespace suil {
                                   sock.id(), h.opcode);
                             end_session = true;
 
-                        case ws_op_t::TEXT:
-                        case ws_op_t::BINARY:
+                        case WsOp::TEXT:
+                        case WsOp::BINARY:
                             if (api.on_message) {
                                 // one way of appending null at end of string
                                 (char *)b;
-                                api.on_message(*this, b, (ws_op_t) h.opcode);
+                                api.on_message(*this, b, (WsOp) h.opcode);
                             }
                             break;
-                        case ws_op_t::CLOSE:
+                        case WsOp::CLOSE:
                             end_session = true;
                             if (api.on_close) {
                                 api.on_close(*this);
                             }
                             break;
-                        case ws_op_t::PING:
-                            send(b, ws_op_t::PONG);
+                        case WsOp::PING:
+                            send(b, WsOp::PONG);
                             break;
                         default:
                             trace("%s - unknown web socket op %02X",
@@ -249,13 +249,13 @@ namespace suil {
             }
         }
 
-        bool websock::send(const void *data, size_t size, ws_op_t op) {
+        bool WebSock::send(const void *data, size_t size, WsOp op) {
             uint8_t payload_1;
             uint8_t hbuf[14] = {0};
             uint8_t hlen = WS_FRAME_HDR;
 
             if (end_session) {
-                trace("%s - sending while session is closing is not allow",
+                trace("%s - sending while Session is closing is not allow",
                       sock.id());
                 return false;
             }
@@ -303,7 +303,7 @@ namespace suil {
             return true;
         }
 
-        bool websock::bsend(const void *data, size_t len) {
+        bool WebSock::bsend(const void *data, size_t len) {
             if (!sock.isopen()) {
                 iwarn("attempting to send to a closed websocket");
                 return false;
@@ -323,11 +323,11 @@ namespace suil {
             return true;
         }
 
-        void websock::broadcast(const void *data, size_t sz, ws_op_t op) {
+        void WebSock::broadcast(const void *data, size_t sz, WsOp op) {
             trace("WebSock::broadcast data %p, sz %lu, op 0x%02X", data, sz, op);
 
             if (end_session) {
-                trace("%s - sending while session is closing is not allow",
+                trace("%s - sending while Session is closing is not allow",
                       ipstr(sock.addr()));
                 return;
             }
@@ -336,8 +336,8 @@ namespace suil {
             if (api.nsocks > 1) {
                 trace("broadcasting %lu web sockets", api.nsocks);
                 uint8_t *copy = (uint8_t *) memory::alloc(
-                                     sizeof(wsock_bcast_msg) + sz +16);
-                wsock_bcast_msg *msg = (wsock_bcast_msg *)copy;
+                                     sizeof(WsockBcastMsg) + sz +16);
+                WsockBcastMsg *msg = (WsockBcastMsg *)copy;
 
                 uint8_t payload_1;
                 uint8_t hlen = WS_FRAME_HDR;
@@ -373,12 +373,12 @@ namespace suil {
                 msg->api_id = api.id;
                 // the copied buffer now belongs to the go-routine
                 // being scheduled
-                size_t len = sizeof(wsock_bcast_msg)+msg->len;
+                size_t len = sizeof(WsockBcastMsg)+msg->len;
                 go(broadcast(*this, api, copy, len));
             }
         }
 
-        coroutine void websock::broadcast(websock& ws, websock_api &api, void *data, size_t size) {
+        coroutine void WebSock::broadcast(WebSock& ws, WebSockApi &api, void *data, size_t size) {
             strace("WebSock::broadcast data %p size %lu", data, size);
             // use the api to broadcast to all connected web sockets
             api.broadcast(&ws, data, size);
@@ -387,25 +387,25 @@ namespace suil {
             memory::free(data);
         }
 
-        void websock_api::bsend(async_t<int>& ch, websock& ws, const void *data, size_t len) {
+        void WebSockApi::bsend(Async<int>& ch, WebSock& ws, const void *data, size_t len) {
             bool result = ws.bsend(data, len);
             if (ch)
                 ch << result;
         }
 
-        void websock_api::broadcast(websock* src,const void *data, size_t size) {
+        void WebSockApi::broadcast(WebSock* src,const void *data, size_t size) {
             strace("WebSockApi::broadcast src %p, data %p, size %lu",
                    src, data, size);
 
-            async_t<int> async(-1);
+            Async<int> async(-1);
             uint32_t wait = 0;
 
-            const wsock_bcast_msg *msg = (const wsock_bcast_msg *)data;
+            const WsockBcastMsg *msg = (const WsockBcastMsg *)data;
 
             for(auto ws : websocks) {
                 if (&ws.second != src) {
                     if (websocks.size() == 1) {
-                        websock& wsock = ws.second;
+                        WebSock& wsock = ws.second;
                         // there is no need to spawn go-routines if there is only
                         // one other node
                         if (!wsock.send(msg->payload, msg->len)) {
@@ -425,7 +425,7 @@ namespace suil {
             strace("web socket broadcast completed %ld", mnow());
         }
 
-        void websock_api::send(chan ch, websock &ws, const void *data, size_t sz, ws_op_t op) {
+        void WebSockApi::send(chan ch, WebSock &ws, const void *data, size_t sz, WsOp op) {
             bool result = ws.send(data, sz, op);
             if (ch)
                 chs(ch, bool, result);

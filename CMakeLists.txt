@@ -19,15 +19,19 @@ set(SUIL_COPYRIGHT "Copyright (C) 2017, 2017-2017 Suilteam")
 set(SUIL_VERSION ${SUIL_MAJOR_VERSION}.${SUIL_MINOR_VERSION}.${SUIL_PATCH_VERSION})
 
 option(SUIL_BUILD_UNIT_TEST    "Enable unit testing" ON)
-option(SUIL_BUILD_EXAMPLES      "Enable building examples" OFF)
+option(SUIL_BUILD_EXAMPLES     "Enable building examples" OFF)
 option(SUIL_BUILD_DEV_PACKAGE  "Produce a development package" OFF)
 option(SUIL_DEV_IDE            "Currently using an IDE" OFF)
+set(SUIL_FILE_SERVER_ROUTE     1511d5908a7811e790ed6f6e6c696e65)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough")
-set(SUIL_FILE_SERVER_ROUTE 1511d5908a7811e790ed6f6e6c696e65)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
+if (NOT SUIL_BUILD_DEV_PACKAGE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
+    set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Os")
+endif()
 
 set(SUIL_DEFINES)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -54,7 +58,10 @@ if (OpenSSL_FOUND)
 endif()
 
 find_package(PostgreSQL ${SUIL_PGSQL_VERSION} REQUIRED)
-find_package(Protobuf REQUIRED)
+
+if (SUIL_BUILD_ABCI)
+    find_package(Protobuf REQUIRED)
+endif()
 
 set(SUIL_LIBRARIES
         uuid sqlite3 mill
@@ -77,7 +84,11 @@ if (SUIL_BUILD_DEV_PACKAGE)
             FILES_MATCHING PATTERN "*.h")
 
     # Packaging
-    set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil sabci_s)
+    if (SUIL_BUILD_ABCI)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil)
+    else()
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil sabci_s)
+    endif()
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})
     set(SUIL_PACKAGE_DEFINES   ${SUIL_DEFINES})
 
@@ -151,8 +162,6 @@ endif()
 
 if (SUIL_DEV_IDE)
 #    add_subdirectory(apps/suil-web)
-#    add_subdirectory(apps/sodoin)
-    add_subdirectory(apps/suilchain)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

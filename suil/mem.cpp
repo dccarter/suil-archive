@@ -278,7 +278,7 @@ namespace suil {
         if (len == 0)
             len = 8;
 
-        if (len <= MEM_BLOCK_SIZE_MAX) {
+        if (len <= (MEM_BLOCK_SIZE_MAX-4)) {
             idx = memblock::index(len);
             ptr = s_MEMORY.blocks[idx].p->get();
             s_MEMORY.blocks[idx].allocs++;
@@ -316,7 +316,7 @@ namespace suil {
         void		*ptr;
         size_t		total;
 
-        if (SIZE_MAX / memb < len)
+        if (SIZE_MAX < (memb*len))
             scritical("memory::calloc(): memb * len > SIZE_MAX");
 
         total = memb * len;

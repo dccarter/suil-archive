@@ -11,8 +11,8 @@
 namespace suil {
 
     struct server_handler {
-        void operator()(sock_adaptor& sock, void *) {
-            //sinfo("received connection from: %s", sock.id());
+        void operator()(SocketAdaptor& sock, void *) {
+            //sinfo("received Connection from: %s", sock.id());
             sock.send(version::SWNAME);
             sock.send(" - ");
             sock.send(version::STRING);
@@ -22,7 +22,7 @@ namespace suil {
     };
 
     define_log_tag(SERVER);
-    struct server_config : public  ssl_ss_config , public tcp_ss_config {
+    struct ServerConfig : public  SslSsConfig , public TcpSsConfig {
         std::string     name{"127.0.0.1"};
         int             port{1080};
         int             accept_backlog{127};
@@ -30,11 +30,11 @@ namespace suil {
         uint64_t        request_limit{40};
     };
 
-    template <class __H = server_handler, class __A = tcp_ss, class __C = void>
-    struct server : LOGGER(dtag(SERVER)) {
+    template <class __H = server_handler, class __A = TcpSs, class __C = void>
+    struct Server : LOGGER(dtag(SERVER)) {
         typedef typename __A::sock_t __sock_t;
     public:
-        server(server_config& scfg, typename __A::config_t& acfg, __C *ctx)
+        Server(ServerConfig& scfg, typename __A::config_t& acfg, __C *ctx)
             : adaptor(acfg),
               context(ctx),
               config(scfg)
@@ -61,7 +61,7 @@ namespace suil {
                     // timeout's are allowed
                     if (errno != ETIMEDOUT) {
                         if (!exiting) {
-                            ierror("accepting next connection failed: %s", errno_s);
+                            ierror("accepting next Connection failed: %s", errno_s);
                             status = errno;
                         }
 
@@ -92,7 +92,7 @@ namespace suil {
 
     private:
 
-        static coroutine void handle(server<__H, __A, __C> *srv, __sock_t& s) {
+        static coroutine void handle(Server<__H, __A, __C> *srv, __sock_t& s) {
             __sock_t ss = std::move(s);
             __H()(ss, srv->context);
 
@@ -103,16 +103,16 @@ namespace suil {
 
         __A adaptor;
         __C *context;
-        server_config& config;
+        ServerConfig& config;
         bool     running{true};
         bool     has_lock{false};
         bool     exiting{false};
     };
 
     template <class __H = server_handler>
-    using ssl_server = server<__H, ssl_ss>;
+    using SslServer = Server<__H, SslSs>;
 
     template <class __H = server_handler>
-    using tcp_server = server<__H, tcp_ss>;
+    using TcpServer = Server<__H, TcpSs>;
 }
 #endif //SUIL_NET_HPP

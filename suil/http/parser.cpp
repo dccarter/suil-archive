@@ -124,8 +124,8 @@ do {                                                                 \
 } while (0)
 
 
-#define _PROXY_CONNECTION "proxy-connection"
-#define _CONNECTION "connection"
+#define _PROXY_CONNECTION "proxy-Connection"
+#define _CONNECTION "Connection"
 #define _CONTENT_LENGTH "content-length"
 #define _TRANSFER_ENCODING "transfer-encoding"
 #define _UPGRADE "upgrade"
@@ -636,7 +636,7 @@ size_t http_parser_execute(http_parser *parser,
              * This check is arguably the responsibility of embedders but we're doing
              * it on the embedder's behalf because most won't bother and this way we
              * make the web a little safer.  HTTP_MAX_HEADER_SIZE is still far bigger
-             * than any reasonable request or response so this should never affect
+             * than any reasonable Request or Response so this should never affect
              * day-to-day operation.
              */
             if (parser->nread > (HTTP_MAX_HEADER_SIZE)) {
@@ -780,7 +780,7 @@ size_t http_parser_execute(http_parser *parser,
                 parser->state = s_resHTTP_minor;
                 break;
 
-                /* minor HTTP version or end of request line */
+                /* minor HTTP version or end of Request line */
             case s_resHTTP_minor: {
                 if (ch == ' ') {
                     parser->state = s_res_first_status_code;
@@ -1176,7 +1176,7 @@ size_t http_parser_execute(http_parser *parser,
                 parser->state = s_reqHTTP_minor;
                 break;
 
-                /* minor HTTP version or end of request line */
+                /* minor HTTP version or end of Request line */
             case s_reqHTTP_minor: {
                 if (ch == _CR) {
                     parser->state = s_req_line_almost_done;
@@ -1206,7 +1206,7 @@ size_t http_parser_execute(http_parser *parser,
                 break;
             }
 
-                /* end of request line */
+                /* end of Request line */
             case s_req_line_almost_done: {
                 if (ch != _LF) {
                     _SET_ERRNO(HPE_LF_EXPECTED);
@@ -1299,7 +1299,7 @@ size_t http_parser_execute(http_parser *parser,
                             }
                             break;
 
-                            /* connection */
+                            /* Connection */
 
                         case h_matching_connection:
                             parser->index++;
@@ -1311,7 +1311,7 @@ size_t http_parser_execute(http_parser *parser,
                             }
                             break;
 
-                            /* proxy-connection */
+                            /* proxy-Connection */
 
                         case h_matching_proxy_connection:
                             parser->index++;
@@ -1611,7 +1611,7 @@ size_t http_parser_execute(http_parser *parser,
                 _STRICT_CHECK(ch != _LF);
 
                 if (parser->flags & F_TRAILING) {
-                    /* End of a chunked request */
+                    /* End of a chunked Request */
                     parser->state = _NEW_MESSAGE();
                     _CALLBACK_NOTIFY(message_complete);
                     break;
@@ -1626,8 +1626,8 @@ size_t http_parser_execute(http_parser *parser,
                 /* Here we call the headers_complete callback. This is somewhat
                  * different than other callbacks because if the user returns 1, we
                  * will interpret that as saying that this message has no body. This
-                 * is needed for the annoying case of recieving a response to a HEAD
-                 * request.
+                 * is needed for the annoying case of recieving a Response to a HEAD
+                 * Request.
                  *
                  * We'd like to use _CALLBACK_NOTIFY_NOADVANCE() here but we cannot, so
                  * we have to simulate it by handling a change in errno below.
@@ -1907,7 +1907,7 @@ http_message_needs_eof(const http_parser *parser) {
     if (parser->status_code / 100 == 1 || /* 1xx e.g. Continue */
         parser->status_code == 204 ||     /* No Content */
         parser->status_code == 304 ||     /* Not Modified */
-        parser->flags & F_SKIPBODY) {     /* response to a HEAD request */
+        parser->flags & F_SKIPBODY) {     /* Response to a HEAD Request */
         return 0;
     }
 

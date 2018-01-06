@@ -12,7 +12,7 @@ namespace suil {
 
         define_log_tag(FILE_SERVER);
 
-        struct file_server : LOGGER(dtag(FILE_SERVER)) {
+        struct FileServer : LOGGER(dtag(FILE_SERVER)) {
             struct config_t {
                 size_t          compress_min{2048};
                 bool            enable_send_file{false};
@@ -23,7 +23,7 @@ namespace suil {
             };
 
             template <typename __Endpoint, typename... __Opts>
-            file_server(__Endpoint& ep, __Opts&&... opts)
+            FileServer(__Endpoint& ep, __Opts&&... opts)
             {
                 // apply  file server configurations
                 utils::apply_config(config, opts...);
@@ -35,23 +35,29 @@ namespace suil {
                 ("GET"_method, "HEAD"_method)
                 .attrs(opt(STATIC, true),
                        opt(AUTHORIZE, Auth{false}))
-                ([&](const request& req, response& res) {
-                    // handle static file request
+                ([&](const Request& req, Response& res) {
+                    // handle static file Request
                     zcstring path(req.url);
-                    const char *ext = strrchr(path.cstr, '.');
+                    const char *ext = strrchr(path.data(), '.');
                     if (!ext) {
                         // file not found
                         throw error::not_found();
                     }
 
                     // get path from extension
-                    zcstring p(path.cstr, ext-path.cstr, false);
-                    zcstring e(ext, path.len-p.len, false);
-                    if ((method_t)req.method == method_t::Get) {
-                        get(req, res, p, e);
-                    }
-                    else {
-                        head(req, res, p, e);
+                    try {
+                        zcstring p(path.data(), ext - path.data(), false);
+                        zcstring e(ext, path.size() - p.size(), false);
+                        if ((Method) req.method == Method::Get) {
+                            get(req, res, p, e);
+                        } else {
+                            head(req, res, p, e);
+                        }
+                    } catch (...) {
+                        const char *emsg = suil::suil_error::getmsg(std::current_exception());
+                        res << "Error serving '" << path << "': " << emsg;
+                        ierror("'%s': %s", path(), emsg);
+                        res.end(Status::INTERNAL_ERROR);
                     }
                 });
             }
@@ -107,9 +113,9 @@ namespace suil {
         private:
             void init();
 
-            void get(const request& req, response& resp, zcstring& path, zcstring& ext);
+            void get(const Request& req, Response& resp, zcstring& path, zcstring& ext);
 
-            void head(const request& req, response& resp, zcstring& path, zcstring& ext);
+            void head(const Request& req, Response& resp, zcstring& path, zcstring& ext);
 
             struct mime_type_t {
                 mime_type_t(const char *mm)
@@ -121,7 +127,7 @@ namespace suil {
                 bool     allow_range{true};
                 int64_t  cache_expires{-1};
             };
-            typedef zcstr_map_t<mime_type_t> mime_types_t;
+            typedef zmap<mime_type_t> mime_types_t;
 
             struct cached_file_t {
                 int     fd{-1};
@@ -190,7 +196,7 @@ namespace suil {
                     clear();
                 }
             };
-            using cached_files_t = zcstr_map_t<cached_file_t>;
+            using cached_files_t = zmap<cached_file_t>;
 
             typename cached_files_t::iterator load_file(const zcstring&, const mime_type_t&);
 
@@ -198,16 +204,16 @@ namespace suil {
 
             bool read_file(cached_file_t& cf, const struct stat& st);
 
-            void cache_control(const request&, response&, cached_file_t&, mime_type_t&);
+            void cache_control(const Request&, Response&, cached_file_t&, mime_type_t&);
 
-            void prepare_response(const request&, response&, cached_file_t&, mime_type_t&);
+            void prepare_response(const Request&, Response&, cached_file_t&, mime_type_t&);
 
             void build_range_resp(
-                    const request&, response&, strview_t&, cached_file_t&, mime_type_t&);
+                    const Request&, Response&, strview_t&, cached_file_t&, mime_type_t&);
 
             mime_types_t    mime_types_;
             cached_files_t  cached_files_;
-            zcstr<>         www_dir;
+            zcstring        www_dir;
         };
     }
 }

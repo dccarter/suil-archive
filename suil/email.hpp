@@ -12,7 +12,7 @@ namespace suil {
     define_log_tag(SMTP_CLIENT);
 
     template <typename Proto>
-    struct stmp;
+    struct Stmp;
 
     namespace __internal {
         struct client;
@@ -27,7 +27,7 @@ namespace suil {
             zcstring name;
             zcstring email;
 
-            inline void encode(buffer_t& b) const {
+            inline void encode(zbuffer& b) const {
                 if (!name.empty()) {
                     b << "'" << name << "'";
                 }
@@ -82,12 +82,12 @@ namespace suil {
 
             inline bool load();
 
-            void send(sock_adaptor& sock, const zcstring& boundary, int64_t timeout);
+            void send(SocketAdaptor& sock, const zcstring& boundary, int64_t timeout);
 
             inline const char *filename() const {
-                const char *tmp = strrchr(fname.cstr, '/');
+                const char *tmp = strrchr(fname.data(), '/');
                 if (tmp) return tmp+1;
-                return fname.cstr;
+                return fname.data();
             }
 
             ~Attachment();
@@ -140,7 +140,7 @@ namespace suil {
             bodybuf << msg;
         }
 
-        inline buffer_t& body() {
+        inline zbuffer& body() {
             return bodybuf;
         }
 
@@ -148,7 +148,7 @@ namespace suil {
         zcstring gethead(const Address &from);
 
         template <typename Proto>
-        friend struct suil::stmp;
+        friend struct suil::Stmp;
         friend struct suil::__internal::client;
 
         inline void to(){}
@@ -194,20 +194,20 @@ namespace suil {
         std::vector<Address>    receipts;
         std::vector<Address>    ccs;
         std::vector<Address>    bccs;
-        zcstr_map_t<Attachment> attachments;
-        buffer_t                bodybuf;
+        zmap<Attachment> attachments;
+        zbuffer                bodybuf;
     };
 
     namespace __internal {
 
         struct client : LOGGER(dtag(SMTP_CLIENT)) {
-            client(sock_adaptor& sock)
+            client(SocketAdaptor& sock)
                 :sock(sock)
             {}
 
         private:
             template <typename Proto>
-            friend struct suil::stmp;
+            friend struct suil::Stmp;
 
             bool sendaddresses(const std::vector<Email::Address>& addrs, int64_t timeout);
             bool sendhead(Email& msg, int64_t timeout);
@@ -235,7 +235,7 @@ namespace suil {
             }
 
             inline bool send_data(int64_t timeout, const zcstring& str) {
-                return sock.send(str.cstr, str.len, timeout) == str.len;
+                return sock.send(str.data(), str.size(), timeout) == str.size();
             }
 
             template <typename... __P>
@@ -247,22 +247,22 @@ namespace suil {
             }
 
             ~client() {
-                // close current connection gracefully
+                // close current Connection gracefully
                 quit();
             }
 
-            sock_adaptor&    sock;
+            SocketAdaptor&    sock;
         };
     }
 
-    template <typename Proto = ssl_sock>
-    struct stmp : LOGGER(dtag(SMTP_CLIENT)) {
+    template <typename Proto = SslSock>
+    struct Stmp : LOGGER(dtag(SMTP_CLIENT)) {
         /**
          * @brief Creates a new smtp mail server
          * @param server the server address
          * @param port the stmp port on the server
          */
-        stmp(const char *server, int port)
+        Stmp(const char *server, int port)
             : server(zcstring(server).dup()),
               port(port),
               sender(proto)
@@ -299,20 +299,20 @@ namespace suil {
             int64_t timeout = params.get(sym(timeout), 1500);
             zcstring domain = params.get(sym(domain),  "localhost");
 
-            ipaddr addr = ipremote(server.cstr, port, 0, utils::after(timeout));
+            ipaddr addr = ipremote(server.data(), port, 0, utils::after(timeout));
             if (errno != 0) {
                 ierror("server address '%s:%d' could not be resolved: %",
-                            server.cstr, port, errno_s);
+                            server.data(), port, errno_s);
                 return false;
             }
 
-            // open connection to server using underlying protocol (either raw TCP or SSL)
+            // open Connection to server using underlying protocol (either raw TCP or SSL)
             if (!proto.connect(addr, timeout)) {
                 ierror("connecting to server '%s:%d' failed: %s",
-                          server.cstr, port, errno_s);
+                          server.data(), port, errno_s);
                 return false;
             }
-            trace("connection to email server '%s:%d' open", server.cstr, port);
+            trace("Connection to email server '%s:%d' open", server.data(), port);
 
             // login to server
             return sender.login(domain, user, passwd);

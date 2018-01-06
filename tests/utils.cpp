@@ -391,7 +391,7 @@ TEST_CASE("utils::zcstring", "[utils][zcstring]")
         REQUIRE(str4.own == 1);
         REQUIRE(strcmp(str4.str, "Hello World") == 0);
 
-        buffer_t b(15);
+        zbuffer b(15);
         b << "Hello World";
         zcstring str5(utils::strdup("Hello World"), 12, true);
         REQUIRE_FALSE(str5.empty());

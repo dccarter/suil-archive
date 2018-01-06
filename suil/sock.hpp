@@ -19,13 +19,13 @@ namespace suil {
         return ipaddrstr(addr, ret);
     }
 
-    struct sock_adaptor {
+    struct SocketAdaptor {
         virtual bool connect(ipaddr, int64_t timeout = -1) = 0;
         virtual int port() const  = 0;
         virtual const ipaddr addr() const = 0;
         virtual size_t send(const void*, size_t, int64_t timeout = -1) = 0;
         virtual size_t send(const zcstring &str, int64_t timeout = -1) {
-            return send(str.cstr, str.len, timeout);
+            return send(str.data(), str.size(), timeout);
         }
         virtual size_t sendfile(int, off_t, size_t, int64_t timeout = -1) = 0;
         virtual bool flush(int64_t timeout = -1) = 0;
@@ -53,7 +53,7 @@ namespace suil {
             return id_;
         }
 
-        virtual ~sock_adaptor() {
+        virtual ~SocketAdaptor() {
             if (id_) {
                 memory::free(id_);
                 id_ = nullptr;
@@ -64,23 +64,23 @@ namespace suil {
         char    *id_{nullptr};
     };
 
-    define_log_tag(SSL_SOCKET);
-    struct ssl_sock : public virtual sock_adaptor, LOGGER(dtag(SSL_SOCKET)) {
-        ssl_sock()
+    define_log_tag(SSL_SOCK);
+    struct SslSock : public virtual SocketAdaptor, LOGGER(dtag(SSL_SOCK)) {
+        SslSock()
             : raw(nullptr)
         {}
 
-        ssl_sock(sslsock s)
+        SslSock(sslsock s)
             : raw(s)
         {}
 
-        ssl_sock(ssl_sock &&other)
+        SslSock(SslSock &&other)
         : raw(other.raw)
         {
             other.raw = nullptr;
         }
 
-        ssl_sock &operator=(ssl_sock &&other) {
+        SslSock &operator=(SslSock &&other) {
             raw = other.raw;
             other.raw = nullptr;
             return *this;
@@ -231,7 +231,7 @@ namespace suil {
             }
         }
 
-        virtual ~ssl_sock() {
+        virtual ~SslSock() {
             if (raw)
                 close();
         }
@@ -240,22 +240,22 @@ namespace suil {
     };
 
     define_log_tag(TCP_SOCKET);
-    struct tcp_sock : public virtual sock_adaptor, LOGGER(dtag(TCP_SOCKET)) {
-        tcp_sock()
+    struct TcpSock : public virtual SocketAdaptor, LOGGER(dtag(TCP_SOCKET)) {
+        TcpSock()
             : raw(nullptr)
         {}
 
-        tcp_sock(tcpsock s)
+        TcpSock(tcpsock s)
             : raw(s)
         {}
 
-        tcp_sock(tcp_sock &&other)
+        TcpSock(TcpSock &&other)
             : raw(other.raw)
         {
             other.raw = nullptr;
         }
 
-        tcp_sock &operator=(tcp_sock &&other) {
+        TcpSock &operator=(TcpSock &&other) {
             raw = other.raw;
             other.raw = nullptr;
             return *this;
@@ -279,7 +279,7 @@ namespace suil {
 
             raw = tcpconnect(addr, utils::after(timeout));
             if (raw == NULL) {
-                trace("connection to address %s failed: %s", ipstr(addr), errno_s);
+                trace("Connection to address %s failed: %s", ipstr(addr), errno_s);
                 return false;
             }
             return true;
@@ -411,7 +411,7 @@ namespace suil {
             }
         }
 
-        virtual ~tcp_sock() {
+        virtual ~TcpSock() {
             if (raw)
                 close();
         }
@@ -420,23 +420,23 @@ namespace suil {
     };
 
     template <class __S>
-    struct server_sock {
+    struct ServerSock {
         virtual bool listen(ipaddr, int) = 0;
         virtual bool accept(__S&, int64_t timeout = -1) = 0;
         virtual void close() = 0;
         virtual void shutdown() = 0;
     };
 
-    struct ssl_ss_config {
+    struct SslSsConfig {
         std::string     key;
         std::string     cert;
     };
 
-    struct ssl_ss : public server_sock<ssl_sock>, LOGGER(dtag(SSL_SOCKET)) {
-        typedef ssl_sock sock_t;
-        typedef ssl_ss_config config_t;
+    struct SslSs : public ServerSock<SslSock>, LOGGER(dtag(SSL_SOCK)) {
+        typedef SslSock sock_t;
+        typedef SslSsConfig config_t;
 
-        ssl_ss(ssl_ss_config& cfg)
+        SslSs(SslSsConfig& cfg)
             :config(cfg)
         {}
 
@@ -461,7 +461,7 @@ namespace suil {
             sslsock tsock;
             tsock = sslaccept(raw, utils::after(timeout));
             if (tsock == nullptr) {
-                trace("accept connection failed: %s", errno_s);
+                trace("accept Connection failed: %s", errno_s);
                 s = sock_t(nullptr);
                 return false;
             } else {
@@ -482,17 +482,17 @@ namespace suil {
 
     private:
         sslsock         raw{nullptr};
-        ssl_ss_config& config;
+        SslSsConfig& config;
     };
 
-    struct tcp_ss_config {
+    struct TcpSsConfig {
     };
 
-    struct tcp_ss : public server_sock<tcp_sock>, public LOGGER(dtag(TCP_SOCKET)) {
-        typedef tcp_sock sock_t;
-        typedef tcp_ss_config config_t;
+    struct TcpSs : public ServerSock<TcpSock>, public LOGGER(dtag(TCP_SOCKET)) {
+        typedef TcpSock sock_t;
+        typedef TcpSsConfig config_t;
 
-        tcp_ss(tcp_ss_config /* Unused */)
+        TcpSs(TcpSsConfig /* Unused */)
             : raw(nullptr)
         {}
 
@@ -515,7 +515,7 @@ namespace suil {
             tcpsock tsock;
             tsock = tcpaccept(raw, utils::after(timeout));
             if (tsock == nullptr) {
-                trace("accept connection failed: %s", errno_s);
+                trace("accept Connection failed: %s", errno_s);
                 s = sock_t(nullptr);
                 return false;
             } else {

@@ -8,7 +8,7 @@ namespace suil {
 
     namespace http {
 
-        void trie_t::optimize_node(node_t *n) {
+        void Trie::optimize_node(node_t *n) {
             for(auto x : n->param_childrens)
             {
                 if (!x)
@@ -52,7 +52,7 @@ namespace suil {
             }
         }
 
-        suil::http::router_params_t trie_t::find(
+        suil::http::router_params_t Trie::find(
                 const strview_t &req_url,
                 const node_t *node,
                 unsigned int pos,
@@ -182,7 +182,7 @@ namespace suil {
             return {found, std::move(match_params)};
         }
 
-        void trie_t::add(const std::string &url, unsigned rule_index) {
+        void Trie::add(const std::string &url, unsigned rule_index) {
             unsigned idx{0};
 
             for(unsigned i = 0; i < url.size(); i ++)
@@ -238,7 +238,7 @@ namespace suil {
             nodes_[idx].rule_index = rule_index;
         }
 
-        void trie_t::debug_node_print(std::string &dbpr, node_t *n, int level) {
+        void Trie::debug_node_print(std::string &dbpr, node_t *n, int level) {
             dbpr.reserve(512);
             for (int i = 0; i < (int) suil::detail::ParamType::MAX; i++) {
                 if (n->param_childrens[i]) {
@@ -274,7 +274,7 @@ namespace suil {
         }
 
 
-        void router_t::validate() {
+        void Router::validate() {
             trie_.validate();
             for(auto& rule : rules_)
             {
@@ -285,15 +285,15 @@ namespace suil {
             }
         }
 
-        dynamic_rule& router_t::new_rule_dynamic(const std::string &rule) {
-            auto rule_obj = new dynamic_rule(rule);
+        DynamicRule& Router::new_rule_dynamic(const std::string &rule) {
+            auto rule_obj = new DynamicRule(rule);
 
             internal_add_rule_object(rule, rule_obj);
 
             return *rule_obj;
         }
 
-        void router_t::internal_add_rule_object(const std::string &rule, base_rule_t *rule_obj) {
+        void Router::internal_add_rule_object(const std::string &rule, BaseRule *rule_obj) {
             rules_.emplace_back(rule_obj);
             trie_.add(rule, rules_.size() - 1);
 
@@ -307,7 +307,7 @@ namespace suil {
             }
         }
 
-        void router_t::before(request &req, response &resp) {
+        void Router::before(Request &req, Response &resp) {
             char *url;
             zcstring tmp(req.url);
             if (tmp.empty() || (tmp == "/")) {
@@ -317,7 +317,7 @@ namespace suil {
             }
             else if (api_base.empty() || strncasecmp(req.url, api_base.c_str(), api_base.size()) == 0)
             {
-                /* the request is an api` rule */
+                /* the Request is an api` rule */
                 size_t index = api_base.empty()? 0: api_base.size();
                 url = &req.url[index];
             }
@@ -335,29 +335,29 @@ namespace suil {
             if (params.first >= rules_.size())
                 throw std::runtime_error("trie internal structure corrupted!");
 
-            // update request with params
+            // update Request with params
             req.params.index = params.first;
             req.params.decoded = std::move(params.second);
             req.params.attrs = &rules_[params.first]->attrs_;
         }
 
-        void router_t::handle(const request &req, response &res) {
+        void Router::handle(const Request &req, Response &res) {
 
             if (req.params.index == RULE_SPECIAL_REDIRECT_SLASH)
             {
-                res = response();
+                res = Response();
 
                 // TODO absolute url building
                 if (req.header("Host").empty())
                 {
-                    buffer_t b(0);
+                    zbuffer b(0);
                     b += req.url;
                     b += "/";
                     res.header("Location", b);
                 }
                 else
                 {
-                    buffer_t b(16);
+                    zbuffer b(16);
                     b += "http://";
                     b += req.header("Host");
                     b += req.url;
@@ -388,7 +388,7 @@ namespace suil {
             }
         }
 
-        void system_attrs::before(request &req, response &, Context &) {
+        void SystemAttrs::before(Request &req, Response &, Context &) {
             /* check for system attributes and apply appropriate actions */
             const route_attributes_t& attrs = req.route();
             if (cookies || attrs.PARSE_COOKIES) {
@@ -397,12 +397,12 @@ namespace suil {
             }
 
             if (attrs.PARSE_FORM) {
-                /* parse request form if route expects form */
+                /* parse Request form if route expects form */
                 req.parse_form();
             }
         }
 
-        void system_attrs::after(request &, http::response &, Context &) {
+        void SystemAttrs::after(Request &, http::Response &, Context &) {
         }
     }
 }

@@ -12,80 +12,80 @@
 namespace suil {
     namespace http {
 
-        struct websock_api;
-        struct request;
-        struct response;
+        struct WebSockApi;
+        struct Request;
+        struct Response;
 
-        using proto_handler_t = std::function<bool(request&, response&)>;
+        using ProtocolHandler = std::function<bool(Request&, Response&)>;
 
         define_log_tag(HTTP_RESP);
-        struct response : LOGGER(dtag(HTTP_RESP)) {
-            response()
-                : response(Status::OK)
+        struct Response : LOGGER(dtag(HTTP_RESP)) {
+            Response()
+                : Response(Status::OK)
             {}
 
-            response(const Status status)
+            Response(const Status status)
                 : body(0),
                   status(status)
             {}
 
-            response(const std::string& resp)
+            Response(const std::string& resp)
                 : body(resp.size()+2),
                   status(Status::OK)
             {
                 body.append(resp.data(), resp.size());
             }
 
-            response(const zcstring& resp)
-                : body(resp.len+2),
+            Response(const zcstring& resp)
+                : body(resp.size()+2),
                   status(Status::OK)
             {
-                body.append(resp.cstr, resp.len);
+                body.append(resp.data(), resp.size());
             }
 
-            response(const char* resp)
+            Response(const char* resp)
                 : body(0),
                   status(Status::OK)
             {
                 body << resp;
             }
 
-            response(const int64_t& data)
+            Response(const int64_t& data)
                 : body(15),
                   status(Status::OK)
             {
                 body << data;
             }
 
-            response(const int& data)
+            Response(const int& data)
                 : body(15),
                   status(Status::OK)
             {
                 body << data;
             }
 
-            response(const unsigned& data)
+            Response(const unsigned& data)
                 : body(15),
                   status(Status::OK)
             {
                 body << data;
             }
 
-            response(const uint64_t& data)
+            Response(const uint64_t& data)
                 : body(15),
                   status(Status::OK)
             {
                 body << data;
             }
 
-            response(const double& data)
+            Response(const double& data)
                 : body(15),
                   status(Status::OK)
             {
                 body << data;
             }
 
-            response(const float& data)
+            Response(const float& data)
                     : body(15),
                       status(Status::OK)
             {
@@ -93,7 +93,7 @@ namespace suil {
             }
 
 
-            response(Status status, buffer_t& body)
+            Response(Status status, zbuffer& body)
                 : body(0),
                   status(status)
             {
@@ -101,7 +101,7 @@ namespace suil {
             }
 
             template<typename _T>
-            response(const _T& data)
+            Response(const _T& data)
                 : body(0),
                   status(Status::OK)
             {
@@ -109,13 +109,13 @@ namespace suil {
                 body << iod::json_encode(data).c_str();
             }
 
-            response(response&&);
+            Response(Response&&);
 
-            response&operator=(response&&);
+            Response&operator=(Response&&);
 
             void end(Status status = Status::OK);
 
-            void end(Status status, buffer_t& body);
+            void end(Status status, zbuffer& body);
 
             void set_content_type(const char *type) {
                 header("Content-Type", type);
@@ -136,11 +136,11 @@ namespace suil {
             }
 
             inline void append(const zcstring& str) {
-                body.append(str.str, str.len);
+                body.append(str.data(), str.size());
             }
 
             template <typename __T>
-            inline response& operator<<(const __T data) {
+            inline Response& operator<<(const __T data) {
                 body << data;
                 return *this;
             }
@@ -168,7 +168,7 @@ namespace suil {
                 header(std::move(h.dup()), std::move(v.dup()));
             }
 
-            inline void header(const char* field, buffer_t& value) {
+            inline void header(const char* field, zbuffer& value) {
                 zcstring h(field);
                 zcstring v(value, true);
                 header(std::move(h.dup()), std::move(v));
@@ -192,7 +192,7 @@ namespace suil {
                 return header(field);
             }
 
-            void cookie(cookie_t& ck) {
+            void cookie(Cookie& ck) {
                 if (ck) {
                     // even after we move the cookies name, the peeked
                     // name will still point to the right point
@@ -213,7 +213,7 @@ namespace suil {
                 return completed;
             }
 
-            void end(proto_handler_t p);
+            void end(ProtocolHandler p);
 
             inline void redirect(Status status, const char *location) {
                 header("Location", location);
@@ -221,13 +221,13 @@ namespace suil {
             }
 
         private:
-             proto_handler_t operator()() {
+             ProtocolHandler operator()() {
                  return proto;
              }
 
             void flush_cookies();
 
-            struct chunk_t {
+            struct Chunk {
                 union {
                     int     fd;
                     void    *data;
@@ -239,45 +239,45 @@ namespace suil {
 
                 bool     use_fd{0};
 
-                chunk_t(int fd, off_t offset, size_t len)
+                Chunk(int fd, off_t offset, size_t len)
                     : fd(fd), offset(offset), len(len), use_fd(1)
                 {}
-                chunk_t(int fd, size_t len)
-                        : chunk_t(fd, 0, len)
+                Chunk(int fd, size_t len)
+                        : Chunk(fd, 0, len)
                 {}
 
-                chunk_t(void *data, off_t offset, size_t len)
+                Chunk(void *data, off_t offset, size_t len)
                     : data(data), offset(offset), len(len), use_fd(0)
                 {}
 
-                chunk_t(void *data, size_t len)
-                    : chunk_t(data, 0, len)
+                Chunk(void *data, size_t len)
+                    : Chunk(data, 0, len)
                 {}
             };
 
             template <typename __H, typename ...Mws>
-            friend struct connection;
-            friend struct file_server;
+            friend struct Connection;
+            friend struct FileServer;
 
 
-            void chunk(chunk_t chunk) {
+            void chunk(Chunk chunk) {
                 assert(!body);
                 total_size_ += (chunk.len-chunk.offset);
                 chunks.push_back(chunk);
             }
 
-            std::vector<chunk_t>  chunks;
+            std::vector<Chunk>  chunks;
             size_t                total_size_{0};
 
 #ifdef SUIL_UT_ENABLED
         public:
 #endif
-            zcstr_map_t<zcstring>   headers;
+            zmap<zcstring>   headers;
             cookie_jar_t            cookies;
-            buffer_t                body;
+            zbuffer                body;
             Status                status;
             bool                    completed{false};
-            proto_handler_t         proto{nullptr};
+            ProtocolHandler         proto{nullptr};
         };
     }
 }

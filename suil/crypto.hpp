@@ -13,48 +13,49 @@
 
 #define BASE58_ADDR_MAX_LEN     36
 #define BASE58_KEY_MAX_LEN      53
-#define SODOIN_PUBKEY_LEN       33
-#define SODOIN_CHECKSUM_LEN     4
-#define SODOIN_VERSION_LEN      1
-#define SODOIN_BINARY_KEYLEN    (SODOIN_PUBKEY_LEN+SODOIN_CHECKSUM_LEN+SODOIN_VERSION_LEN)
+#define SUIL_PUBKEY_LEN       33
+#define SUIL_CHECKSUM_LEN     4
+#define SUIL_VERSION_LEN      1
+#define SUIL_BINARY_KEYLEN    (SUIL_PUBKEY_LEN+SUIL_CHECKSUM_LEN+SUIL_VERSION_LEN)
 
 namespace sodoin {
 
-    typedef suil::blob_t<SODOIN_PUBKEY_LEN> pubkeyBLOB;
-    typedef suil::blob_t<32> privkeyBLOB;
-    typedef suil::blob_t<SHA256_DIGEST_LENGTH> sha256BLOB;
-    typedef suil::blob_t<1 + RIPEMD160_DIGEST_LENGTH + SODOIN_CHECKSUM_LEN> addressBLOB;
-    typedef suil::blob_t<BASE58_ADDR_MAX_LEN> base58BLOB;
-    typedef suil::blob_t<64> ecdsasigBLOB;
-    typedef suil::blob_t<SODOIN_BINARY_KEYLEN> netaddrBLOB;
-    typedef suil::blob_t<SHA_DIGEST_LENGTH> Address;
+    typedef suil::Blob<SUIL_PUBKEY_LEN>      PubkeyBlob;
+    typedef suil::Blob<32>                   PrivkeyBlob;
+    typedef suil::Blob<SHA256_DIGEST_LENGTH> Sha256Blob;
+    typedef suil::Blob<BASE58_ADDR_MAX_LEN>  Base58Blob;
+    typedef suil::Blob<64>                   EcdsaSigBlob;
 
     namespace crypto {
+        typedef suil::Blob<1 + RIPEMD160_DIGEST_LENGTH + SUIL_CHECKSUM_LEN> AddressBLOB;
+        typedef suil::Blob<SUIL_BINARY_KEYLEN>   NetAddrBlob;
+        typedef suil::Blob<SHA_DIGEST_LENGTH>    Address;
 
         struct address_bin;
         struct netaddr_bin;
-        struct pubkey_bin : pubkeyBLOB {
+
+        struct pubkey_bin : PubkeyBlob {
             inline uint8_t *key() { return &Ego.bin(); }
-            inline uint8_t &compressed() { return Ego.bin<SODOIN_PUBKEY_LEN-1>(); }
+            inline uint8_t &compressed() { return Ego.bin<SUIL_PUBKEY_LEN-1>(); }
             inline const uint8_t *ckey() const { return &Ego.cbin(); }
-            inline const uint8_t &ccompressed() const { return Ego.cbin<SODOIN_PUBKEY_LEN-1>(); }
+            inline const uint8_t &ccompressed() const { return Ego.cbin<SUIL_PUBKEY_LEN-1>(); }
             bool address(address_bin &) const;
             bool address(Address&) const;
         } __attribute__((aligned(1)));
 
-        struct privkey_bin : privkeyBLOB {
+        struct privkey_bin : PrivkeyBlob {
             inline uint8_t *key()              { return Ego.begin(); }
             inline const uint8_t *ckey() const { return Ego.cbegin(); }
             bool  pub(pubkey_bin&) const;
             bool  pub(Address&) const;
         } __attribute__((aligned(1)));
 
-        struct sha256_bin : sha256BLOB {
+        struct sha256_bin : Sha256Blob {
             inline uint8_t *sha()              { return Ego.begin(); };
             inline const uint8_t *csha() const { return Ego.cbegin(); };
         } __attribute__((aligned(1)));
 
-        struct address_bin : addressBLOB {
+        struct address_bin : AddressBLOB {
             inline uint8_t &ver()  { return Ego.bin(); }
             inline Address &addr() { return (Address &)Ego.bin<1>(); }
             inline uint8_t *csum() { return &Ego.bin<1 + RIPEMD160_DIGEST_LENGTH>(); }
@@ -63,7 +64,7 @@ namespace sodoin {
             inline const uint8_t *ccsum() const { return &Ego.cbin<1 + RIPEMD160_DIGEST_LENGTH>(); }
         } __attribute__((aligned(1)));
 
-        struct netaddr_bin: netaddrBLOB{
+        struct netaddr_bin: NetAddrBlob{
             inline uint8_t&     ver()  { return Ego.bin(); }
             inline pubkey_bin&  pub()  { return (pubkey_bin &) Ego.bin<1>(); }
             inline uint8_t*     csum() { return &Ego.bin<1+sizeof(pubkey_bin)>(); }
@@ -72,7 +73,7 @@ namespace sodoin {
             inline const uint8_t*     ccsum() const { return &Ego.cbin<1+sizeof(pubkey_bin)>(); }
         } __attribute__((aligned(1)));
 
-        struct base58_bin : base58BLOB {
+        struct base58_bin : Base58Blob {
             inline uint8_t *b58() { return Ego.begin(); }
             inline const uint8_t *cb58() const { return Ego.cbegin(); }
         };
@@ -90,7 +91,7 @@ namespace sodoin {
             bool decode(const uint8_t in[], size_t sin, uint8_t out[], size_t& sout);
 
             inline bool decode(const suil::zcstring& b58, uint8_t out[], size_t& sout) {
-                return decode((uint8_t *)b58.str, b58.len, out, sout);
+                return decode((uint8_t *)b58.data(), b58.size(), out, sout);
             }
             char* encode(const uint8_t in[], size_t sin, uint8_t out[], size_t& nout);
 
@@ -107,7 +108,7 @@ namespace sodoin {
 
         namespace ecdsa {
 
-            struct signature_bin : ecdsasigBLOB {
+            struct signature_bin : EcdsaSigBlob {
                 inline uint8_t *r()   { return &Ego.bin<0>();  }
                 inline uint8_t *s()   { return &Ego.bin<32>(); }
                 inline const uint8_t *cr()   const { return &Ego.cbin<0>();  }
@@ -117,30 +118,30 @@ namespace sodoin {
             bool sign(const uint8_t msg[], size_t len, const privkey_bin &key, signature_bin &sig);
 
             inline bool sign(const suil::zcstring &msg, const privkey_bin &key, signature_bin &sig) {
-                    return sign((uint8_t *) msg.str, msg.len, key, sig);
+                    return sign((uint8_t *) msg.data(), msg.size(), key, sig);
             }
 
-            inline bool sign(const suil::buffer_t &msg, const privkey_bin &key, signature_bin &sig) {
+            inline bool sign(const suil::zbuffer &msg, const privkey_bin &key, signature_bin &sig) {
                     return sign((uint8_t *) msg.data(), msg.size(), key, sig);
             }
 
             template<size_t N>
-            inline bool sign(const suil::blob_t<N> &msg, const privkey_bin &key, signature_bin &sig) {
+            inline bool sign(const suil::Blob<N> &msg, const privkey_bin &key, signature_bin &sig) {
                     return sign(msg.begin(), msg.size(), key, sig);
             }
 
             bool check(const uint8_t msg[], size_t len, const pubkey_bin& key, signature_bin &sig);
 
             inline bool check(const suil::zcstring &msg, const pubkey_bin &key, signature_bin &sig) {
-                    return check((uint8_t *) msg.str, msg.len, key, sig);
+                    return check((uint8_t *) msg.data(), msg.size(), key, sig);
             }
 
-            inline bool check(const suil::buffer_t &msg, const pubkey_bin &key, signature_bin &sig) {
+            inline bool check(const suil::zbuffer &msg, const pubkey_bin &key, signature_bin &sig) {
                     return check((uint8_t *) msg.data(), msg.size(), key, sig);
             }
 
             template<size_t N>
-            inline bool check(const suil::blob_t<N> &msg, const pubkey_bin &key, signature_bin &sig) {
+            inline bool check(const suil::Blob<N> &msg, const pubkey_bin &key, signature_bin &sig) {
                     return check(msg.begin(), msg.size(), key, sig);
             }
         }

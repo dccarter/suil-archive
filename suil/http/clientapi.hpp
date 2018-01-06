@@ -28,23 +28,23 @@ namespace suil {
                 static constexpr int URL_ENCODED      = 0;
                 static constexpr int MULTIPART_FORM   = 1;
                 static constexpr int MULTIPART_OTHERS = 2;
-                struct File {
-                    File(const char *name, const char *path, const char *ctype = nullptr)
+                struct file_t {
+                    file_t(const char *name, const char *path, const char *ctype = nullptr)
                         : name(std::move(zcstring(name).dup())),
                           path(std::move(zcstring(path).dup())),
                           ctype(std::move(zcstring(ctype).dup()))
                     {}
 
-                    File(const File&) = delete;
-                    File& operator=(const File&) = delete;
-                    File(File&& o)
+                    file_t(const file_t&) = delete;
+                    file_t& operator=(const file_t&) = delete;
+                    file_t(file_t&& o)
                         : name(std::move(o.name)),
                           path(std::move(o.path)),
                           ctype(std::move(o.ctype)),
                           size(o.size)
                     { o.size = 0; }
 
-                    File& operator=(File&& o) {
+                    file_t& operator=(file_t&& o) {
                         if (this != &o) {
                             name = std::move(o.name);
                             path = std::move(o.path);
@@ -102,10 +102,10 @@ namespace suil {
                     return  !data.empty() || !files.empty();
                 }
 
-                size_t encode(buffer_t& b) const;
+                size_t encode(zbuffer& b) const;
 
                 int encoding{URL_ENCODED};
-                std::vector<File> files;
+                std::vector<file_t> files;
 
                 ~Form() {
                     clear();
@@ -119,7 +119,7 @@ namespace suil {
 
             private:
                 struct Upload {
-                    Upload(const File *f, zcstring&& head)
+                    Upload(const file_t *f, zcstring&& head)
                         : file(f),
                           head(std::move(head))
                     {}
@@ -156,12 +156,12 @@ namespace suil {
                         close();
                     }
 
-                    int        fd{-1};
-                    const File *file;
+                    int          fd{-1};
+                    const file_t *file;
                     zcstring head;
                 };
 
-                friend struct request;
+                friend struct Request;
 
                 template <typename __V>
                 void append_args(const char* name, __V& val) {
@@ -177,8 +177,8 @@ namespace suil {
                 void append_args() {
                 }
 
-                void append_args(File&& file) {
-                    file.size = utils::fs::size(file.path.cstr);
+                void append_args(file_t&& file) {
+                    file.size = utils::fs::size(file.path.data());
                     files.push_back(std::move(file));
                 }
 
@@ -189,20 +189,20 @@ namespace suil {
                 };
 
                 template <typename... __A>
-                void append_args(File& file, __A&... aa) {
+                void append_args(file_t& file, __A&... aa) {
                     append_args(std::move(file));
                     append_args(aa...);
                 };
 
                 zcstring boundary{};
                 mutable std::vector<Upload>   uploads;
-                mutable zcstr_map_t<zcstring> data;
+                mutable zmap<zcstring> data;
             };
-            using File = Form::File;
-            using response_writer_t = std::function<size_t(const char*, size_t)>;
+            using UpFile = Form::file_t;
+            using ResponseWriter = std::function<size_t(const char*, size_t)>;
 
-            struct response : protected http::parser {
-                response()
+            struct Response : protected http::parser {
+                Response()
                     : http::parser(http_parser_type::HTTP_RESPONSE)
                 {}
 
@@ -237,7 +237,7 @@ namespace suil {
                     return strview_t();
                 }
 
-                inline const buffer_t& operator()() const {
+                inline const zbuffer& operator()() const {
                     return body;
                 }
 
@@ -249,20 +249,20 @@ namespace suil {
 
             private:
 
-                friend struct session;
+                friend struct Session;
 
                 virtual int handle_body_part(const char *at, size_t length) override;
                 virtual int msg_complete() override ;
                 virtual int handle_headers_complete() override;
-                void receive(sock_adaptor& sock, int64_t timeout);
+                void receive(SocketAdaptor& sock, int64_t timeout);
 
                 bool body_read{false};
-                response_writer_t reader{nullptr};
+                ResponseWriter reader{nullptr};
             };
 
-            struct request {
-                request(const request&) = delete;
-                request& operator=(const request&) = delete;
+            struct Request {
+                Request(const Request&) = delete;
+                Request& operator=(const Request&) = delete;
                 inline void hdr(zcstring&& name, zcstring&& val) {
                     headers.insert(headers.end(),
                                    std::make_pair(std::move(name), std::move(val)));
@@ -294,17 +294,17 @@ namespace suil {
                     hdrs(e...);
                 }
 
-                request& operator<<(Form&& f);
+                Request& operator<<(Form&& f);
 
 
                 template <typename __Json>
-                inline request& operator<<(__Json jobj) {
+                inline Request& operator<<(__Json jobj) {
                     body << iod::json_encode(jobj);
                     hdrs("Content-Type", "application/json");
                     return *this;
                 }
 
-                buffer_t& buffer(const char* content_type = "text/plain") {
+                zbuffer& buffer(const char* content_type = "text/plain") {
                     hdrs("Content-Type", content_type);
                     return body;
                 }
@@ -316,11 +316,11 @@ namespace suil {
                         hdrs("Connection", "Close");
                 }
 
-                request(request&& o) noexcept;
+                Request(Request&& o) noexcept;
 
-                request& operator=(request&& o) noexcept;
+                Request& operator=(Request&& o) noexcept;
 
-                ~request() {
+                ~Request() {
                     if (sock_ptr != nullptr) {
                         delete sock_ptr;
                         sock_ptr = nullptr;
@@ -330,9 +330,9 @@ namespace suil {
                 }
 
             private:
-                friend struct session;
+                friend struct Session;
 
-                void reset(method_t m, const char* res, bool clear = true) {
+                void reset(Method m, const char* res, bool clear = true) {
                     if (clear || m != method || resource != res) {
                         cleanup();
                         resource = zcstring(res).dup();
@@ -347,34 +347,34 @@ namespace suil {
                     headers.clear();
                 }
 
-                void encodeargs(buffer_t& dst) const;
+                void encodeargs(zbuffer& dst) const;
 
-                void encodehdrs(buffer_t& dst) const;
+                void encodehdrs(zbuffer& dst) const;
 
                 size_t buildbody();
 
                 void submit(int timeout = -1);
 
-                request(sock_adaptor* adaptor)
+                Request(SocketAdaptor* adaptor)
                     : sock_ptr(adaptor),
                       sock(*sock_ptr)
                 {}
 
-                sock_adaptor           *sock_ptr;
-                sock_adaptor&           sock;
-                zcstr_map_t<zcstring>  headers{};
-                zcstr_map_t<zcstring>  arguments{};
-                method_t               method{method_t::Unknown};
+                SocketAdaptor           *sock_ptr;
+                SocketAdaptor&           sock;
+                zmap<zcstring>  headers{};
+                zmap<zcstring>  arguments{};
+                Method               method{Method::Unknown};
                 zcstring               resource{};
                 Form                   form{};
-                buffer_t               body{1024};
+                zbuffer               body{1024};
             };
 
-            using request_builder_t = std::function<bool(request&)>;
+            using request_builder_t = std::function<bool(Request&)>;
 
-            struct session : LOGGER(dtag(HTTP_CLIENT)) {
+            struct Session : LOGGER(dtag(HTTP_CLIENT)) {
                 struct handle_t {
-                    handle_t(session& sess, sock_adaptor* sock)
+                    handle_t(Session& sess, SocketAdaptor* sock)
                         : sess(sess),
                           req(sock)
                     {}
@@ -392,10 +392,10 @@ namespace suil {
                     handle_t(const handle_t&) = delete;
                     handle_t&operator=(const handle_t&) = delete;
 
-                    session& sess;
+                    Session& sess;
                 private:
-                    friend struct session;
-                    request  req;
+                    friend struct Session;
+                    Request  req;
                 };
 
                 inline void header(zcstring&& name, zcstring&& value) {
@@ -421,34 +421,34 @@ namespace suil {
                         header("Connection", "Close");
                 }
 
-                inline session::handle_t handle() {
-                    sock_adaptor *sock = nullptr;
+                inline Session::handle_t handle() {
+                    SocketAdaptor *sock = nullptr;
                     if (ishttps()) {
-                        sock = new ssl_sock;
+                        sock = new SslSock;
                     }
                     else {
-                        sock = new tcp_sock;
+                        sock = new TcpSock;
                     }
 
-                    return session::handle_t{*this, sock};
+                    return Session::handle_t{*this, sock};
                 }
 
-                handle_t connect(zcstr_map_t<zcstring> hdrs = {}) {
+                handle_t connect(zmap<zcstring> hdrs = {}) {
                     handle_t h = handle();
                     connect(h, hdrs);
                     return std::move(h);
                 }
 
-                void connect(handle_t& h, zcstr_map_t<zcstring> hdrs = {});
+                void connect(handle_t& h, zmap<zcstring> hdrs = {});
 
-                response head(handle_t& h, const char* resource, zcstr_map_t<zcstring> hdr = {});
+                Response head(handle_t& h, const char* resource, zmap<zcstring> hdr = {});
 
             private:
                 template <typename... __O>
-                friend session  load(const char *, int port, const char *, __O...);
-                friend response perform(method_t, handle_t& h, const char *, request_builder_t,response_writer_t);
+                friend Session  load(const char *, int port, const char *, __O...);
+                friend Response perform(Method, handle_t& h, const char *, request_builder_t,ResponseWriter);
 
-                session(zcstring&& proto, zcstring&& host, int port = 80)
+                Session(zcstring&& proto, zcstring&& host, int port = 80)
                     : port(port),
                       host(std::move(host)),
                       protocol(std::move(proto))
@@ -456,11 +456,11 @@ namespace suil {
 
                 template <typename... __O>
                 void configure(const char* path, __O&... opts) {
-                    /* configure session */
+                    /* configure Session */
                     // FIXME: zcstring sess(utils::fs::readall(path, true));
-                    addr = ipremote(host.cstr, port, 0, utils::after(timeout));
+                    addr = ipremote(host.data(), port, 0, utils::after(timeout));
                     if (errno != 0) {
-                        throw suil_error::create("getting address '", host.cstr,
+                        throw suil_error::create("getting address '", host(),
                                                  ":", port, "' failed:", errno_s);
                     }
 
@@ -473,23 +473,23 @@ namespace suil {
                     return protocol == "https";
                 }
 
-                response perform(handle_t& h, method_t m, const char *url, request_builder_t& builder, response_writer_t& rd);
-                inline response perform(handle_t& h, method_t m, const char *url = "") {
+                Response perform(handle_t& h, Method m, const char *url, request_builder_t& builder, ResponseWriter& rd);
+                inline Response perform(handle_t& h, Method m, const char *url = "") {
                     request_builder_t rb{nullptr};
-                    response_writer_t rw{nullptr};
+                    ResponseWriter rw{nullptr};
                     return std::move(perform(h, m, url, rb, rw));
                 }
 
                 int       port{80};
                 zcstring  host;
-                zcstr_map_t<zcstring> headers{};
+                zmap<zcstring> headers{};
                 int64_t   timeout{20000};
                 ipaddr    addr{};
                 zcstring  protocol{"http"};
             };
 
-            inline client::response perform(method_t m, session::handle_t& h, const char *u, request_builder_t b,
-                                            response_writer_t rd = nullptr) {
+            inline client::Response perform(Method m, Session::handle_t& h, const char *u, request_builder_t b,
+                                            ResponseWriter rd = nullptr) {
                 auto resp = h.sess.perform(h, m, u, b, rd);
                 if (resp.status() == Status::TEMPORARY_REDIRECT) {
                 }
@@ -499,9 +499,9 @@ namespace suil {
 
 #undef CRLF
 
-            struct file_offload: file_t {
-                explicit file_offload(const char *path, int64_t timeout = -1)
-                        : file_t(path, O_WRONLY|O_CREAT, 0644),
+            struct FileOffload: File {
+                explicit FileOffload(const char *path, int64_t timeout = -1)
+                        : File(path, O_WRONLY|O_CREAT, 0644),
                           timeout(timeout)
                 {
                     handler = [&](const char *data, size_t len) {
@@ -521,20 +521,20 @@ namespace suil {
                     };
                 }
 
-                ~file_offload() override = default;
+                ~FileOffload() override = default;
 
-                response_writer_t& operator()() {
+                ResponseWriter& operator()() {
                     return handler;
                 }
 
             private:
                 off_t       offset{0};
                 int64_t     timeout{-1};
-                response_writer_t  handler{nullptr};
+                ResponseWriter  handler{nullptr};
             };
 
-            struct memory_offload {
-                memory_offload(size_t mapped_min = 65000)
+            struct MemoryOffload {
+                MemoryOffload(size_t mapped_min = 65000)
                     : mapped_min(mapped_min)
                 {
                     handler = [&](const char *at, size_t len) {
@@ -558,13 +558,13 @@ namespace suil {
                     };
                 }
 
-                ~memory_offload();
+                ~MemoryOffload();
 
                 operator zcstring() {
                     return zcstring(data, offset, false);
                 }
 
-                response_writer_t& operator()() {
+                ResponseWriter& operator()() {
                     return handler;
                 }
 
@@ -574,20 +574,20 @@ namespace suil {
                 size_t  offset{0};
                 size_t  mapped_min{65350};
                 bool    is_mapped{false};
-                response_writer_t handler{nullptr};
+                ResponseWriter handler{nullptr};
             };
 
             /**
-             * @brief loads an http client session from the given path
-             * @param host the host that the session connects to
+             * @brief loads an http client Session from the given path
+             * @param host the host that the Session connects to
              * @param port the port to connect to on the host
-             * @param path the local path where the session is saved
-             * @param opts options that will be passed to the session
+             * @param path the local path where the Session is saved
+             * @param opts options that will be passed to the Session
              *
-             * @returns the loaded session
+             * @returns the loaded Session
              * */
             template <typename... __O>
-            session load(const char *url, int port, const char *path, __O... opts) {
+            Session load(const char *url, int port, const char *path, __O... opts) {
                 const char *tmp(strstr(url, "://"));
                 zcstring proto{}, host{};
                 if (tmp != nullptr) {
@@ -601,77 +601,77 @@ namespace suil {
                     host  = zcstring(url).dup();
                 }
 
-                session sess(std::move(proto), std::move(host), port);
+                Session sess(std::move(proto), std::move(host), port);
                 sess.configure(path, opts...);
                 return sess;
             }
 
-            inline session load(const char *url, int port = 80) {
+            inline Session load(const char *url, int port = 80) {
                 return load(url, port, nullptr);
             }
 
-            inline response get(session::handle_t& h, const char *resource, request_builder_t builder = nullptr ) {
-                return client::perform(method_t::Get, h, resource, builder);
+            inline Response get(Session::handle_t& h, const char *resource, request_builder_t builder = nullptr ) {
+                return client::perform(Method::Get, h, resource, builder);
             }
 
-            inline response get(session& sess, const char *resource, request_builder_t builder = nullptr ) {
+            inline Response get(Session& sess, const char *resource, request_builder_t builder = nullptr ) {
                 auto h = sess.handle();
-                return client::perform(method_t::Get, h, resource, builder);
+                return client::perform(Method::Get, h, resource, builder);
             }
 
             template <typename __T>
-            inline response get(__T& off, session::handle_t& h, const char *resource, request_builder_t builder = nullptr ) {
-                return client::perform(method_t::Get, h, resource, builder, off());
+            inline Response get(__T& off, Session::handle_t& h, const char *resource, request_builder_t builder = nullptr ) {
+                return client::perform(Method::Get, h, resource, builder, off());
             }
 
             template <typename __T>
-            inline response get(__T& off,session& sess, const char *resource, request_builder_t builder = nullptr ) {
+            inline Response get(__T& off,Session& sess, const char *resource, request_builder_t builder = nullptr ) {
                 auto h = sess.handle();
-                return client::perform(method_t::Get, h, resource, builder, off());
+                return client::perform(Method::Get, h, resource, builder, off());
             }
 
-            inline response post(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
-                return client::perform(method_t::Post, h, resource, builder);
+            inline Response post(Session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
+                return client::perform(Method::Post, h, resource, builder);
             }
 
-            inline response post(session& sess, const char *resource, request_builder_t builder = nullptr) {
+            inline Response post(Session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
-                return client::perform(method_t::Post, h, resource, builder);
+                return client::perform(Method::Post, h, resource, builder);
             }
 
-            inline response put(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
-                return client::perform(method_t::Put, h, resource, builder);
+            inline Response put(Session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
+                return client::perform(Method::Put, h, resource, builder);
             }
 
-            inline response put(session& sess, const char *resource, request_builder_t builder = nullptr) {
+            inline Response put(Session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
-                return client::perform(method_t::Put, h, resource, builder);
+                return client::perform(Method::Put, h, resource, builder);
             }
 
-            inline response del(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
-                return client::perform(method_t::Delete, h, resource, builder);
+            inline Response del(Session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
+                return client::perform(Method::Delete, h, resource, builder);
             }
-            inline response del(session& sess, const char *resource, request_builder_t builder = nullptr) {
+            inline Response del(Session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
-                return client::perform(method_t::Delete, h, resource, builder);
+                return client::perform(Method::Delete, h, resource, builder);
             }
 
-            inline response options(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
-                return client::perform(method_t::Options, h, resource, builder);
+            inline Response options(Session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
+                return client::perform(Method::Options, h, resource, builder);
             }
 
-            inline response options(session& sess, const char *resource, request_builder_t builder = nullptr) {
+            inline Response options(Session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
-                return client::perform(method_t::Options, h, resource, builder);
+                return client::perform(Method::Options, h, resource, builder);
             }
 
-            inline response head(session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
-                return client::perform(method_t::Head, h, resource, builder);
+            inline Response head(Session::handle_t& h, const char *resource, request_builder_t builder = nullptr) {
+                return client::perform(Method::Head, h, resource, builder);
             }
 
-            inline response head(session& sess, const char *resource, request_builder_t builder = nullptr) {
+            inline Response head(Session& sess, const char *resource, request_builder_t builder = nullptr) {
                 auto h = sess.handle();
-                return client::perform(method_t::Head, h, resource, builder);
+                return client::perform(Method::Head, h, resource, builder);
             }
         }
     }

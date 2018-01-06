@@ -37,19 +37,19 @@ namespace suil {
             };
 
             template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
-            bool middleware_call_helper(Container& middlewares, http::request& req, http::response& res, Context& ctx);
+            bool middleware_call_helper(Container& middlewares, http::Request& req, http::Response& res, Context& ctx);
 
             template <typename ... Middlewares>
             struct context : private partial_context<Middlewares...>
                 //struct context : private Middlewares::context... // simple but less type-safe
             {
                 template <int N, typename Context, typename Container>
-                friend typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, http::request& req, http::response& res);
+                friend typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, http::Request& req, http::Response& res);
                 template <int N, typename Context, typename Container>
-                friend typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, http::request& req, http::response& res);
+                friend typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, http::Request& req, http::Response& res);
 
                 template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares2>
-                friend bool middleware_call_helper(Container& middlewares, http::request& req, http::response& res, Context& ctx);
+                friend bool middleware_call_helper(Container& middlewares, http::Request& req, http::Response& res, Context& ctx);
 
                 template <typename T>
                 typename T::Context& get()
@@ -64,7 +64,7 @@ namespace suil {
             template<typename MW>
             struct check_before_handle_arity_3_const {
                 template<typename T,
-                        void (T::*)(http::request &, http::response &, typename MW::Context &) const = &T::before
+                        void (T::*)(http::Request &, http::Response &, typename MW::Context &) const = &T::before
                 >
                 struct get {
                 };
@@ -73,7 +73,7 @@ namespace suil {
             template<typename MW>
             struct check_before_handle_arity_3 {
                 template<typename T,
-                        void (T::*)(http::request &, http::response &, typename MW::Context &) = &T::before
+                        void (T::*)(http::Request &, http::Response &, typename MW::Context &) = &T::before
                 >
                 struct get {
                 };
@@ -82,7 +82,7 @@ namespace suil {
             template<typename MW>
             struct check_after_handle_arity_3_const {
                 template<typename T,
-                        void (T::*)(http::request &, http::response &, typename MW::Context &) const = &T::after
+                        void (T::*)(http::Request &, http::Response &, typename MW::Context &) const = &T::after
                 >
                 struct get {
                 };
@@ -91,7 +91,7 @@ namespace suil {
             template<typename MW>
             struct check_after_handle_arity_3 {
                 template<typename T,
-                        void (T::*)(http::request &, http::response &, typename MW::Context &) = &T::after
+                        void (T::*)(http::Request &, http::Response &, typename MW::Context &) = &T::after
                 >
                 struct get {
                 };
@@ -130,30 +130,30 @@ namespace suil {
 
             template<typename MW, typename Context, typename ParentContext>
             typename std::enable_if<!is_before_handle_arity_3_impl<MW>::value>::type
-            before_handler_call(MW &mw, http::request &req, http::response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
+            before_handler_call(MW &mw, http::Request &req, http::Response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
                 mw.before(req, res, ctx.template get<MW>(), ctx);
             }
 
             template<typename MW, typename Context, typename ParentContext>
             typename std::enable_if<is_before_handle_arity_3_impl<MW>::value>::type
-            before_handler_call(MW &mw, http::request &req, http::response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
+            before_handler_call(MW &mw, http::Request &req, http::Response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
                 mw.before(req, res, ctx.template get<MW>());
             }
 
             template<typename MW, typename Context, typename ParentContext>
             typename std::enable_if<!is_after_handle_arity_3_impl<MW>::value>::type
-            after_handler_call(MW &mw, http::request &req, http::response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
+            after_handler_call(MW &mw, http::Request &req, http::Response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
                 mw.after(req, res, ctx.template get<MW>(), ctx);
             }
 
             template<typename MW, typename Context, typename ParentContext>
             typename std::enable_if<is_after_handle_arity_3_impl<MW>::value>::type
-            after_handler_call(MW &mw, http::request &req, http::response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
+            after_handler_call(MW &mw, http::Request &req, http::Response &res, Context &ctx, ParentContext & /*parent_ctx*/) {
                 mw.after(req, res, ctx.template get<MW>());
             }
 
             template<int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
-            bool middleware_call_helper(Container &middlewares, http::request &req, http::response &res, Context &ctx) {
+            bool middleware_call_helper(Container &middlewares, http::Request &req, http::Response &res, Context &ctx) {
                 using parent_context_t = typename Context::template partial<N - 1>;
                 before_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx,
                                                                           static_cast<parent_context_t &>(ctx));
@@ -176,20 +176,20 @@ namespace suil {
             }
 
             template<int N, typename Context, typename Container>
-            bool middleware_call_helper(Container & /*middlewares*/, http::request & /*req*/, http::response & /*res*/,
+            bool middleware_call_helper(Container & /*middlewares*/, http::Request & /*req*/, http::Response & /*res*/,
                                         Context & /*ctx*/) {
                 return false;
             }
 
             template<int N, typename Context, typename Container>
             typename std::enable_if<(N < 0)>::type
-            after_handlers_call_helper(Container & /*middlewares*/, Context & /*context*/, http::request & /*req*/,
-                                       http::response& /*res*/) {
+            after_handlers_call_helper(Container & /*middlewares*/, Context & /*context*/, http::Request & /*req*/,
+                                       http::Response& /*res*/) {
             }
 
             template<int N, typename Context, typename Container>
             typename std::enable_if<(N == 0)>::type
-            after_handlers_call_helper(Container &middlewares, Context &ctx, http::request &req, http::response &res) {
+            after_handlers_call_helper(Container &middlewares, Context &ctx, http::Request &req, http::Response &res) {
                 using parent_context_t = typename Context::template partial<N - 1>;
                 using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
                 after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx,
@@ -198,7 +198,7 @@ namespace suil {
 
             template<int N, typename Context, typename Container>
             typename std::enable_if<(N > 0)>::type
-            after_handlers_call_helper(Container &middlewares, Context &ctx, http::request &req, http::response &res) {
+            after_handlers_call_helper(Container &middlewares, Context &ctx, http::Request &req, http::Response &res) {
                 using parent_context_t = typename Context::template partial<N - 1>;
                 using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
                 after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx,
@@ -212,14 +212,14 @@ namespace suil {
 #endif
         define_log_tag(HTTP_CONN);
         template <typename __H, typename... __Mws>
-        struct connection : LOGGER(dtag(HTTP_CONN)) {
+        struct Connection : LOGGER(dtag(HTTP_CONN)) {
             typedef std::tuple<__Mws...> middlewares_t;
 
-            connection(sock_adaptor& sock,
-                       http_config_t& config,
+            Connection(SocketAdaptor& sock,
+                       HttpConfig& config,
                        __H& handler,
                        middlewares_t* mws,
-                       server_stats_t& stats)
+                       ServerStats& stats)
                 : mws(mws),
                   config(config),
                   sock(sock),
@@ -228,22 +228,22 @@ namespace suil {
             {
                 stats.total_requests++;
                 stats.open_requests++;
-                trace("(%p) %s - creating connection", this, sock.id());
+                trace("(%p) %s - creating Connection", this, sock.id());
             }
 
             void start() {
 
                 Status  status = Status::OK;
-                request req(sock, config);
+                Request req(sock, config);
 
-                trace("%s - starting connection handler", sock.id());
+                trace("%s - starting Connection handler", sock.id());
                 do {
-                    // receive request headers
+                    // receive Request headers
                     status = req.receive_headers(stats);
                     if (status != Status::OK) {
                         if (status != Status::REQUEST_TIMEOUT) {
                             // receiving headers failed, send back failure
-                            response res(status);
+                            Response res(status);
                             send_response(req, res, true);
                         }
                         else {
@@ -253,19 +253,19 @@ namespace suil {
                         break;
                     }
 
-                    // receive request body
+                    // receive Request body
                     status = req.receive_body(stats);
                     if (status != Status::OK) {
                         // receiving body failed, send back error
-                        response res(status);
+                        Response res(status);
                         send_response(req, res, true);
                         break;
                     }
 
-                    // handle received request
+                    // handle received Request
                     bool err{false};
                     int64_t start = mnow();
-                    response res(Status::OK);
+                    Response res(Status::OK);
                     detail::context<__Mws...> ctx =
                             detail::context<__Mws...>();
 
@@ -275,7 +275,7 @@ namespace suil {
                         handler.before(req, res);
 
                         req.middleware_context = (void *) &ctx;
-                        // call before handle middleware contexts
+                        // call before handle Middleware contexts
                         detail::middleware_call_helper<
                                 0,
                                 decltype(ctx),
@@ -284,11 +284,11 @@ namespace suil {
                                 (*mws, req, res, ctx);
 
                         if (!res.iscompleted()) {
-                            // call the request handler
+                            // call the Request handler
                             handler.handle(req, res);
                         }
 
-                        // call after handle middleware contexts
+                        // call after handle Middleware contexts
                         detail::after_handlers_call_helper<(
                                 (int)sizeof...(__Mws)-1),
                                 decltype(ctx), decltype(*mws)>
@@ -305,13 +305,13 @@ namespace suil {
                         res.body.reset(0, true);
                         res.body.append(ex.what());
                         err = true;
-                        idebug("request unhandled error: %s", ex.what());
+                        idebug("Request unhandled error: %s", ex.what());
                     }
                     catch (...) {
                         res.status = Status::INTERNAL_ERROR;
                         res.body.reset(0, true);
                         err = true;
-                        idebug("request unhandled unknown error");
+                        idebug("Request unhandled unknown error");
                     }
 
                     send_response(req, res, err);
@@ -322,35 +322,35 @@ namespace suil {
                     }
 
                     idebug("\"%s %s HTTP/%u.%u\" %u - %lu ms",
-                          http::method_name((http::method_t) req.method), req.url,
+                          http::method_name((http::Method) req.method), req.url,
                           req.http_major, req.http_minor, res.status, (mnow()-start));
 
                     req.clear();
                     res.clear();
                 } while (!close_);
 
-                trace("%p - done handling connection, %d", this, close_);
+                trace("%p - done handling Connection, %d", this, close_);
             }
 
-            ~connection() {
+            ~Connection() {
                 stats.open_requests--;
             }
 
         private:
 
-            using sendbuf_t = std::vector<response::chunk_t>;
+            using sendbuf_t = std::vector<Response::Chunk>;
 
-            void send_response(request& req, response& res, bool err = false) {
+            void send_response(Request& req, Response& res, bool err = false) {
                 if (!sock.isopen()) {
                     close_ = true;
-                    trace("%p - send response error: socket closed", this);
+                    trace("%p - send Response error: socket closed", this);
                     return;
                 }
 
                 sendbuf_t obuf;
                 obuf.reserve(4);
 
-                buffer_t hbuf(2047);
+                zbuffer hbuf(2047);
 
                 const char *status = Statusext(res.status);
                 hbuf.append(status);
@@ -358,7 +358,7 @@ namespace suil {
                 if (!err) {
                     const strview_t conn = req.header("Connection");
                     if (!conn.empty() && !strcasecmp(conn.data(), "Close")) {
-                        // client requested connection be closed
+                        // client requested Connection be closed
                         close_ = true;
                     }
 
@@ -377,7 +377,7 @@ namespace suil {
                     }
                 }
                 else {
-                    // force connection close on error
+                    // force Connection close on error
                     close_ = true;
                 }
 
@@ -388,9 +388,9 @@ namespace suil {
                 res.flush_cookies();
 
                 for (auto h : res.headers) {
-                    hbuf.append(h.first.cstr, h.first.len);
+                    hbuf.append(h.first.data(), h.first.size());
                     hbuf.append(" : ", sizeofcstr(" : "));
-                    hbuf.append(h.second.str, h.second.len);
+                    hbuf.append(h.second.data(), h.second.size());
                     hbuf.append("\r\n", 2);
                 }
 
@@ -447,7 +447,7 @@ namespace suil {
                             rc = sock.sendfile(b.fd, (b.offset + nsent), chunk,
                                                config.connection_timeout);
                             if (rc < 0 || rc != chunk) {
-                                trace("(%p) -  sending response failed: %s", errno_s);
+                                trace("(%p) -  sending Response failed: %s", errno_s);
                                 return false;
                             }
 
@@ -464,7 +464,7 @@ namespace suil {
                                             chunk,
                                             config.connection_timeout);
                             if (!rc) {
-                                trace("(%p) sending response failed: %s", errno_s);
+                                trace("(%p) sending Response failed: %s", errno_s);
                                 return false;
                             }
 
@@ -492,10 +492,10 @@ namespace suil {
             }
 
             middlewares_t       *mws;
-            http_config_t&      config;
-            sock_adaptor&       sock;
+            HttpConfig&      config;
+            SocketAdaptor&       sock;
             __H&                handler;
-            server_stats_t&     stats;
+            ServerStats&     stats;
             bool                close_{false};
         };
     }

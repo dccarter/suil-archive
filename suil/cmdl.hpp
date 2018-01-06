@@ -13,7 +13,7 @@ namespace suil {
     namespace cmdl {
 
         static const char NOSF = '\0';
-        struct argument {
+        struct Arg {
             zcstring        lf{nullptr};
             zcstring        help;
             char            sf{NOSF};
@@ -21,7 +21,7 @@ namespace suil {
             bool            required{false};
             bool            global{false};
         private:
-            friend struct command;
+            friend struct Cmd;
 
             inline bool check(const zcstring& arg) const {
                 return lf == arg;
@@ -36,18 +36,18 @@ namespace suil {
             }
         };
 
-        struct command {
-            command(zcstring&& name, const char *descript = nullptr, bool help =  true);
-            command&operator()(zcstring&& lf, zcstring&& help, char sf, bool opt, bool req);
-            command&operator<<(argument&&arg);
-            command&operator()(std::function<void(command&)> handler) {
+        struct Cmd {
+            Cmd(zcstring&& name, const char *descript = nullptr, bool help =  true);
+            Cmd&operator()(zcstring&& lf, zcstring&& help, char sf, bool opt, bool req);
+            Cmd&operator<<(Arg&&arg);
+            Cmd&operator()(std::function<void(Cmd&)> handler) {
                 if (Ego.handler != nullptr) {
                     throw suil_error::create("command '", name,
                                              "' already assigned a handler");
                 }
                 Ego.handler = handler;
             }
-            void showhelp(const char *app, buffer_t &help, bool ishelp = false) const;
+            void showhelp(const char *app, zbuffer &help, bool ishelp = false) const;
             bool parse(int argc, char *argv[], bool debug = false);
 
             template <typename... O>
@@ -73,11 +73,11 @@ namespace suil {
             }
 
             zcstring operator[](char sf) {
-                argument& arg = Ego.check(nullptr, sf);
+                Arg& arg = Ego.check(nullptr, sf);
                 return Ego[arg.lf].peek();
             }
             zcstring operator[](const char *lf) {
-                argument& arg = Ego.check(lf, NOSF);
+                Arg& arg = Ego.check(lf, NOSF);
                 return Ego[arg.lf].peek();
             }
 
@@ -97,7 +97,7 @@ namespace suil {
 
             template <typename V>
             V getvalue(const zcstring& name, const V def) {
-                argument *_;
+                Arg *_;
                 if (!check(_, name, NOSF)) {
                     throw suil_error::create("passed parameter '",
                             name, "' is not an argument");
@@ -111,7 +111,7 @@ namespace suil {
             }
 
         private:
-            friend struct parser;
+            friend struct Parser;
 
             template <typename V>
             inline void setvalue(V& out, zcstring& from) {
@@ -141,45 +141,45 @@ namespace suil {
                 return 0;
             }
 
-            void requestvalue(argument& arg);
+            void requestvalue(Arg& arg);
 
-            argument& check(const zcstring& lf, char sf);
-            bool check(argument*& found, const zcstring& lf, char sf);
+            Arg& check(const zcstring& lf, char sf);
+            bool check(Arg*& found, const zcstring& lf, char sf);
             zcstring    name;
             zcstring    descript;
-            std::vector<argument> args;
+            std::vector<Arg> args;
             size_t      longest{0};
             bool        required{false};
             bool        internal{false};
             bool        inter{false};
             bool        interhelp{false};
-            zcstr_map_t<zcstring> passed;
-            std::function<void(command&)> handler;
+            zmap<zcstring> passed;
+            std::function<void(Cmd&)> handler;
         };
 
-        struct parser {
-            parser(const char* app, const char *version, const char *descript = nullptr);
+        struct Parser {
+            Parser(const char* app, const char *version, const char *descript = nullptr);
             template <typename... Commands>
-            void add(command&& cmd, Commands&&... cmds) {
-                add(std::forward<command>(cmd));
+            void add(Cmd&& cmd, Commands&&... cmds) {
+                add(std::forward<Cmd>(cmd));
                 add(std::forward<Commands>(cmds)...);
             }
 
-            void add(command&& cmd);
+            void add(Cmd&& cmd);
 
-            parser&operator<<(argument&& arg);
+            Parser&operator<<(Arg&& arg);
 
             void  parse(int argc, char *argv[]);
             void  handle();
-            void  showcmdhelp(buffer_t& out, command& cmd, bool ishelp);
-            const command* getcmd() const {
+            void  showcmdhelp(zbuffer& out, Cmd& cmd, bool ishelp);
+            const Cmd* getcmd() const {
                 return parsed;
             }
 
             template <typename __T>
             zcstring operator[](char sf) {
                 zcstring _{nullptr};
-                argument *arg = findarg(_, sf);
+                Arg *arg = findarg(_, sf);
                 if (arg) {
                     return Ego.getvalue(arg->lf, arg);
                 }
@@ -195,16 +195,16 @@ namespace suil {
             }
 
         private:
-            zcstring  getvalue(const zcstring&, argument* arg);
+            zcstring  getvalue(const zcstring&, Arg* arg);
             void      showhelp(const char *prefix = nullptr);
-            command*  find(const zcstring& name);
-            argument* findarg(const zcstring& name, char sf=NOSF);
-            argument  shallowcopy(const argument& arg);
+            Cmd*  find(const zcstring& name);
+            Arg* findarg(const zcstring& name, char sf=NOSF);
+            Arg  shallowcopy(const Arg& arg);
             void add(){}
-            std::vector<command>  commands;
-            std::vector<argument> globals;
+            std::vector<Cmd>  commands;
+            std::vector<Arg> globals;
             // this is the command that successfully passed
-            command               *parsed{nullptr};
+            Cmd               *parsed{nullptr};
             zcstring              appname;
             zcstring              descript;
             zcstring              appversion;

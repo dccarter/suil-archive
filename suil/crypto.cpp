@@ -158,7 +158,7 @@ namespace sodoin {
             // get private key
             privkey = EC_KEY_get0_private_key(key);
             keylen = (size_t) BN_num_bytes(privkey);
-            if (keylen != SODOIN_PUBKEY_LEN-1) {
+            if (keylen != SUIL_PUBKEY_LEN-1) {
                 serror("unpacking private key (len=%lu)", keylen);
                 goto fail_free_priv;
             }
@@ -224,7 +224,7 @@ namespace sodoin {
             uint8_t sha[SHA256_DIGEST_LENGTH];
 
             SHA256_Init(&ctx);
-            SHA256_Update(&ctx, Ego.ckey(), SODOIN_PUBKEY_LEN-1);
+            SHA256_Update(&ctx, Ego.ckey(), SUIL_PUBKEY_LEN-1);
             SHA256_Final(sha, &ctx);
 
             RIPEMD160(sha, sizeof(sha), &addr.bin());
@@ -257,7 +257,7 @@ namespace sodoin {
             /* Save keypair key */
             pubkey  = pub.key();
             keylen  = (size_t) i2o_ECPublicKey(ppriv, &pubkey);
-            if (keylen != SODOIN_PUBKEY_LEN) {
+            if (keylen != SUIL_PUBKEY_LEN) {
                 serror("packing public key (len=%lu)", keylen);
                 goto fail_free_bn;
             }
@@ -310,7 +310,7 @@ namespace sodoin {
                 return true;
             }
 
-            bool encode(const privkey_bin& key, base58BLOB& out) {
+            bool encode(const privkey_bin& key, Base58Blob& out) {
                 netaddr_bin addr{};
                 char *p{nullptr};
 
@@ -322,7 +322,7 @@ namespace sodoin {
                 memcpy(addr.pub().key(), key.ckey(), sizeof(key));
 
                 // append checksum
-                base58Checksum(addr.csum(), &addr.bin(), (1 + SODOIN_PUBKEY_LEN));
+                base58Checksum(addr.csum(), &addr.bin(), (1 + SUIL_PUBKEY_LEN));
                 sinfo("before_encode: %s", addr.hexstr()());
                 p = encode_base58((char *)out.begin(), BASE58_KEY_MAX_LEN, &addr.bin(), sizeof(addr));
 
@@ -342,7 +342,7 @@ namespace sodoin {
                 memcpy(addr.pub().key(), key.ckey(), sizeof(key));
 
                 // append checksum
-                base58Checksum(addr.csum(), &addr.bin(), (1 + SODOIN_PUBKEY_LEN));
+                base58Checksum(addr.csum(), &addr.bin(), (1 + SUIL_PUBKEY_LEN));
                 p = encode_base58(out, BASE58_KEY_MAX_LEN, &addr.bin(), sizeof(addr));
 
                 return zcstring{p}.dup();
@@ -358,7 +358,7 @@ namespace sodoin {
                 memcpy(addr.pub().key(), key.ckey(), sizeof(key));
 
                 // append checksum
-                base58Checksum(addr.csum(), &addr.bin(), (1 + SODOIN_PUBKEY_LEN));
+                base58Checksum(addr.csum(), &addr.bin(), (1 + SUIL_PUBKEY_LEN));
                 p = encode_base58(out, BASE58_KEY_MAX_LEN, &addr.bin(), sizeof(addr));
 
                 return zcstring{p}.dup();
@@ -398,16 +398,16 @@ namespace sodoin {
                 bool   status{false};
 
                 BN_init(&bn);
-                if (!rawDecodeBase58(&bn, b58.cstr, b58.len)) {
-                    serror("decoding invalid base58 '%s' failed", b58("nil"));
+                if (!rawDecodeBase58(&bn, b58.data(), b58.size())) {
+                    serror("decoding invalid base58 '%s' failed", b58());
                     goto fail_free_bn;
                 }
 
                 keylen = (size_t) BN_num_bytes(&bn);
                 /* sodoin always uses compressed keys. */
-                if (keylen != SODOIN_BINARY_KEYLEN) {
+                if (keylen != SUIL_BINARY_KEYLEN) {
                     serror("sodoin key length %d invalid (expected: %d)",
-                           keylen, SODOIN_BINARY_KEYLEN);
+                           keylen, SUIL_BINARY_KEYLEN);
                     goto fail_free_bn;
                 }
 
@@ -442,16 +442,16 @@ namespace sodoin {
                 bool   status{false};
 
                 BN_init(&bn);
-                if (!rawDecodeBase58(&bn, b58.cstr, b58.len)) {
-                    serror("decoding invalid base58 '%s' failed", b58("nil"));
+                if (!rawDecodeBase58(&bn, b58.data(), b58.size())) {
+                    serror("decoding invalid base58 '%s' failed", b58());
                     goto fail_free_bn;
                 }
 
                 keylen = (size_t) BN_num_bytes(&bn);
                 /* sodoin always uses compressed keys. */
-                if (keylen != SODOIN_BINARY_KEYLEN) {
+                if (keylen != SUIL_BINARY_KEYLEN) {
                     serror("sodoin key length %d invalid (expected: %d)",
-                           keylen, SODOIN_BINARY_KEYLEN);
+                           keylen, SUIL_BINARY_KEYLEN);
                     goto fail_free_bn;
                 }
 
@@ -487,16 +487,16 @@ namespace sodoin {
                 bool   status{false};
 
                 BN_init(&bn);
-                if (!rawDecodeBase58(&bn, b58.cstr, b58.len)) {
-                    serror("decoding invalid base58 '%s' failed", b58("nil"));
+                if (!rawDecodeBase58(&bn, b58.data(), b58.size())) {
+                    serror("decoding invalid base58 '%s' failed", b58());
                     goto fail_free_bn;
                 }
 
                 keylen = (size_t) BN_num_bytes(&bn);
                 /* sodoin always uses compressed keys. */
-                if (keylen != SODOIN_BINARY_KEYLEN) {
+                if (keylen != SUIL_BINARY_KEYLEN) {
                     serror("sodoin key length %d invalid (expected: %d)",
-                           keylen, SODOIN_BINARY_KEYLEN);
+                           keylen, SUIL_BINARY_KEYLEN);
                     goto fail_free_bn;
                 }
 
@@ -512,7 +512,7 @@ namespace sodoin {
                 /* Byte after key should be 1 to represent a compressed key.*/
                 if (addr.pub().compressed() != 1) {
                     serror("base58 key '%s' is not compressed %X",
-                           b58.cstr, addr.pub().compressed());
+                           b58.data(), addr.pub().compressed());
                     goto fail_free_bn;
                 }
 
@@ -540,7 +540,7 @@ namespace sodoin {
                 /* Save keypair key */
                 pubkey  = pub.key();
                 keylen  = (size_t) i2o_ECPublicKey(ppriv, &pubkey);
-                if (keylen != SODOIN_PUBKEY_LEN) {
+                if (keylen != SUIL_PUBKEY_LEN) {
                     serror("packing public key (len=%lu)", keylen);
                     goto fail_free_priv;
                 }
@@ -563,14 +563,14 @@ namespace sodoin {
                 BIGNUM  bn{};
                 size_t  len{0};
 
-                if (b58.len > (BASE58_ADDR_MAX_LEN-1)) {
-                    sdebug("base58 '%s' address to long", b58("nil"));
+                if (b58.size() > (BASE58_ADDR_MAX_LEN-1)) {
+                    sdebug("base58 '%s' address to long", b58());
                     return false;
                 }
 
                 BN_init(&bn);
-                if (!rawDecodeBase58(&bn, b58.cstr, b58.len)) {
-                    sdebug("decoding base58 '%s' address failure", b58("nil"));
+                if (!rawDecodeBase58(&bn, b58.data(), b58.size())) {
+                    sdebug("decoding base58 '%s' address failure", b58());
                     BN_free(&bn);
                     return false;
                 }
@@ -617,7 +617,7 @@ namespace sodoin {
                 doubleSHA256(sha, msg, len);
 
                 // unpack public key
-                if (!o2i_ECPublicKey(&eckey, &k, SODOIN_PUBKEY_LEN)) {
+                if (!o2i_ECPublicKey(&eckey, &k, SUIL_PUBKEY_LEN)) {
                     strace("unpack public key '%s' failed: %s",
                            key.hexstr()(), errno_s);
                     goto ecdsa_check_out;

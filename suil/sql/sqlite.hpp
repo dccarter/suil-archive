@@ -180,7 +180,7 @@ namespace suil {
                 return sqlite3_bind_text(stmt, pos, s.data(), s.size(), nullptr);
             }
             int bind(sqlite3_stmt* stmt, int pos, zcstring& s) const {
-                return sqlite3_bind_text(stmt, pos, s.cstr, s.len, nullptr);
+                return sqlite3_bind_text(stmt, pos, s.data(), s.size(), nullptr);
             }
             int bind(sqlite3_stmt* stmt, int pos, strview_t& s) const {
                 return sqlite3_bind_text(stmt, pos, s.data(), s.size(), nullptr);
@@ -192,16 +192,16 @@ namespace suil {
             int             last_ret_;
         };
 
-        struct sqlite_connection : LOGGER(dtag(SQLITE_CONN)) {
+        struct SQLiteConnetion : LOGGER(dtag(SQLITE_CONN)) {
             static void free_sqlite3_db(void *p) {
                 sqlite3_close_v2((sqlite3*) p);
             }
 
             typedef std::shared_ptr<sqlite3>     db_ptr_t;
-            typedef zcstr_map_t <SQLiteStmt>     stmt_map_t;
+            typedef zmap <SQLiteStmt>     stmt_map_t;
             typedef std::shared_ptr<stmt_map_t>  stmt_map_ptr_t;
 
-            sqlite_connection()
+            SQLiteConnetion()
                 :db_(nullptr),
                  stmt_cache_(new stmt_map_t())
             {}
@@ -226,7 +226,7 @@ namespace suil {
                 formart_error(err, args...);
             }
 
-            SQLiteStmt operator()(buffer_t& req) {
+            SQLiteStmt operator()(zbuffer& req) {
                 // create temporary zero copy str, does
                 // not own buffer
                 zcstring tmp(req, false);
@@ -266,7 +266,7 @@ namespace suil {
                 }
 
                 // forced to create string
-                buffer_t b(0);
+                zbuffer b(0);
                 b << req;
                 return (*this)(b);
             }
@@ -277,13 +277,13 @@ namespace suil {
                 return (stmt(name) >> has) && has == 1;
             }
 
-            inline sqlite_connection& get() {
+            inline SQLiteConnetion& get() {
                 return (*this);
             }
 
             inline void put() {}
 
-            static inline void params(buffer_t& req, int /* UNUSED */) {
+            static inline void params(zbuffer& req, int /* UNUSED */) {
                 req << "?";
             }
 
@@ -298,7 +298,7 @@ namespace suil {
             static inline const char* type_to_string(const std::string&)
             { return "TEXT"; }
 
-            ~sqlite_connection() {
+            ~SQLiteConnetion() {
                 close();
             }
 
@@ -315,10 +315,10 @@ namespace suil {
             stmt_map_ptr_t    stmt_cache_;
         };
 
-        struct sqlite_db : LOGGER(dtag(SQLITE_DB)) {
-            typedef sqlite_connection Connection;
+        struct SQLiteDb : LOGGER(dtag(SQLITE_DB)) {
+            typedef SQLiteConnetion Connection;
 
-            sqlite_db()
+            SQLiteDb()
             {}
 
             operator Connection& () {
@@ -343,18 +343,18 @@ namespace suil {
                     /* database not already initialized */
                     conn.connect(path, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
                     if (opts.has(sym(SYNCHRONOUS))) {
-                        buffer_t qb(32);
+                        zbuffer qb(32);
                         qb << "PRAGMA synchronous = " << opts.get(sym(SYNCHRONOUS), 2);
                         conn(qb);
                     }
-                    trace("sqlite: `%s` connection initialized", path);
+                    trace("SQLite: `%s` Connection initialized", path);
                 }
                 else {
-                    trace("sqlite: %s already initialized", path);
+                    trace("SQLite: %s already initialized", path);
                 }
             }
 
-            ~sqlite_db() {
+            ~SQLiteDb() {
                 if (path) {
                     memory::free(path);
                     path = nullptr;
@@ -366,7 +366,7 @@ namespace suil {
         };
 
         namespace  mw {
-            using sqlite = sql::middleware<sqlite_db>;
+            using SQLite = sql::Middleware<SQLiteDb>;
         }
     }
 }

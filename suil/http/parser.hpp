@@ -79,8 +79,8 @@ typedef struct http_parser_settings http_parser_settings;
  *
  * The one exception is on_headers_complete. In a HTTP_RESPONSE parser
  * returning '1' from on_headers_complete will tell the parser that it
- * should not expect a body. This is used when receiving a response to a
- * HEAD request which may contain 'Content-Length' or 'Transfer-Encoding:
+ * should not expect a body. This is used when receiving a Response to a
+ * HEAD Request which may contain 'Content-Length' or 'Transfer-Encoding:
  * chunked' headers that indicate the presence of a body.
  *
  * http_data_cb does not return data chunks. It will be call arbitrarally
@@ -173,7 +173,7 @@ enum flags {
   _XX(HEADER_OVERFLOW,                                                \
      "too many header bytes seen; overflow detected")                \
   _XX(CLOSED_CONNECTION,                                              \
-     "data received after completed connection: close message")      \
+     "data received after completed Connection: close message")      \
   _XX(INVALID_VERSION, "invalid HTTP version")                        \
   _XX(INVALID_STATUS, "invalid HTTP status code")                     \
   _XX(INVALID_METHOD, "invalid HTTP method")                          \
@@ -234,7 +234,7 @@ struct http_parser {
     unsigned int upgrade : 1;
 
     /** PUBLIC **/
-    void *data; /* A pointer to get hook to the "connection" or "socket" object */
+    void *data; /* A pointer to get hook to the "Connection" or "socket" object */
 };
 
 
@@ -296,9 +296,9 @@ size_t http_parser_execute(http_parser *parser,
 
 /* If http_should_keep_alive() in the on_headers_complete or
  * on_message_complete callback returns 0, then this should be
- * the last message on the connection.
+ * the last message on the Connection.
  * If you are the server, respond with the "Connection: close" header.
- * If you are the client, close the connection.
+ * If you are the client, close the Connection.
  */
 int http_should_keep_alive(const http_parser *parser);
 
@@ -336,9 +336,9 @@ namespace suil {
 
         struct parser : public http_parser {
             char *url;
-            zcstr_map_t <zcstring> headers;
+            zmap <zcstring> headers;
             query_string qps;
-            buffer_t body;
+            zbuffer body;
 
         protected:
 
@@ -380,9 +380,9 @@ namespace suil {
                 STATE_VALUE
             };
 
-            buffer_t hf;
-            buffer_t hv;
-            buffer_t raw_url;
+            zbuffer hf;
+            zbuffer hv;
+            zbuffer raw_url;
 
         private:
 
@@ -402,7 +402,7 @@ namespace suil {
 
             template<typename __H, typename ...__Mws>
             friend
-            struct connection;
+            struct Connection;
         };
     }
 }

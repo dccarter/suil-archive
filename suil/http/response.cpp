@@ -7,7 +7,7 @@
 namespace suil {
     namespace http {
 
-        response::response(response && other)
+        Response::Response(Response && other)
             : headers(std::move(other.headers)),
               cookies(std::move(other.cookies)),
               body(std::move(other.body)),
@@ -16,7 +16,7 @@ namespace suil {
         {
         }
 
-        response& response::operator=(response &&other) {
+        Response& Response::operator=(Response &&other) {
             status = other.status;
             body = std::move(other.body);
             headers = std::move(other.headers);
@@ -25,7 +25,7 @@ namespace suil {
             return *this;
         }
 
-        void response::clear() {
+        void Response::clear() {
             completed = false;
             headers.clear();
             body.clear();
@@ -34,12 +34,12 @@ namespace suil {
             status = Status::OK;
         }
 
-        void response::end(Status status) {
+        void Response::end(Status status) {
             this->status = status;
             completed = true;
         }
 
-        void response::end(Status status, buffer_t& body) {
+        void Response::end(Status status, zbuffer& body) {
             if (this->body)
                 this->body << body;
             else
@@ -49,18 +49,18 @@ namespace suil {
             completed = true;
         }
 
-        void response::end(proto_handler_t p) {
+        void Response::end(ProtocolHandler p) {
             proto = p;
             status = Status::SWITCHING_PROTOCOLS;
         }
 
-        void response::flush_cookies() {
+        void Response::flush_cookies() {
             // avoid allocating unnecessary memory
-            buffer_t b(0);
+            zbuffer b(0);
             for(auto& it : cookies) {
-                cookie_t& ck = it.second;
+                Cookie& ck = it.second;
                 if (!ck || !ck.value()) {
-                    trace("ignoring invalid cookie in response");
+                    trace("ignoring invalid cookie in Response");
                     continue;
                 }
 

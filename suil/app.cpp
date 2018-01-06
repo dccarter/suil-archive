@@ -19,12 +19,12 @@ namespace suil {
         }
     }
 
-    bool application::check(const char *name) {
+    bool Application::check(const char *name) {
         zcstring tmp(name);
-        return tasks.find(name) != tasks.end();
+        return tasks.find(tmp) != tasks.end();
     }
 
-    void application::killsig(int s) {
+    void Application::killsig(int s) {
         unsigned long tag = (unsigned long) 1L<<s;
         if (!(tag&__sigmask)) {
             signal(s, __sighandler);
@@ -32,7 +32,7 @@ namespace suil {
         }
     }
 
-    int application::start() {
+    int Application::start() {
         idebug("starting application with %d tasks", tasks.size());
         if (started) {
             throw suil_error::create("application aleady started");
@@ -54,16 +54,16 @@ namespace suil {
         stopped = false;
 
         for (auto& it: tasks) {
-            app_task& tmp = *it.second;
+            AppTask& tmp = *it.second;
             // launch the tasks in a coroutine
             if (!tmp.running) {
-                trace("launching coroutine for task-%s", tmp.name.cstr);
+                trace("launching coroutine for task-%s", tmp.name.c_str());
                 started++;
                 go(runtask(*this, it.second));
             }
             else {
                 // running tasks shouldn't be started
-                trace("task-%s already started", tmp.name.cstr);
+                trace("task-%s already started", tmp.name.c_str());
             }
         }
 
@@ -78,7 +78,7 @@ namespace suil {
         return code;
     }
 
-    void application::wait_notify(application& app) {
+    void Application::wait_notify(Application& app) {
         ldebug(&app, "wait exit notification coroutine started");
         int ev = fdwait(__notifyfd[0], FDW_IN, -1);
         if (ev == FDW_IN) {
@@ -95,18 +95,18 @@ namespace suil {
         ltrace(&app, "waiting for notice signal signal failed: %s", errno_s);
     }
 
-    void application::stop(int code) {
+    void Application::stop(int code) {
         trace("stopping application, code=%d", code);
         stopped = true;
 
         uint32_t requested{0};
         for (auto& it : tasks) {
-            app_task& tmp = *(it.second);
+            AppTask& tmp = *(it.second);
             if (!tmp.running) {
-                trace("task-%s is not running", tmp.name.cstr);
+                trace("task-%s is not running", tmp.name.c_str());
             }
             else {
-                trace("stopping task-%s", tmp.name.cstr);
+                trace("stopping task-%s", tmp.name.c_str());
                 tmp.stop(code);
                 requested++;
             }
@@ -117,9 +117,9 @@ namespace suil {
                   mnow(), requested);
             bool status;
             status = stopsync[timeout](requested) |
-            [&](bool, app_task *task) {
+            [&](bool, AppTask *task) {
                 idebug("task-%s exited {exitcode:%d}",
-                      task->name.cstr, task->exitcode);
+                      task->name.c_str(), task->exitcode);
             };
 
             idebug("{%ld} %u tasks exited", mnow(), requested);
@@ -133,15 +133,15 @@ namespace suil {
         close(__notifyfd[1]);
     }
 
-    void application::runtask(application &app, app_task *task) {
-        ltrace(&app, "starting task-%s", task->name.cstr);
+    void Application::runtask(Application &app, AppTask *task) {
+        ltrace(&app, "starting task-%s", task->name.c_str());
         app.running_tasks++;
 
         try {
             task->running = true;
             task->start();
         } catch (...) {
-            lerror(&app, "unhandled error in task-%s", task->name.cstr);
+            lerror(&app, "unhandled error in task-%s", task->name.c_str());
         }
 
         task->running = false;
@@ -149,7 +149,7 @@ namespace suil {
 
         if (app.stopped) {
             // notify stop
-            ltrace(&app, "sending stop signal for task-%s", task->name.cstr);
+            ltrace(&app, "sending stop signal for task-%s", task->name.c_str());
             app.stopsync << task;
         }
 
@@ -160,7 +160,7 @@ namespace suil {
         }
     }
 
-    application::~application() {
+    Application::~Application() {
         if (!stopped) {
             trace("stopping application in destructor, {running:%d}", running_tasks);
             stop(0);
@@ -171,7 +171,7 @@ namespace suil {
             // delete task
             try {
                 trace("deleting task-%s",
-                      it->second->name.cstr);
+                      it->second->name.c_str());
                 delete it->second;
                 tasks.erase(it++);
             }

@@ -11,9 +11,9 @@
 namespace suil {
     namespace tdmabci {
 
-        struct Result: buffer_t {
+        struct Result: zbuffer {
             Result(types::CodeType code)
-                : buffer_t(0),
+                : zbuffer(0),
                   Code(code)
             {}
 
@@ -25,12 +25,12 @@ namespace suil {
             Result&operator=(const Result&) = delete;
 
             Result(Result&& res)
-                : buffer_t((buffer_t&&)res),
+                : zbuffer((zbuffer&&)res),
                   Code(res.Code)
             {}
 
             Result&operator=(Result&& other) {
-                buffer_t::operator=(std::move(other));
+                zbuffer::operator=(std::move(other));
                 Code = other.Code;
                 return *this;
             }

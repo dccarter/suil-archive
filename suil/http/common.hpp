@@ -12,7 +12,7 @@
 #include <functional>
 #include <vector>
 
-#include <suil/sys.hpp>
+#include <suil/json.hpp>
 #include <suil/mem.hpp>
 
 namespace suil {
@@ -820,7 +820,7 @@ namespace suil {
     }
 
     namespace http {
-        struct base_rule_t;
+        struct BaseRule;
         struct router_params_t {
             router_params_t(unsigned first, suil::detail::routing_params&& second)
                 : first(first),

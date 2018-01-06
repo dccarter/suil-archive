@@ -16,8 +16,8 @@ namespace suil {
             return true;
         }
 
-        file_t reader(fname.cstr, O_RDONLY, 0777);
-        len = utils::fs::size(fname.cstr);
+        File reader(fname.data(), O_RDONLY, 0777);
+        len = utils::fs::size(fname.data());
         if (len > 8180) {
             // used mapped buffer
             size = (size_t) len;
@@ -49,7 +49,7 @@ namespace suil {
         return true;
     }
 
-    void Email::Attachment::send(sock_adaptor &sock, const zcstring &boundary, int64_t timeout) {
+    void Email::Attachment::send(SocketAdaptor &sock, const zcstring &boundary, int64_t timeout) {
         if (data == NULL && !load()) {
             // could not load attachment
             throw suil_error::create("Loading attachment failed");
@@ -61,7 +61,7 @@ namespace suil {
 
             written = sock.send(&data[twrite], towrite, timeout);
             if (written == 0) {
-                throw suil_error::create("sending attachment '", fname.cstr, "' failed: ", errno_s);
+                throw suil_error::create("sending attachment '", fname.data(), "' failed: ", errno_s);
             }
             twrite += written;
         } while (twrite < len);
@@ -100,7 +100,7 @@ namespace suil {
             goto client_login_do_quit;
         }
 
-        // Send login request AUTH LOGIN
+        // Send login Request AUTH LOGIN
         if (!sendline(5000, "AUTH LOGIN")) goto client_login_exit;
 
         code = getresponse(5000);
@@ -138,24 +138,24 @@ namespace suil {
 
     int __internal::client::getresponse(int64_t timeout) {
         int code = -1;
-        buffer_t b(127);
+        zbuffer b(127);
         size_t size = b.capacity();
 
         if (sock.read(&b[0], size, timeout)) {
-            // response successfully read, parse response
+            // Response successfully read, parse Response
             b.seek(size);
             zcstring resp(b);
-            zcstring tmp(zcstring(resp.cstr, 3, false).dup());
+            zcstring tmp(zcstring(resp.data(), 3, false).dup());
             utils::cast(tmp, code);
-            if (resp.len > 6) {
-                resp.str[resp.len - 2] = '\0';
-                idebug("smtp_resp: %s", resp.cstr);
+            if (resp.size() > 6) {
+                resp.data()[resp.size() - 2] = '\0';
+                idebug("smtp_resp: %s", resp.data());
             }
             else {
                 idebug("smtp_resp: %d", code);
             }
         } else {
-            ierror("failed to receive response from server");
+            ierror("failed to receive Response from server");
         }
 
         return code;
@@ -234,7 +234,7 @@ namespace suil {
     }
 
     zcstring Email::gethead(const Address &from) {
-        buffer_t b(127);
+        zbuffer b(127);
         b << "From: ";
         from.encode(b);
         b << CRLF;
@@ -278,13 +278,13 @@ namespace suil {
         int code = 0;
         for (auto &addr : addrs) {
             if (!sendline(timeout, "RCPT TO: <", addr.email, ">")) {
-                ierror("sending messaged failed 'RCPT TO: %s'", addr.email.cstr);
+                ierror("sending messaged failed 'RCPT TO: %s'", addr.email.data());
                 return false;
             }
 
             code = getresponse(timeout);
             if (code != 250) {
-                ierror("stmp RCPT TO: <%s> failed: %s", addr.email.cstr, showerror(code));
+                ierror("stmp RCPT TO: <%s> failed: %s", addr.email.data(), showerror(code));
             }
         }
 
@@ -325,14 +325,14 @@ namespace suil {
         }
 
         zcstring headers = msg.gethead(from);
-        if (sock.send(headers, timeout) != headers.len)
+        if (sock.send(headers, timeout) != headers.size())
         {
             throw suil_error::create("sending email header failed: ", errno_s);
         }
 
         if (!msg.attachments.empty())
         {
-            buffer_t b(63);
+            zbuffer b(63);
             b << "--" << msg.boundry << CRLF
               << "Content-Type: " << msg.body_type << "; charset=utf8" CRLF
               << "Content-Encoding: 8bit" CRLF CRLF;
@@ -349,7 +349,7 @@ namespace suil {
         // Send attachments
         if (!msg.attachments.empty())
         {
-            buffer_t b(63);
+            zbuffer b(63);
 
             b << "\r\n\r\n";
             for (auto &it: msg.attachments)

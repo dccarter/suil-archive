@@ -12,17 +12,17 @@
 using  namespace suil;
 using  namespace suil::http;
 
-struct middleware {
+struct Middleware {
     struct Context {
     };
 
-    void before(http::request& req, http::response&, Context&) {
+    void before(http::Request& req, http::Response&, Context&) {
         if (req.route().STATIC) {
             sinfo("handling static route: %s", req.url);
         }
     }
 
-    void after(http::request&, http::response&, Context&)
+    void after(http::Request&, http::Response&, Context&)
     {}
 };
 
@@ -31,23 +31,23 @@ typedef decltype(iod::D(
     prop(username,   std::string),
     prop(email,      std::string),
     prop(age,        int)
-)) user_t;
-typedef sql::orm<typename sql::pgsql_db::Connection, user_t> user_orm_t;
+)) User;
+typedef sql::Orm<typename sql::PgSqlDb::Connection, User> user_orm_t;
 
 
-struct http_task : public app_task {
+struct http_task : public AppTask {
     template <typename... __Args>
     http_task(const char *name, __Args... args)
-        : app_task(name),
+        : AppTask(name),
           ep("/api/v1", args...)
     {
-//        ep.middleware<sql::Postgres>().
-//                setup("dbname=test1 user=postgres password=*******",
+//        ep.Middleware<sql::Postgres>().
+//                setup("dbname=test1 user=Postgres password=*******",
 //                      opt(EXPIRES, 10000),
 //                      opt(ASYNC, true));
 
         // setup file server
-        http::file_server fs(ep,
+        http::FileServer fs(ep,
                              opt(root, "/home/dc/app/"));
 
         eproute(ep, "/hello/<string>")
@@ -59,16 +59,16 @@ struct http_task : public app_task {
 
 //        eproute(ep, "/users")
 //        ("GET"_method)
-//        ([&](const http::request& req) {
+//        ([&](const http::Request& req) {
 //
-//            auto &conn = ep.middleware<sql::Postgres>().conn();
+//            auto &conn = ep.Middleware<sql::Postgres>().conn();
 //            user_orm_t user_orm("users", conn);
-//            std::vector<user_t> users;
-//            user_orm.forall([&](user_t& u){
+//            std::vector<User> users;
+//            user_orm.forall([&](User& u){
 //                users.push_back(u);
 //            });
 //
-//            // close the connection
+//            // close the Connection
 //            conn.close();
 //
 //            return iod::json_encode(users);
@@ -77,17 +77,17 @@ struct http_task : public app_task {
         eproute(ep, "/form")
         ("POST"_method)
         .attrs(opt(PARSE_FORM, true))
-        ([&](const http::request& req) {
+        ([&](const http::Request& req) {
             http::request_form_t form(req);
             form |
             [&](const zcstring& name, const zcstring& val) {
-                sinfo("argument: %s: %s", name.cstr, val.str);
+                sinfo("argument: %s: %s", name(), val());
                 return false;
             };
 
             form |
-            [&](const http::upfile_t& f) {
-                sinfo("file: name=%s, size %ld", f.name().cstr, f.size());
+            [&](const http::UploadedFile& f) {
+                sinfo("file: name=%s, size %ld", f.name()(), f.size());
                 f.save("/home/dc/app");
                 return false;
             };
@@ -105,10 +105,10 @@ protected:
     }
 
 private:
-    http::endpoint<http::system_attrs, middleware/*, sql::Postgres*/> ep;
+    http::TcpEndpoint<http::SystemAttrs, Middleware/*, sql::Postgres*/> ep;
 };
 
-coroutine void do_start(application& app) {
+coroutine void do_start(Application& app) {
     app.start();
 }
 
@@ -117,19 +117,38 @@ int main(int argc, const char *argv[])
     auto opts = parse_cmd(argc, argv);
     suil::init();
 
-    application app("demo");
-    /* setup logging options */
-    log::setup(opt(name, "demo"));
+//    typedef decltype(iod::D(
+//            prop(name, json::Object),
+//            prop(age,  int)
+//    )) Dynamic;
+//
+//    std::string jstr = "{\"name\":{\"num\":1, \"boolean\":true}, \"age\":28}";
+//    Dynamic  d{};
+//    try {
+//        iod::json_decode(d, jstr);
+//    }
+//    catch(...) {
+//        sinfo("error: %s", suil_error::getmsg(std::current_exception()));
+//    }
+//    json::Object& obj = d.name;
+//    double num = obj["num"].number_value();
+//    double b   = obj["boolean"].bool_value();
+//
+//    auto out = iod::json_encode(d);
+//
+//    Application app("demo");
+//    /* setup logging options */
+//    log::setup(opt(name, "demo"));
 
 
     /*auto browser = client::load("http://browser.dc1.suilteam.com");
     {
-        client::response resp = client::get(browser, "/api/v1/gsearch/basic",
-        [&](client::request& req) {
+        client::Response resp = client::get(browser, "/api/v1/gsearch/basic",
+        [&](client::Request& req) {
             req.args("q", "Barack Obama");
             return true;
         });
-        strace("request honored");
+        strace("Request honored");
     }*/
     app.regtask<http_task>("http", opt(port, opts.port));
     //go(do_start(app));

@@ -14,9 +14,9 @@ namespace suil {
     namespace sql {
 
         template <typename __Db>
-        struct middleware {
+        struct Middleware {
             template <typename __O>
-            using orm = sql::orm<typename __Db::Connection, __O>;
+            using Orm = sql::Orm<typename __Db::Connection, __O>;
 
             struct Context{
             };
@@ -34,13 +34,13 @@ namespace suil {
             }
 
             typename __Db::Connection& conn() {
-                return db.connection();
+                return db.Connection();
             }
 
-            void before(http::request&, http::response&, Context&) {
+            void before(http::Request&, http::Response&, Context&) {
             }
 
-            void after(http::request&, http::response&, Context&) {
+            void after(http::Request&, http::Response&, Context&) {
             }
 
         private:

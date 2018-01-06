@@ -446,7 +446,7 @@ namespace suil {
         return tsent;
     }
 
-    coroutine void async_send(async_t<int>& ch, uint8_t dst, uint8_t msg, const void *data, size_t len) {
+    coroutine void async_send(Async<int>& ch, uint8_t dst, uint8_t msg, const void *data, size_t len) {
         // send asynchronously
         ltrace(WLOG, "async_send ch %p, dst %hhu, msg 0x%hhX data %p, len %lu",
                &ch, dst, msg, data, len);
@@ -463,7 +463,7 @@ namespace suil {
     coroutine void async_broadcast(uint8_t msg, void *data, size_t len) {
         // for each worker send the message
         int wait = 0;
-        async_t<int> async(-1);
+        Async<int> async(-1);
 
         // send asynchronously
         ltrace(WLOG, "async_broadcast msg %02X data %p, len %lu", msg, data, len);
@@ -496,7 +496,7 @@ namespace suil {
         go(async_broadcast(msg, copy, len));
     }
 
-    uint8_t worker::broadcast(async_t<int> &ch, uint8_t msg, const void *data, size_t len) {
+    uint8_t worker::broadcast(Async<int> &ch, uint8_t msg, const void *data, size_t len) {
         // send message to all workers
         int wait = 0;
 
@@ -573,7 +573,7 @@ namespace suil {
 
         ltrace(WLOG, "received header [%02X|%02X|%08X]", hdr.id, hdr.src, hdr.len);
         // receive message body
-        buffer_t b((uint32_t) hdr.len);
+        zbuffer b((uint32_t) hdr.len);
         void *ptr = b.data();
         size_t tread = 0;
 
@@ -682,11 +682,11 @@ namespace suil {
         cleaners.insert(cleaners.begin(), cleaner);
     }
 
-    network_buffer worker::get(uint8_t msg, uint8_t w, int64_t tout){
+    NetworkBuffer worker::get(uint8_t msg, uint8_t w, int64_t tout){
         if (w == SPID_PARENT || w == spid) {
             lerror(WLOG, "executing get to (%hhu) parent or current worker not supported",
                    w);
-            return network_buffer();
+            return NetworkBuffer();
         }
 
         ipc_get_handle async(nullptr);
@@ -697,17 +697,17 @@ namespace suil {
         payload.size = 0;
         worker::send(w, msg, &payload, sizeof(payload));
 
-        // receive the response
+        // receive the Response
         void *data;
-        ltrace(WLOG, "sent get request waiting for 1 response in %ld ms", tout);
+        ltrace(WLOG, "sent get Request waiting for 1 Response in %ld ms", tout);
         bool status = async[tout] >> data;
 
-        network_buffer netbuf;
+        NetworkBuffer netbuf;
         if (status && data != nullptr) {
             /* successfully received data from worker */
             auto *resp = (ipc_get_payload *) data;
-            ltrace(WLOG, "got response: data %p, size %lu", data, resp->size);
-            return std::move(network_buffer(resp, resp->size, sizeof(ipc_get_payload)));
+            ltrace(WLOG, "got Response: data %p, size %lu", data, resp->size);
+            return std::move(NetworkBuffer(resp, resp->size, sizeof(ipc_get_payload)));
         } else {
             lerror(WLOG, "get from worker %hhu failed, msg %hhu", w, msg);
         }
@@ -715,10 +715,10 @@ namespace suil {
         return netbuf;
     }
 
-    std::vector<network_buffer> worker::gather(uint8_t msg, int64_t tout) {
+    std::vector<NetworkBuffer> worker::gather(uint8_t msg, int64_t tout) {
         if (ipc->nworkers == 0) {
             lwarn(WLOG, "executing get %hhu not supported when no workers", msg);
-            return std::vector<network_buffer>();
+            return std::vector<NetworkBuffer>();
         }
 
         if (worker::spinlock(SHM_GATHER_LOCK, tout)) {
@@ -731,15 +731,15 @@ namespace suil {
             payload.size = 0;
             worker::broadcast(msg, &payload, sizeof(payload));
 
-            // receive the response
-            std::vector<network_buffer> all;
-            ltrace(WLOG, "sent gather request waiting for %hhu responses in %ld ms",
+            // receive the Response
+            std::vector<NetworkBuffer> all;
+            ltrace(WLOG, "sent gather Request waiting for %hhu responses in %ld ms",
                    ipc->nactive-1, tout);
 
             bool status = async[tout](ipc->nactive-1) |
             [&](bool /* unsused */, void *data) {
                 auto *resp = (ipc_get_payload *) data;
-                network_buffer res(resp, resp->size, sizeof(ipc_get_payload));
+                NetworkBuffer res(resp, resp->size, sizeof(ipc_get_payload));
                 all.push_back(std::move(res));
             };
 
@@ -752,7 +752,7 @@ namespace suil {
             return std::move(all);
         } else {
             lwarn(WLOG, "acquiring SHM_GET_LOCK timed out");
-            return std::vector<network_buffer>();
+            return std::vector<NetworkBuffer>();
         }
 
     }
@@ -810,16 +810,16 @@ namespace suil {
             /* go 500 ms ahead in time */
             int64_t tmp = mnow() + 500;
             if (payload->deadline > tmp) {
-                ltrace(WLOG, "got response in time deadline:%ld now:%ld",
+                ltrace(WLOG, "got Response in time deadline:%ld now:%ld",
                        payload->deadline, tmp);
-                /*we haven't timed out waiting for response */
+                /*we haven't timed out waiting for Response */
                 ipc_get_handle *async = payload->handle;
                 (*async) << data;
 
                 return true;
             }
             else {
-                lwarn(WLOG, "got response from %hhu after timeout dd %ld now %ld",
+                lwarn(WLOG, "got Response from %hhu after timeout dd %ld now %ld",
                       src, payload->deadline, tmp);
                 return false;
             }

@@ -39,4 +39,7 @@ install(FILES suil.sql suil.pgsql.sql
 install(FILES suil.sqlite
         DESTINATION share/suil/sqlite/)
 
-add_subdirectory(abci)
+if (SUIL_BUILD_ABCI)
+    add_subdirectory(abci)
+
+endif()

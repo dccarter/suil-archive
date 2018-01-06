@@ -7,19 +7,19 @@
 namespace suil {
     namespace cmdl {
 
-        command::command(zcstring &&name, const char *descript, bool help)
+        Cmd::Cmd(zcstring &&name, const char *descript, bool help)
             : name(name.dup()),
               descript(zcstring{descript}.dup())
         {
             if (help)
-                Ego << argument{"help", "Show this command's help", 'h', true, false};
+                Ego << Arg{"help", "Show this command's help", 'h', true, false};
         }
 
-        command& command::operator()(zcstring &&lf, zcstring&& help, char sf, bool opt, bool req) {
-            return (Ego << argument{lf.dup(), help.dup(), sf, opt, req});
+        Cmd& Cmd::operator()(zcstring &&lf, zcstring&& help, char sf, bool opt, bool req) {
+            return (Ego << Arg{lf.dup(), help.dup(), sf, opt, req});
         }
 
-        command& command::operator<<(argument &&arg) {
+        Cmd& Cmd::operator<<(Arg &&arg) {
             if (!arg.lf) {
                 throw suil_error::create(
                         "command line argument missing log format (--help) option");
@@ -35,7 +35,7 @@ namespace suil {
             required = required||arg.required;
             /* for help display calculation
              *    -s, --help (required)*/
-            size_t len = (required? arg.lf.len+11 : arg.lf.len);
+            size_t len = (required? arg.lf.size()+11 : arg.lf.size());
             if (longest < len)
                 longest = len;
             arg.global = false;
@@ -43,7 +43,7 @@ namespace suil {
             return Ego;
         }
 
-        void command::showhelp(const char *app, buffer_t &help, bool ishelp) const {
+        void Cmd::showhelp(const char *app, zbuffer &help, bool ishelp) const {
 
             if (ishelp) {
                 help << descript << "\n";
@@ -71,7 +71,7 @@ namespace suil {
                     }
 
                     help << "--" <<  arg.lf;
-                    remaining -= arg.lf.len;
+                    remaining -= arg.lf.size();
                     if (arg.required) {
                         help << " (required)";
                         remaining -= 11;
@@ -88,8 +88,8 @@ namespace suil {
             }
         }
 
-        argument& command::check(const zcstring &lf, char sf) {
-            argument *arg{nullptr};
+        Arg& Cmd::check(const zcstring &lf, char sf) {
+            Arg *arg{nullptr};
             if (check(arg, lf, sf)) {
                 return *arg;
             }
@@ -102,7 +102,7 @@ namespace suil {
             }
         }
 
-        bool command::check(argument*& found, const zcstring &lf, char sf) {
+        bool Cmd::check(Arg*& found, const zcstring &lf, char sf) {
             for (auto& arg: args) {
                 if (arg.check(sf, lf)) {
                     found = &arg;
@@ -112,7 +112,7 @@ namespace suil {
             return false;
         }
 
-        bool command::parse(int argc, char **argv, bool dbg) {
+        bool Cmd::parse(int argc, char **argv, bool dbg) {
             int pos{0};
             zcstring zarg{};
 
@@ -126,7 +126,7 @@ namespace suil {
                     *cval++ = '\0';
                 }
 
-                int dashes = command::isvalid(carg);
+                int dashes = Cmd::isvalid(carg);
                 // are we passing option (or value)
                 if (!dashes) {
                     throw suil_error::create("error: Unsupported argument syntax: ", carg);
@@ -134,7 +134,7 @@ namespace suil {
 
                 if (dashes == 2) {
                     // argument passed in long format
-                    argument& arg = Ego.check(&carg[2], NOSF);
+                    Arg& arg = Ego.check(&carg[2], NOSF);
                     if (arg.sf == 'h') {
                         ishelp = true;
                         break;
@@ -169,7 +169,7 @@ namespace suil {
                     size_t nopts = strlen(carg);
                     size_t opos{1};
                     while (opos < nopts) {
-                        argument& arg = Ego.check(nullptr, carg[opos++]);
+                        Arg& arg = Ego.check(nullptr, carg[opos++]);
                         if (arg.sf == 'h') {
                             ishelp = true;
                             break;
@@ -209,7 +209,7 @@ namespace suil {
 
             if (!ishelp) {
                 // verify required arguments
-                buffer_t msg{127};
+                zbuffer msg{127};
                 msg << "error: missing required arguments:";
                 int  missing{false};
                 for (auto& arg: args) {
@@ -218,7 +218,7 @@ namespace suil {
                         if (!Ego.inter) {
                             msg << (missing ? ", '" : " '") << arg.lf << '\'';
                         } else {
-                            // command in interactive, request commands from console
+                            // command in interactive, Request commands from console
                             requestvalue(arg);
                         }
                         missing = true;
@@ -246,10 +246,10 @@ namespace suil {
             return ishelp;
         }
 
-        void command::requestvalue(argument &arg) {
+        void Cmd::requestvalue(Arg &arg) {
             zcstring display{utils::catstr("Enter ", arg.lf)};
             if (Ego.interhelp) {
-                write(STDOUT_FILENO, arg.help(), arg.help.len);
+                write(STDOUT_FILENO, arg.help(), arg.help.size());
                 printf("\n");
             }
 
@@ -257,22 +257,22 @@ namespace suil {
             passed.emplace(std::make_pair(arg.lf.peek(), std::move(val)));
         }
 
-        zcstring command::operator[](const zcstring &lf) {
+        zcstring Cmd::operator[](const zcstring &lf) {
             auto it = passed.find(lf);
             if (it != passed.end())
                 return it->second.peek();
             return zcstring{nullptr};
         }
 
-        parser::parser(const char *app, const char *version, const char *descript)
+        Parser::Parser(const char *app, const char *version, const char *descript)
             : appname(zcstring{app}.dup()),
               appversion(zcstring{version}.dup()),
               descript(zcstring{descript}.dup())
         {
             // application version command
-            command ver("version", "Show the application version", false);
-            ver([&](command& cmd){
-                buffer_t b{63};
+            Cmd ver("version", "Show the application version", false);
+            ver([&](Cmd& cmd){
+                zbuffer b{63};
                 b << appname << " v-" << appversion << '\n';
                 if (!Ego.descript.empty()) {
                     b << Ego.descript << '\n';
@@ -282,8 +282,8 @@ namespace suil {
             ver.internal = true;
 
             // application help command
-            command help("help", "Display the application help", false);
-            help([&](command& cmd) {
+            Cmd help("help", "Display the application help", false);
+            help([&](Cmd& cmd) {
                 // show application help
                 Ego.showhelp();
             });
@@ -291,11 +291,11 @@ namespace suil {
 
             Ego.add(std::move(ver), std::move(help));
             // --help to global flag
-            Ego << argument{"help", "Show the help for application", 'h'};
+            Ego << Arg{"help", "Show the help for application", 'h'};
         }
 
-        command* parser::find(const zcstring &name) {
-            command *cmd{nullptr};
+        Cmd* Parser::find(const zcstring &name) {
+            Cmd *cmd{nullptr};
             for (auto& c: commands) {
                 if (c.name == name) {
                     cmd = &c;
@@ -306,7 +306,7 @@ namespace suil {
             return cmd;
         }
 
-        argument* parser::findarg(const zcstring &name, char sf) {
+        Arg* Parser::findarg(const zcstring &name, char sf) {
             for (auto& a: globals) {
                 if (a.sf == sf || a.lf == name) {
                     return &a;
@@ -315,16 +315,16 @@ namespace suil {
             return nullptr;
         }
 
-        argument parser::shallowcopy(const argument &arg) {
-            return std::move(argument{arg.lf.peek(), nullptr, arg.sf,
+        Arg Parser::shallowcopy(const Arg &arg) {
+            return std::move(Arg{arg.lf.peek(), nullptr, arg.sf,
                                       arg.option, arg.required, true});
         }
 
-        parser& parser::operator<<(argument &&arg) {
+        Parser& Parser::operator<<(Arg &&arg) {
             if (Ego.findarg(arg.lf) == nullptr) {
                 arg.global = true;
                 required = required || arg.required;
-                size_t len = (required? arg.lf.len+11 : arg.lf.len);
+                size_t len = (required? arg.lf.size()+11 : arg.lf.size());
                 if (longestflag < len)
                     longestflag = len;
                 globals.emplace_back(std::move(arg));
@@ -336,20 +336,20 @@ namespace suil {
             }
         }
 
-        void parser::add(command &&cmd) {
+        void Parser::add(Cmd &&cmd) {
             if (Ego.find(cmd.name) == nullptr) {
                 // add copies of global arguments
                 for (auto& ga: globals) {
-                    argument* _;
+                    Arg* _;
                     if (!cmd.check(_, ga.lf, ga.sf)) {
-                        argument copy = Ego.shallowcopy(ga);
+                        Arg copy = Ego.shallowcopy(ga);
                         cmd.args.emplace_back(std::move(copy));
                     }
                 }
 
                 // accommodate interactive
                 inter = inter || cmd.inter;
-                size_t len = Ego.inter? (cmd.name.len+14) : cmd.name.len;
+                size_t len = Ego.inter? (cmd.name.size()+14) : cmd.name.size();
                 if (longestcmd < len) {
                     longestcmd = len;
                 }
@@ -362,8 +362,8 @@ namespace suil {
             }
         }
 
-        void parser::showhelp(const char *prefix) {
-            buffer_t out{254};
+        void Parser::showhelp(const char *prefix) {
+            zbuffer out{254};
             if (prefix != nullptr) {
                 out << prefix << '\n';
             }
@@ -391,7 +391,7 @@ namespace suil {
             if (!commands.empty()) {
                 out << "Available Commands:\n";
                 for (auto& cmd: commands) {
-                    size_t remaining{longestcmd-cmd.name.len};
+                    size_t remaining{longestcmd-cmd.name.size()};
                     out << "  " << cmd.name << ' ';
                     if (cmd.inter) {
                         out << "(interactive) ";
@@ -410,7 +410,7 @@ namespace suil {
             if (!globals.empty()) {
                 out << "Flags:\n";
                 for (auto& ga: globals) {
-                    size_t remaining{longestflag-ga.lf.len};
+                    size_t remaining{longestflag-ga.lf.size()};
                     out << "    ";
                     if (ga.sf != NOSF) {
                         out << '-' << ga.sf;
@@ -436,18 +436,18 @@ namespace suil {
                 << "\" [command] --help for more information about a command"
                 << "\n";
             zcstring str(out);
-            write(STDOUT_FILENO, str.cstr, str.len);
+            write(STDOUT_FILENO, str.data(), str.size());
         }
 
-        void parser::showcmdhelp(buffer_t &out, command &cmd, bool ishelp) {
+        void Parser::showcmdhelp(zbuffer &out, Cmd &cmd, bool ishelp) {
             // help was requested or an error occurred
             if (!out.empty()) out << "\n";
-            cmd.showhelp(appname.cstr, out, ishelp);
+            cmd.showhelp(appname.data(), out, ishelp);
             // append global arguments
             if (!globals.empty()) {
                 out << "\nGlobal Flags:\n";
                 for (auto& ga: globals) {
-                    size_t remaining{longestflag-ga.lf.len};
+                    size_t remaining{longestflag-ga.lf.size()};
                     out << "    ";
                     if (ga.sf != NOSF) {
                         out << '-' << ga.sf;
@@ -471,7 +471,7 @@ namespace suil {
             write(STDOUT_FILENO, out.data(), out.size());
         }
 
-        void parser::parse(int argc, char **argv) {
+        void Parser::parse(int argc, char **argv) {
             if (argc <= 1) {
                 // show application help
                 Ego.showhelp();
@@ -479,7 +479,7 @@ namespace suil {
             }
 
             if (argv[1][0] == '-') {
-                int tr = command::isvalid(argv[1]);
+                int tr = Cmd::isvalid(argv[1]);
                 if (!tr) {
                     fprintf(stderr, "error: bad flag syntax: %s\n", argv[1]);
                     exit(EXIT_FAILURE);
@@ -489,7 +489,7 @@ namespace suil {
             }
 
             zcstring  cmdstr{argv[1]};
-            command *cmd = Ego.find(cmdstr);
+            Cmd *cmd = Ego.find(cmdstr);
             if (cmd == nullptr) {
                 fprintf(stderr, "error: unknown command \"%s\" for \"%s\"\n",
                             argv[1], appname());
@@ -497,7 +497,7 @@ namespace suil {
             }
 
             bool showhelp[2] ={false, true};
-            buffer_t errbuf{126};
+            zbuffer errbuf{126};
             try {
                 // parse command line (appname command)
                 int nargs{argc-2};
@@ -526,7 +526,7 @@ namespace suil {
             }
         }
 
-        void parser::handle() {
+        void Parser::handle() {
             if (parsed && parsed->handler) {
                 parsed->handler(*parsed);
                 return;
@@ -535,7 +535,7 @@ namespace suil {
                                              "invoked before invoking handle");
         }
 
-        zcstring parser::getvalue(const zcstring &lf, argument *arg) {
+        zcstring Parser::getvalue(const zcstring &lf, Arg *arg) {
             arg = arg? arg: Ego.findarg(lf);
             if (arg == nullptr) {
                 return zcstring{nullptr};
@@ -549,7 +549,7 @@ namespace suil {
 
         zcstring readparam(const zcstring& display, const char *def) {
             char line[512];
-            write(STDOUT_FILENO, display.cstr, display.len);
+            write(STDOUT_FILENO, display.data(), display.size());
             printf(": ");
             if (fgets(line, sizeof(line), stdin)) {
                 // copy data to zcstring, trimming of \n

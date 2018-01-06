@@ -10,7 +10,7 @@
 namespace suil {
     namespace http {
 
-        void file_server::init() {
+        void FileServer::init() {
             // add text mime types
             mime(".html", "text/html",
                  opt(allow_caching, false));
@@ -84,20 +84,20 @@ namespace suil {
             }
 
             // this will dup over the base
-            www_dir = zcstring(base).dup();
+            www_dir = zcstring{base}.dup();
         }
 
-        void file_server::get(const request &req, response &resp, zcstring &path, zcstring &ext) {
+        void FileServer::get(const Request &req, Response &resp, zcstring &path, zcstring &ext) {
             auto mime = mime_types_.find(ext);
             if (mime == mime_types_.end()) {
-                trace("extension type (%s) not supported", ext.str);
+                trace("extension type (%s) not supported", ext());
                 throw error::not_found();
             }
 
             mime_type_t& mm = mime->second;
             auto sf = load_file(path, mm);
             if (sf == cached_files_.end()) {
-                trace("requested static resource (%s) does not exist", path.str);
+                trace("requested static resource (%s) does not exist", path());
                 // static file not found;
                 throw error::not_found();
             }
@@ -121,21 +121,21 @@ namespace suil {
             // set the content type
             resp.header("Content-Type", mm.mime);
 
-            // prepare the response
+            // prepare the Response
             prepare_response(req,resp, cf, mm);
         }
 
-        void file_server::head(const request &req, response &resp, zcstring &path, zcstring &ext) {
+        void FileServer::head(const Request &req, Response &resp, zcstring &path, zcstring &ext) {
             // FIXME: part of code is the similar to GET code, move to common stub
             auto mime = mime_types_.find(ext);
             if (mime == mime_types_.end()) {
-                trace("extension type (%s) not supported", ext.str);
+                trace("extension type (%s) not supported", ext());
                 throw error::not_found();
             }
             mime_type_t& mm = mime->second;
             auto sf = load_file(path, mm);
             if (sf == cached_files_.end()) {
-                trace("requested static resource (%s) does not exist", path.str);
+                trace("requested static resource (%s) does not exist", path());
                 // static file not found;
                 throw error::not_found();
             }
@@ -166,8 +166,8 @@ namespace suil {
             }
         }
 
-        void file_server::prepare_response(
-                const request &req, response &resp, cached_file_t &cf, mime_type_t &mm)
+        void FileServer::prepare_response(
+                const Request &req, Response &resp, cached_file_t &cf, mime_type_t &mm)
         {
             if (mm.allow_range) {
                 // let clients know that the server accepts ranges for current mime type
@@ -178,10 +178,10 @@ namespace suil {
                 resp.header("Accept-Ranges", "none");
             }
 
-            // check for range base request support
+            // check for range base Request support
             strview_t range = req.header("Range");
             if (!range.empty() && mm.allow_range) {
-                // prepare range based request
+                // prepare range based Request
                 build_range_resp(req, resp, range, cf, mm);
                 if (resp.completed) {
                     return;
@@ -190,17 +190,17 @@ namespace suil {
             else {
                 // send the entire content
                 if (config.enable_send_file) {
-                    resp.chunk(std::move(response::chunk_t(cf.fd, cf.len)));
+                    resp.chunk(std::move(Response::Chunk(cf.fd, cf.len)));
                 }
                 else {
-                    resp.chunk(std::move(response::chunk_t(cf.data, cf.len)));
+                    resp.chunk(std::move(Response::Chunk(cf.data, cf.len)));
                 }
                 resp.end(Status::OK);
             }
         }
 
-        void file_server::build_range_resp(
-                const request &req, response &resp, strview_t &rng, cached_file_t &cf, mime_type_t &mm)
+        void FileServer::build_range_resp(
+                const Request &req, Response &resp, strview_t &rng, cached_file_t &cf, mime_type_t &mm)
         {
             const char *pend = rng.data() + rng.size();
             const char *it = strchr(rng.data(), '=');
@@ -234,17 +234,17 @@ namespace suil {
                 it = strchr(it, ',');
             }
 
-            // depending on the number of requested ranges, build response
+            // depending on the number of requested ranges, build Response
             if (ranges.size() == 1) {
                 auto& range = ranges[0];
                 if (config.enable_send_file) {
-                    resp.chunk(response::chunk_t(cf.fd, range.first, range.second));
+                    resp.chunk(Response::Chunk(cf.fd, range.first, range.second));
                 }
                 else {
-                    resp.chunk(response::chunk_t(cf.data, range.first, range.second));
+                    resp.chunk(Response::Chunk(cf.data, range.first, range.second));
                 }
                 // add the range header
-                buffer_t b(16);
+                zbuffer b(16);
                 b.appendf("bytes %lu-%lu/%lu", range.first, range.second-1, cf.len);
                 resp.header("Content-Range", b);
 
@@ -256,21 +256,21 @@ namespace suil {
             }
         }
 
-        void file_server::cache_control(
-                const request &req, response &resp, cached_file_t &cf, mime_type_t &mm)
+        void FileServer::cache_control(
+                const Request &req, Response &resp, cached_file_t &cf, mime_type_t &mm)
         {
             // get http data format
             zcstring dt(datetime(cf.last_mod)(datetime::HTTP_FMT));
             resp.header("Last-Modified", dt);
             // add cache control header
             if (mm.cache_expires > 0) {
-                buffer_t b(31);
+                zbuffer b(31);
                 b.appendnf(30, "public, max-age=%ld", mm.cache_expires);
                 resp.header("Cache-Control", b);
             }
         }
 
-        file_server::cached_files_t::iterator file_server::load_file(const zcstring &rel, const mime_type_t &mm)
+        FileServer::cached_files_t::iterator FileServer::load_file(const zcstring &rel, const mime_type_t &mm)
         {
             auto it = cached_files_.find(rel);
 
@@ -281,21 +281,21 @@ namespace suil {
                     cf.clear();
 
                     struct stat st;
-                    stat(path.str, &st);
+                    stat(path.data(), &st);
 
-                    cf.fd = open(path.str, O_RDONLY);
+                    cf.fd = open(path.data(), O_RDONLY);
                     if (cf.fd < 0) {
                         iwarn("opening static resource(%s) failed: %s",
-                             path.str, errno_s);
+                             path(), errno_s);
                         return cached_files_.end();
                     }
                     else if (config.enable_send_file) {
-                        trace("enable send fd(%d) for %s", cf.fd, path.str);
+                        trace("enable send fd(%d) for %s", cf.fd, path());
                         cf.use_fd = 1;
                     }
                     else {
                         if (!read_file(cf, st)) {
-                            trace("loading file (%s) failed", path.str);
+                            trace("loading file (%s) failed", path());
                             close(cf.fd);
                             return cached_files_.end();
                         }
@@ -314,26 +314,26 @@ namespace suil {
             else {
                 cached_file_t& cf = it->second;
                 struct stat st;
-                stat(cf.path.str, &st);
+                stat(cf.path.data(), &st);
 
                 // reload file if it was recently modified
                 if(cf.last_mod != (time_t)st.st_mtim.tv_sec) {
                     cf.clear();
 
-                    cf.fd = open(cf.path.str, O_RDONLY);
+                    cf.fd = open(cf.path.data(), O_RDONLY);
                     if (cf.fd < 0) {
                         iwarn("opening static resource(%s) failed: %s",
-                             cf.path.str, errno_s);
+                             cf.path(), errno_s);
                         cached_files_.erase(it);
                         return cached_files_.end();
                     }
                     else if (config.enable_send_file) {
-                        trace("enable send fd(%d) for %s", cf.fd, cf.path.str);
+                        trace("enable send fd(%d) for %s", cf.fd, cf.path());
                         cf.use_fd = 1;
                     }
                     else {
                         if (!read_file(cf, st)) {
-                            trace("loading file (%s) failed", cf.path.str);
+                            trace("loading file (%s) failed", cf.path());
                             close(cf.fd);
                             cached_files_.erase(it);
                             return cached_files_.end();
@@ -349,7 +349,7 @@ namespace suil {
             return it;
         }
 
-        bool file_server::read_file(cached_file_t &cf, const struct stat &st)
+        bool FileServer::read_file(cached_file_t &cf, const struct stat &st)
         {
             if (cf.fd < 0) {
                 trace("reloading a closed file not allowed");
@@ -372,7 +372,7 @@ namespace suil {
             else {
                 // read file
                 uint32_t total = (uint32_t) st.st_size + 8;
-                buffer_t b(total);
+                zbuffer b(total);
                 size_t nread = 0, toread = (size_t) st.st_size;
                 ssize_t cread = 0;
                 char *ptr = b;
@@ -395,26 +395,26 @@ namespace suil {
             return true;
         }
 
-        bool file_server::file_exists(zcstring &path, const zcstring &rel) const
+        bool FileServer::file_exists(zcstring &path, const zcstring &rel) const
         {
             // we want to ensure that the file is within the base directory
-            buffer_t b(0);
+            zbuffer b(0);
             // append base, followed by file
-            b << www_dir << rel.str;
+            b << www_dir << rel;
             char absolute[PATH_MAX];
             realpath((char *)b, absolute);
-            zcstring tmp(absolute, www_dir.len, false);
+            zcstring tmp(absolute, www_dir.size(), false);
 
             if (tmp != www_dir) {
                 // path violation
-                idebug("requested path has back references: %s", rel.str);
+                idebug("requested path has back references: %s", rel());
                 return false;
             }
 
-            struct stat st;
+            struct stat st{};
             if (stat(absolute, &st) != 0 || !S_ISREG(st.st_mode)) {
                 // file does not exist
-                idebug("request path does not exist: %s", absolute);
+                idebug("Request path does not exist: %s", absolute);
                 return false;
             }
 
@@ -423,7 +423,7 @@ namespace suil {
             return true;
         }
 
-        void file_server::cached_file_t::clear() {
+        void FileServer::cached_file_t::clear() {
             if (data) {
                 if (is_mapped) {
                     munmap(data, size);

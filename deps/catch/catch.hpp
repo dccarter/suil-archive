@@ -1275,7 +1275,7 @@ namespace Internal {
     template<typename T>
     inline T& opCast(T const& t) { return const_cast<T&>(t); }
 
-// nullptr_t support based on pull request #154 from Konstantin Baumann
+// nullptr_t support based on pull Request #154 from Konstantin Baumann
 #ifdef CATCH_CONFIG_CPP11_NULLPTR
     inline std::nullptr_t opCast(std::nullptr_t) { return nullptr; }
 #endif // CATCH_CONFIG_CPP11_NULLPTR
@@ -6379,7 +6379,7 @@ namespace Catch {
             { SIGILL,  "SIGILL - Illegal instruction signal" },
             { SIGFPE,  "SIGFPE - Floating point error signal" },
             { SIGSEGV, "SIGSEGV - Segmentation violation signal" },
-            { SIGTERM, "SIGTERM - Termination request signal" },
+            { SIGTERM, "SIGTERM - Termination Request signal" },
             { SIGABRT, "SIGABRT - Abort (abnormal termination) signal" }
     };
 
@@ -6980,7 +6980,7 @@ namespace Catch {
                 if( m_configData.filenamesAsTags )
                     applyFilenamesAsTags( *m_config );
 
-                // Handle list request
+                // Handle list Request
                 if( Option<std::size_t> listed = list( config() ) )
                     return static_cast<int>( *listed );
 

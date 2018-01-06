@@ -71,7 +71,9 @@ dkms.conf
 # Executables
 
 # Generated files
+.bin/
 suil/symbols.h
+cmake/SuilConfigVersion.cmake
 
 # Build directories
 .build

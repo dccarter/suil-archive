@@ -68,7 +68,7 @@ namespace suil {
 
         struct abci_conn : LOGGER(dtag(TDM_ABCISRV)) {
 
-            abci_conn(appication& app, sock_adaptor& sock)
+            abci_conn(appication& app, SocketAdaptor& sock)
                 : app(app),
                   sock(sock)
             {}
@@ -86,28 +86,28 @@ namespace suil {
 
             int  recvlen(const char *dbg);
 
-            bool recvmsg(buffer_t& rxb, int len, const char *dbg);
+            bool recvmsg(zbuffer& rxb, int len, const char *dbg);
 
-            bool sendmsg(buffer_t& rxb, const char *dbg);
+            bool sendmsg(zbuffer& rxb, const char *dbg);
 
-            suil::sock_adaptor& sock;
+            suil::SocketAdaptor& sock;
             appication&         app;
         };
 
-        template <typename Backend = suil::tcp_ss>
+        template <typename Backend = suil::TcpSs>
         struct abci_server : LOGGER(dtag(TDM_ABCISRV)) {
 
             typedef abci_server<Backend> __server_t;
 
             struct abci_handler {
-                void operator()(sock_adaptor& sock, __server_t *s) {
-                    ldebug(s, "handling abci connection %s:%d",
+                void operator()(SocketAdaptor& sock, __server_t *s) {
+                    ldebug(s, "handling abci Connection %s:%d",
                                     ipstr(sock.addr()), sock.port());
 
                     abci_conn conn(s->getapp(), sock);
                     conn.start();
 
-                    ldebug(s, "done handling abci connection %s:%d",
+                    ldebug(s, "done handling abci Connection %s:%d",
                            ipstr(sock.addr()), sock.port());
                 }
             };
@@ -161,11 +161,11 @@ namespace suil {
             typedef server<abci_handler, Backend, __server_t> abci_backend_t;
             abci_backend_t      backend;
             appication&         app;
-            server_config       config;
+            ServerConfig       config;
         };
 
-        using sslabci = abci_server<ssl_ss>;
-        using rawabci = abci_server<tcp_ss>;
+        using sslabci = abci_server<SslSs>;
+        using rawabci = abci_server<TcpSs>;
     }
 }
 #endif //SUIL_SERVER_HPP

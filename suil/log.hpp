@@ -117,13 +117,13 @@ namespace suil {
                               va_list args);
         };
 
-        using logformat_t = std::function<size_t(char *,level, const char *, const char*, va_list)>;
+        using LogFormat = std::function<size_t(char *,level, const char *, const char*, va_list)>;
 
-        struct default_handler {
+        struct DefaultHandler {
             void operator()(const char *log, size_t, level);
         };
 
-        using logsink_t = std::function<void(const char *, size_t, level)>;
+        using LogSink = std::function<void(const char *, size_t, level)>;
 
 #define define_log_tag(name) \
         struct name##_log_tag {\
@@ -133,16 +133,16 @@ namespace suil {
         define_log_tag(SYSTEM);
 
         template<class __T = dtag(SYSTEM)>
-        struct logger {
-            logger()
+        struct Logger {
+            Logger()
             {}
-            logger(const char *tag)
+            Logger(const char *tag)
                 : tag(::strdup(tag))
             {}
 
             void log(level l, const char *fmt, ...) const;
 
-            virtual ~logger() {
+            virtual ~Logger() {
                 if (tag) {
                     free(tag);
                     tag = nullptr;
@@ -152,11 +152,11 @@ namespace suil {
             char *tag{nullptr};
         };
 
-        struct __syslog : public logger<> {
+        struct __syslog : public Logger<> {
             __syslog() {
                 sink =
                 [&](const char *msg, size_t sz, level l) {
-                    default_handler()(msg, sz, l);
+                    DefaultHandler()(msg, sz, l);
                 };
 
                 formatter =
@@ -191,9 +191,9 @@ namespace suil {
             template<typename... __Opts>
             friend void setup(__Opts...);
 
-            logsink_t sink{nullptr};
+            LogSink sink{nullptr};
             level lvl{level::DEBUG};
-            logformat_t formatter{nullptr};
+            LogFormat formatter{nullptr};
             char *appname{nullptr};
         };
     }
@@ -203,7 +203,7 @@ namespace suil {
     namespace log {
 
         template<typename __T>
-        void logger<__T>::log(level l, const char *fmt, ...) const {
+        void Logger<__T>::log(level l, const char *fmt, ...) const {
             char buf[SUIL_LOG_BUF_SIZE];
             va_list args;
             va_start(args, fmt);
@@ -238,13 +238,13 @@ namespace suil {
                 __log.lvl = lvl;
             }
 
-            logsink_t sink = options.get(sym(logsink), nullptr);
+            LogSink sink = options.get(sym(logsink), nullptr);
             if (sink != nullptr) {
                 /* set log sink */
                 __log.sink = std::move(sink);
             }
 
-            logformat_t fmt = options.get(sym(logformat), nullptr);
+            LogFormat fmt = options.get(sym(logformat), nullptr);
             if (fmt != nullptr) {
                 /* set log formatter */
                 __log.formatter = std::move(fmt);
@@ -262,7 +262,7 @@ namespace suil {
     }
 }
 
-#define LOGGER(...) suil::log::logger<__VA_ARGS__>
+#define LOGGER(...) suil::log::Logger<__VA_ARGS__>
 #define __LOG(sub, l, fmt, ...)                                 \
     if (suil::__log.getLevel() <= (suil::log::level:: l))       \
         (sub)->log(suil::log::level:: l , fmt , ##__VA_ARGS__)

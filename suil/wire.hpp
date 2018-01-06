@@ -9,6 +9,108 @@
 
 namespace suil {
 
+    wire& wire::operator<<(const char *str) {
+        zcstring tmp{str};
+        Ego << tmp;
+        return Ego;
+    }
+
+    wire& wire::operator<<(const std::string &str) {
+        zcstring tmp{str.data(), str.size(), false};
+        Ego << tmp;
+        return Ego;
+    }
+
+    wire& wire::operator>>(std::string &str) {
+        varint v{0};
+        Ego >> v;
+        uint64_t tmp{v.read<uint64_t>()};
+        if (tmp > 0) {
+            str.resize(tmp, '\0');
+            if (!reverse((uint8_t *)str.data(), tmp)) {
+                suil_error::create("pulling string from wire failed");
+            }
+        }
+
+        return Ego;
+    }
+
+    template <typename __T>
+    wire& wire::operator<<(const std::vector<__T> &vec) {
+        varint sz{vec.size()};
+        Ego << sz;
+        for (auto& e: vec) {
+            Ego << e;
+        }
+
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator<<(const std::vector<iod::sio<__T...>> &vec) {
+        varint sz{vec.size()};
+        Ego << sz;
+        for (const iod::sio<__T...>& e: vec) {
+            Ego << e;
+        }
+
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator>>(std::vector<iod::sio<__T...>> &vec) {
+        varint sz{0};
+        Ego >> sz;
+        uint64_t entries{sz.read<uint64_t>()};
+        for (int i = 0; i < entries; i++) {
+            iod::sio<__T...> entry;
+            Ego >> entry;
+            vec.emplace_back(std::move(entry));
+        }
+
+        return Ego;
+    }
+
+    template <typename __T>
+    wire& wire::operator>>(std::vector<__T> &vec) {
+        varint sz{0};
+        Ego >> sz;
+        uint64_t entries{sz.read<uint64_t>()};
+        for (int i = 0; i < entries; i++) {
+            __T entry{};
+            Ego >> entry;
+            vec.emplace_back(std::move(entry));
+        }
+
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator<<(const iod::sio<__T...> &o) {
+        //typedef __internal::remove_unwired<decltype(o)> wireble;
+        iod::foreach2(o) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || Ego.always) {
+                /* use given metadata to to set options */
+                Ego << m.symbol().member_access(o);
+            }
+        };
+        return Ego;
+    }
+
+    template <typename... __T>
+    wire& wire::operator>>(iod::sio<__T...> &o) {
+        //typedef __internal::remove_unwired<decltype(o)> wireble;
+        iod::foreach2(o) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || Ego.always) {
+                /* use given metadata to to set options */
+                Ego >> m.symbol().member_access(o);
+            }
+        };
+        return Ego;
+    }
+
     using rawbuffer = const std::pair<const uint8_t*, size_t>;
 
     struct breadboard : wire {
@@ -58,10 +160,10 @@ namespace suil {
         }
 
         bool fromhexstr(zcstring& str) {
-            if ((str.len>>1) > M-T)
+            if ((str.size()>>1) > M-T)
                 return false;
             utils::bytes(str, &sink[T], (M-T));
-            T += (str.len>>1);
+            T += (str.size()>>1);
             return true;
         }
 

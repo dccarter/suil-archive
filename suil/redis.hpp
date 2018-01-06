@@ -23,9 +23,9 @@ namespace suil {
     namespace redis {
         define_log_tag(REDIS);
 
-        struct command {
+        struct Commmand {
             template <typename... Params>
-            command(const char *cmd, Params... params)
+            Commmand(const char *cmd, Params... params)
                 : buffer(32+strlen(cmd))
             {
                 prepare(cmd, params...);
@@ -38,7 +38,7 @@ namespace suil {
             }
 
             template <typename Param>
-            command& operator<<(const Param param) {
+            Commmand& operator<<(const Param param) {
                 addparam(param);
                 return *this;
             }
@@ -76,7 +76,7 @@ namespace suil {
             }
 
             void addparam(const zcstring& param) {
-                buffer << SUIL_REDIS_PREFIX_STRING << param.len << SUIL_REDIS_CRLF;
+                buffer << SUIL_REDIS_PREFIX_STRING << param.size() << SUIL_REDIS_CRLF;
                 buffer << param << SUIL_REDIS_CRLF;
             }
 
@@ -92,7 +92,7 @@ namespace suil {
             }
 
             template <size_t B>
-            void addparam(const blob_t<B>& param) {
+            void addparam(const Blob<B>& param) {
                 auto raw = &param.cbin();
                 size_t  sz =  param.size() << 1;
                 buffer << SUIL_REDIS_PREFIX_STRING << sz << SUIL_REDIS_CRLF;
@@ -109,22 +109,22 @@ namespace suil {
                 addparam(params...);
             }
 
-            buffer_t buffer;
+            zbuffer buffer;
         };
 
-        struct reply {
-            reply(char prefix, zcstring&& data)
+        struct Reply {
+            Reply(char prefix, zcstring&& data)
                 : prefix(prefix),
                   data(data)
             {}
 
-            reply(buffer_t&& rxb)
+            Reply(zbuffer&& rxb)
                 : recvd(std::move(rxb)),
                   prefix(rxb.data()[0]),
                   data(&rxb.data()[1], rxb.size()-3, false)
             {
                 // null terminate
-                data.str[data.len] = '\0';
+                data.data()[data.size()] = '\0';
             }
 
             operator bool() const {
@@ -136,7 +136,7 @@ namespace suil {
             }
 
             const char* error() const {
-                if (prefix == SUIL_REDIS_PREFIX_ERROR) return  data.cstr;
+                if (prefix == SUIL_REDIS_PREFIX_ERROR) return  data.data();
                 return "";
             }
 
@@ -145,18 +145,18 @@ namespace suil {
             }
 
         private:
-            friend struct response;
+            friend struct Response;
             friend struct base_client;
             zcstring data{nullptr};
-            buffer_t recvd;
+            zbuffer recvd;
             char     prefix{'-'};
         };
 
-        struct response {
+        struct Response {
 
-            response(){}
+            Response(){}
 
-            response(reply&& rp)
+            Response(Reply&& rp)
             {
                 entries.emplace_back(std::move(rp));
             }
@@ -245,8 +245,8 @@ namespace suil {
             friend struct base_client;
             friend struct transaction;
 
-            std::vector<reply> entries;
-            buffer_t           buffer{128};
+            std::vector<Reply> entries;
+            zbuffer           buffer{128};
         };
 
         struct redisdb_config {
@@ -289,24 +289,24 @@ namespace suil {
 
         private:
             friend  struct base_client;
-            zcstr_map_t<zcstring> params;
-            buffer_t    buffer;
+            zmap<zcstring> params;
+            zbuffer    buffer;
         };
 
         struct base_client : LOGGER(dtag(REDIS)) {
 
-            response send(command& cmd) {
+            Response send(Commmand& cmd) {
                 return dosend(cmd, 1);
             }
 
             template <typename... Args>
-            response send(const zcstring& cd, Args... args) {
-                command cmd(cd(), args...);
+            Response send(const zcstring& cd, Args... args) {
+                Commmand cmd(cd(), args...);
                 return std::move(send(cmd));
             }
 
             template <typename... Args>
-            response operator()(zcstring&& cd, Args... args) {
+            Response operator()(zcstring&& cd, Args... args) {
                 return send(cd, args...);
             }
 
@@ -320,19 +320,19 @@ namespace suil {
             }
 
             bool auth(const zcstring& pass) {
-                command cmd("AUTH", pass);
+                Commmand cmd("AUTH", pass);
                 auto resp = send(cmd);
                 return resp.status();
             }
 
             bool ping() {
-                command cmd("PING");
+                Commmand cmd("PING");
                 return send(cmd).status("PONG");
             }
 
             template <typename __T>
             __T get(zcstring&& key) {
-                response resp = send("GET", key);
+                Response resp = send("GET", key);
                 if (!resp) {
                     throw suil_error::create("redis GET '", key,
                                              "' failed: ", resp.error());
@@ -346,7 +346,7 @@ namespace suil {
             }
 
             int64_t incr(zcstring&& key, int by = 0) {
-                response resp;
+                Response resp;
                 if (by == 0)
                     resp = send("INCR", key);
                 else
@@ -360,7 +360,7 @@ namespace suil {
             }
 
             int64_t decr(zcstring&& key, int by = 0) {
-                response resp;
+                Response resp;
                 if (by == 0)
                     resp = send("DECR", key);
                 else
@@ -379,7 +379,7 @@ namespace suil {
             }
 
             zcstring substr(zcstring&& key, int start, int end) {
-                response resp = send("SUBSTR", key, start, end);
+                Response resp = send("SUBSTR", key, start, end);
                 if (resp) {
                     return resp.get<zcstring>(0);
                 }
@@ -389,7 +389,7 @@ namespace suil {
             }
 
             bool exists(zcstring&& key) {
-                response resp = send("EXISTS", key);
+                Response resp = send("EXISTS", key);
                 if (resp) {
                     return (int) resp == 0;
                 }
@@ -400,7 +400,7 @@ namespace suil {
             }
 
             bool del(zcstring&& key) {
-                response resp = send("DEL", key);
+                Response resp = send("DEL", key);
                 if (resp) {
                     return (int) resp == 0;
                 }
@@ -411,7 +411,7 @@ namespace suil {
             }
 
             std::vector<zcstring> keys(zcstring&& pattern) {
-                response resp = send("KEYS", pattern);
+                Response resp = send("KEYS", pattern);
                 if (resp) {
                     std::vector<zcstring> tmp = resp;
                     return std::move(tmp);
@@ -423,7 +423,7 @@ namespace suil {
             }
 
             int expire(zcstring&& key, int64_t secs) {
-                response resp =  send("EXPIRE", key, secs);
+                Response resp =  send("EXPIRE", key, secs);
                 if (resp) {
                     return (int) resp;
                 }
@@ -434,7 +434,7 @@ namespace suil {
             }
 
             int ttl(zcstring&& key) {
-                response resp =  send("TTL", key);
+                Response resp =  send("TTL", key);
                 if (resp) {
                     return (int) resp;
                 }
@@ -446,7 +446,7 @@ namespace suil {
 
             template <typename... __T>
             int rpush(zcstring&& key, const __T... vals) {
-                response resp = send("RPUSH", key, vals...);
+                Response resp = send("RPUSH", key, vals...);
                 if (resp) {
                     return (int) resp;
                 }
@@ -458,7 +458,7 @@ namespace suil {
 
             template <typename... __T>
             int lpush(zcstring&& key, const __T... vals) {
-                response resp = send("LPUSH", key, vals...);
+                Response resp = send("LPUSH", key, vals...);
                 if (resp) {
                     return (int) resp;
                 }
@@ -469,7 +469,7 @@ namespace suil {
             }
 
             int llen(zcstring&& key) {
-                response resp = send("LLEN", key);
+                Response resp = send("LLEN", key);
                 if (resp) {
                     return (int) resp;
                 }
@@ -480,7 +480,7 @@ namespace suil {
             }
 
             std::vector<zcstring> lrange(zcstring&& key, int start = 0, int end = -1) {
-                response resp = send("LRANGE", key, start, end);
+                Response resp = send("LRANGE", key, start, end);
                 if (resp) {
                     std::vector<zcstring> tmp = resp;
                     return  std::move(tmp);
@@ -492,7 +492,7 @@ namespace suil {
             }
 
             bool ltrim(zcstring&& key, int start = 0, int end = -1) {
-                response resp = send("LTRIM", key, start, end);
+                Response resp = send("LTRIM", key, start, end);
                 if (resp) {
                     return resp.status();
                 }
@@ -504,7 +504,7 @@ namespace suil {
 
             template <typename __T>
             __T ltrim(zcstring&& key, int index) {
-                response resp = send("LINDEX", key, index);
+                Response resp = send("LINDEX", key, index);
                 if (resp) {
                     return (__T) resp;
                 }
@@ -517,36 +517,36 @@ namespace suil {
             bool info(server_info&);
 
         protected:
-            base_client(sock_adaptor& adaptor, redisdb_config& config)
+            base_client(SocketAdaptor& adaptor, redisdb_config& config)
                 : adaptor(adaptor),
                   config(config)
             {}
 
-            response dosend(command& cmd, size_t nreply);
+            Response dosend(Commmand& cmd, size_t nreply);
 
             friend struct transaction;
             inline void reset() {
                 batched.clear();
             }
-            inline void batch(command& cmd) {
+            inline void batch(Commmand& cmd) {
                 batched.push_back(&cmd);
             }
-            inline void batch(std::vector<command>& cmds) {
+            inline void batch(std::vector<Commmand>& cmds) {
                 for (auto& cmd: cmds) {
                     batch(cmd);
                 }
             }
 
-            bool recvresp(buffer_t& out, std::vector<reply>& stagging);
+            bool recvresp(zbuffer& out, std::vector<Reply>& stagging);
 
-            bool readline(buffer_t& out);
+            bool readline(zbuffer& out);
 
             bool readlen(int64_t& len);
 
-            zcstring commit(response& resp);
+            zcstring commit(Response& resp);
 
-            sock_adaptor&         adaptor;
-            std::vector<command*> batched;
+            SocketAdaptor&         adaptor;
+            std::vector<Commmand*> batched;
             redisdb_config&       config;
         };
 
@@ -577,7 +577,7 @@ namespace suil {
             client(const client&) = delete;
 
             ~client() {
-                // reset and close connection
+                // reset and close Connection
                 reset();
                 sock.close();
             }
@@ -586,7 +586,7 @@ namespace suil {
             Sock sock;
         };
 
-        template <typename Proto = tcp_sock>
+        template <typename Proto = TcpSock>
         struct redisdb : LOGGER(dtag(REDIS)) {
             template <typename... Args>
             redisdb(const char *host, int port, Args... args)
@@ -597,7 +597,7 @@ namespace suil {
 
             client<Proto> connect(const char *passwd = nullptr, int db = 0) {
                 Proto proto;
-                trace("opening redis connection");
+                trace("opening redis Connection");
                 if (!proto.connect(addr, config.timeout)) {
                     throw suil_error::create("connecting to redis server '",
                             ipstr(addr), "' failed: ", errno_s);
@@ -614,7 +614,7 @@ namespace suil {
                 else {
                     // ensure that the server is accepting commands
                     if (!cli.ping()) {
-                        throw suil_error::create("redis - ping request failed");
+                        throw suil_error::create("redis - ping Request failed");
                     }
                 }
 
@@ -651,12 +651,12 @@ namespace suil {
         struct transaction : LOGGER(dtag(REDIS)) {
             template <typename... Params>
             transaction& operator()(const char *cmd, Params... params) {
-                command tmp(cmd, params...);
+                Commmand tmp(cmd, params...);
                 commands.emplace_back(std::move(tmp));
                 return *this;
             }
 
-            response& execute();
+            Response& execute();
 
             inline void clear() {
                 commands.clear();
@@ -670,8 +670,8 @@ namespace suil {
 
         private:
 
-            std::vector<command> commands;
-            response             cachedresp;
+            std::vector<Commmand> commands;
+            Response             cachedresp;
             base_client&         client;
         };
     }

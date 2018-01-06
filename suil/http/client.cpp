@@ -14,7 +14,7 @@ namespace suil {
 #undef  CRLF
 #define CRLF "\r\n"
 
-            size_t Form::encode(buffer_t &out) const {
+            size_t Form::encode(zbuffer &out) const {
                 if (data.empty() && files.empty()) {
                     strace("trying to encode an empty form");
                     return 0;
@@ -48,10 +48,10 @@ namespace suil {
                     size_t  content_length{out.size()};
                     /* encode file into upload buffers */
                     for (auto& ff: files) {
-                        buffer_t tmp(127);
+                        zbuffer tmp(127);
                         tmp << "--" << boundary << CRLF;
                         tmp << "Content-Disposition: form-data; name=\""
-                            << ff.name << "\"; filename=\"" << basename(ff.path.str)
+                            << ff.name << "\"; filename=\"" << basename(ff.path._str)
                             << "\"" << CRLF;
                         if (ff.ctype) {
                             /* append content type header */
@@ -67,7 +67,7 @@ namespace suil {
                     }
 
                     /* --boundary--  will be appended */
-                    content_length += sizeofcstr("----") + boundary.len;
+                    content_length += sizeofcstr("----") + boundary._len;
                     return content_length;
                 }
             }
@@ -76,10 +76,10 @@ namespace suil {
                 if (fd > 0) {
                     return fd;
                 }
-                fd = ::open(file->path.cstr, O_RDWR);
+                fd = ::open(file->path._cstr, O_RDWR);
                 if (fd < 0) {
                     /* opening file failed */
-                    throw suil_error::create("open '", file->path.cstr,
+                    throw suil_error::create("open '", file->path._cstr,
                                              "' failed: ", errno_s);
                 }
 
@@ -93,13 +93,13 @@ namespace suil {
                 }
             }
 
-            void response::receive(sock_adaptor &sock, int64_t timeout) {
-                buffer_t tmp(1023);
+            void Response::receive(SocketAdaptor &sock, int64_t timeout) {
+                zbuffer tmp(1023);
                 do {
                     size_t nrd = tmp.capacity();
                     if (!sock.read(&tmp[0], nrd, timeout)) {
                         /* failed to receive headers*/
-                        throw suil_error::create("receiving request failed: ", errno_s);
+                        throw suil_error::create("receiving Request failed: ", errno_s);
                     }
 
                     if (!feed(tmp.data(), nrd)) {
@@ -109,7 +109,7 @@ namespace suil {
                 } while (!headers_complete);
 
                 if (body_read || content_length == 0) {
-                    strace("%s - response has no body to read: %lu", sock.id(), content_length);
+                    strace("%s - Response has no body to read: %lu", sock.id(), content_length);
                     return;
                 }
 
@@ -136,7 +136,7 @@ namespace suil {
                 } while (!body_complete && left > 0);
             }
 
-            int response::handle_body_part(const char *at, size_t length) {
+            int Response::handle_body_part(const char *at, size_t length) {
                 if (reader == nullptr) {
                     return parser::handle_body_part(at, length);
                 }
@@ -148,7 +148,7 @@ namespace suil {
                 }
             }
 
-            int response::handle_headers_complete() {
+            int Response::handle_headers_complete() {
                 /* if reader is configured, */
                 if (reader != NULL) {
                     reader(NULL, content_length);
@@ -159,20 +159,20 @@ namespace suil {
                 return 0;
             }
 
-            bool memory_offload::map_region(size_t len) {
+            bool MemoryOffload::map_region(size_t len) {
                 size_t total = len;
                 int page_sz = getpagesize();
                 total += page_sz-(len % page_sz);
                 data = (char *) mmap(NULL, total, PROT_READ, MAP_SHARED , -1, 0);
                 if (data == nullptr) {
-                    swarn("client::memory_offload mmap failed: %s", errno_s);
+                    swarn("client::MemoryOffload mmap failed: %s", errno_s);
                     return false;
                 }
                 is_mapped = true;
                 return true;
             }
 
-            memory_offload::~memory_offload() {
+            MemoryOffload::~MemoryOffload() {
                 if (data) {
                     if (is_mapped) {
                         /* unmap mapped memory */
@@ -186,14 +186,14 @@ namespace suil {
                 }
             }
 
-            int response::msg_complete() {
+            int Response::msg_complete() {
                 if (reader) {
                     reader(nullptr, 0);
                 }
                 body_read = true;
             }
 
-            const strview_t response::contenttype() const {
+            const strview_t Response::contenttype() const {
                 auto it = headers.find("Content-Type");
                 if (it != headers.end()) {
                     return it->second;
@@ -202,7 +202,7 @@ namespace suil {
                 return strview_t();
             }
 
-            request& request::operator=(request &&o) noexcept {
+            Request& Request::operator=(Request &&o) noexcept {
                 if (this != &o) {
                     sock_ptr = o.sock_ptr;
                     sock = *sock_ptr;
@@ -214,13 +214,13 @@ namespace suil {
                     body = std::move(o.body);
 
                     o.sock_ptr = nullptr;
-                    o.method = method_t::Unknown;
+                    o.method = Method::Unknown;
                     o.cleanup();
                 }
                 return *this;
             }
 
-            request::request(request &&o) noexcept
+            Request::Request(Request &&o) noexcept
                 : sock_ptr(o.sock_ptr),
                   sock(*sock_ptr),
                   headers(std::move(o.headers)),
@@ -231,10 +231,10 @@ namespace suil {
                   body(std::move(o.body))
             {
                 o.sock_ptr = nullptr;
-                o.method = method_t::Unknown;
+                o.method = Method::Unknown;
             }
 
-            request& request::operator<<(Form &&f) {
+            Request& Request::operator<<(Form &&f) {
                 form = std::move(f);
                 zcstring key("Content-Type");
                 zcstring val;
@@ -249,7 +249,7 @@ namespace suil {
                 return *this;
             }
 
-            void request::encodeargs(buffer_t &dst) const {
+            void Request::encodeargs(zbuffer &dst) const {
                 if (!arguments.empty()) {
                     dst << "?";
                     bool first{true};
@@ -263,7 +263,7 @@ namespace suil {
                 }
             }
 
-            void request::encodehdrs(buffer_t &dst) const {
+            void Request::encodehdrs(zbuffer &dst) const {
                 if (!headers.empty()) {
                     for (auto& hdr: headers) {
                         dst << hdr.first << ": " << hdr.second << CRLF;
@@ -271,9 +271,9 @@ namespace suil {
                 }
             }
 
-            size_t request::buildbody() {
+            size_t Request::buildbody() {
                 size_t content_length{0};
-                if (utils::matchany(method, method_t::Put, method_t::Post)) {
+                if (utils::matchany(method, Method::Put, Method::Post)) {
                     if (form) {
                         /*encode form if available */
                         content_length = form.encode(body);
@@ -286,8 +286,8 @@ namespace suil {
                 return content_length;
             }
 
-            void request::submit(int timeout) {
-                buffer_t head(1023);
+            void Request::submit(int timeout) {
+                zbuffer head(1023);
                 size_t  content_length{buildbody()};
                 hdrs("Content-Length", content_length);
 
@@ -301,7 +301,7 @@ namespace suil {
                 size_t nwr = sock.send(head.data(), head.size(), timeout);
                 if (nwr != head.size()) {
                     /* sending headers failed, no need to send body */
-                    throw suil_error::create("send request failed: (", nwr, ",",
+                    throw suil_error::create("send Request failed: (", nwr, ",",
                              head.size(), ")", errno_s);
                 }
                 if (content_length == 0) {
@@ -314,7 +314,7 @@ namespace suil {
                     nwr = sock.send(body.data(), body.size(), timeout);
                     if (nwr != body.size()) {
                         /* sending headers failed, no need to send body */
-                        throw suil_error::create("send request failed: ", errno_s);
+                        throw suil_error::create("send Request failed: ", errno_s);
                     }
                 }
 
@@ -322,16 +322,16 @@ namespace suil {
                     /* send upload files one after the other */
                     for (auto &up: form.uploads) {
                         int fd = up.open();
-                        nwr = sock.send(up.head.cstr, up.head.len, timeout);
-                        if (nwr != up.head.len) {
+                        nwr = sock.send(up.head._cstr, up.head._len, timeout);
+                        if (nwr != up.head._len) {
                             /* sending upload head failed, no need to send body */
-                            throw suil_error::create("send request failed: ", errno_s);
+                            throw suil_error::create("send Request failed: ", errno_s);
                         }
 
                         /* send file */
                         nwr = sock.sendfile(fd, 0, up.file->size, timeout);
                         if (nwr != up.file->size) {
-                            throw suil_error::create("uploading file: '", up.file->path.cstr,
+                            throw suil_error::create("uploading file: '", up.file->path._cstr,
                                                      "' failed: ", errno_s);
                         }
 
@@ -357,25 +357,25 @@ namespace suil {
                 sock.flush();
             }
 
-            response session::perform(handle_t& h, method_t m, const char *resource, request_builder_t& builder, response_writer_t& rd) {
-                request& req = h.req;
-                response resp;
+            Response Session::perform(handle_t& h, Method m, const char *resource, request_builder_t& builder, ResponseWriter& rd) {
+                Request& req = h.req;
+                Response resp;
                 req.reset(m, resource, false);
 
                 for(auto& hdr: headers) {
-                    zcstring key(hdr.first.cstr, hdr.first.len, false);
-                    zcstring val(hdr.second.cstr, hdr.second.len, false);
+                    zcstring key(hdr.first.data(), hdr.first.size(), false);
+                    zcstring val(hdr.second._cstr, hdr.second._len, false);
                     req.hdr(std::move(key), std::move(val));
                 }
 
                 if (builder != nullptr && !builder(req)) {
-                    throw suil_error::create("building request '", resource, "' failed");
+                    throw suil_error::create("building Request '", resource, "' failed");
                 }
 
                 if (!req.sock.isopen()) {
-                    /* open a new socket for the request */
+                    /* open a new socket for the Request */
                     if (!req.sock.connect(addr, timeout)) {
-                        throw suil_error::create("Connecting to '", host.cstr, ":",
+                        throw suil_error::create("Connecting to '", host._cstr, ":",
                                                  port, "' failed: ", errno_s);
                     }
                 }
@@ -387,21 +387,21 @@ namespace suil {
             }
 
 
-            void session::connect(handle_t &h, zcstr_map_t<zcstring> hdrs) {
-                response resp = std::move(perform(h, method_t::Connect, "/"));
+            void Session::connect(handle_t &h, zmap<zcstring> hdrs) {
+                Response resp = std::move(perform(h, Method::Connect, "/"));
                 if (resp.status() != Status::OK) {
                     /* connecting to server failed */
-                    throw suil_error::create("sending CONNECT to '", host.cstr, "' failed: ",
+                    throw suil_error::create("sending CONNECT to '", host._cstr, "' failed: ",
                             http::Statusext(resp.status()));
                 }
 
-                /* cleanup request and return it fresh */
+                /* cleanup Request and return it fresh */
                 h.req.cleanup();
             }
 
-            response session::head(handle_t &h, const char *resource, zcstr_map_t<zcstring> hdr) {
+            Response Session::head(handle_t &h, const char *resource, zmap<zcstring> hdr) {
 
-                response resp = std::move(perform(h, method_t::Connect, resource));
+                Response resp = std::move(perform(h, Method::Connect, resource));
             }
 
 #undef CRLF

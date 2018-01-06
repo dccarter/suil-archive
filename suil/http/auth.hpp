@@ -12,29 +12,29 @@ namespace suil {
     namespace http {
 
         define_log_tag(AUTHENTICATION);
-        struct jwt_t {
+        struct Jwt {
             typedef decltype(iod::D(
                 prop(typ, zcstring),
                 prop(alg, zcstring)
-            )) jwt_header_t;
+            )) JwtHeader;
 
             typedef decltype(iod::D(
-                s::_iss(var(optional), var(ignore))    = zcstring(),
-                s::_aud(var(optional), var(ignore))    = zcstring(),
-                s::_sub(var(optional), var(ignore))    = zcstring(),
-                s::_exp(var(optional), var(ignore))    = int64_t(),
-                s::_roles(var(optional), var(ignore)) = std::vector<zcstring>(),
-                s::_claims(var(optional)) = iod::json_string()
-            )) jwt_payload_t;
+                s::_iss(var(optional),   var(ignore))    = zcstring(),
+                s::_aud(var(optional),   var(ignore))    = zcstring(),
+                s::_sub(var(optional),   var(ignore))    = zcstring(),
+                s::_exp(var(optional),   var(ignore))    = int64_t(),
+                s::_roles(var(optional), var(ignore))    = std::vector<zcstring>(),
+                s::_claims(var(optional),var(ignore))    = json::Object()
+            )) JwtPayload;
 
-            jwt_t(const char* typ)
+            Jwt(const char* typ)
             {
                 header.typ = zcstring(typ).dup();
                 header.alg = zcstring("HS256").dup();
             }
 
-            jwt_t()
-                : jwt_t("JWT")
+            Jwt()
+                : Jwt("JWT")
             {}
 
             template <typename __T>
@@ -70,11 +70,8 @@ namespace suil {
                 roles(args...);
             }
 
-            template <typename __T>
-            inline __T claims() {
-                __T c;
-                iod::json_decode(c, payload.claims);
-                return std::move(c);
+            inline json::Object& claims() {
+                return payload.claims;
             }
 
             inline const zcstring& typ() const {
@@ -129,13 +126,13 @@ namespace suil {
                 payload.exp = exp;
             }
 
-            static bool decode(jwt_t& jwt, zcstring&& zcstr, zcstring& secret);
+            static bool decode(Jwt& jwt, zcstring&& zcstr, zcstring& secret);
             static bool verify(zcstring&& zcstr, zcstring& secret);
             zcstring encode(zcstring& secret);
 
         private:
-            jwt_header_t  header;
-            jwt_payload_t payload;
+            JwtHeader  header;
+            JwtPayload payload;
         };
 
         typedef decltype(iod::D(
@@ -145,10 +142,10 @@ namespace suil {
             prop(passwd,     zcstring),
             s::_salt(var(optional))        = zcstring(),
             prop(fullname,   zcstring),
-            s::_roles(var(optional)) = std::vector<zcstring>(),
-            s::_verified(var(optional)) = bool(),
-            s::_locked(var(optional))   = bool()
-        )) user_t;
+            s::_roles(var(optional))       = std::vector<zcstring>(),
+            s::_verified(var(optional))    = bool(),
+            s::_locked(var(optional))      = bool()
+        )) User;
 
         struct rand_8byte_salt {
             zcstring operator()(const zcstring & /*username*/);
@@ -189,7 +186,8 @@ namespace suil {
             From use;
             zcstring key{"Authorization"};
         };
-        struct jwt_authorization : LOGGER(dtag(AUTHENTICATION)) {
+
+        struct JwtAuthorization : LOGGER(dtag(AUTHENTICATION)) {
             struct Context{
                 Context()
                     : send_tok(0),
@@ -197,7 +195,7 @@ namespace suil {
                       request_auth(0)
                 {}
 
-                inline void authorize(jwt_t&& jwt, user_t& user) {
+                inline void authorize(Jwt&& jwt, User& user) {
                     this->jwt = std::move(jwt);
                     this->jwt.roles(user.roles);
                     this->jwt.sub(user.email);
@@ -234,8 +232,8 @@ namespace suil {
                 }
 
             private:
-                jwt_t    jwt;
-                friend struct jwt_authorization;
+                Jwt    jwt;
+                friend struct JwtAuthorization;
                 union {
                     struct {
                         uint8_t send_tok : 1;
@@ -250,112 +248,9 @@ namespace suil {
                 zcstring logout_url{};
             };
 
-            void before(request& req, response& resp, Context& ctx) {
-                if (req.route().AUTHORIZE) {
-                    zcstring tkhdr;
-                    if (use.use == JwtUse::HEADER) {
-                        auto auth = req.header(use.key);
-                        if (auth.empty() ||
-                            strncasecmp(auth.data(), "Bearer ", 7)) {
-                            /* user is not authorized */
-                            authrequest(resp);
-                        }
-                        /* temporary dup of the token */
-                        tkhdr = zcstring(auth.data(), auth.size(), false);
-                        ctx.actual_token = zcstring(&auth.data()[7], auth.size() - 7, false);
-                    }
-                    else {
-                        // token
-                        cookie_it cookies = req();
-                        auto auth = cookies[use.key];
-                        if (!auth) {
-                            /* user is not authorized */
-                            authrequest(resp);
-                        }
-                        tkhdr = auth;
-                        ctx.actual_token = auth;
-                    }
+            void before(Request& req, Response& resp, Context& ctx);
 
-                    if (ctx.actual_token.len == 0) {
-                        /* no need to proceed, token is invalid */
-                        authrequest(resp);
-                    }
-
-                    zcstring token(ctx.actual_token.dup());
-
-                    bool valid{false};
-                    try {
-                        valid = jwt_t::decode(ctx.jwt, std::move(token), key);
-                    }
-                    catch(...) {
-                        /* error decoding token */
-                        authrequest(resp, "Invalid authorization token.");
-                    }
-
-                    if (!valid || (ctx.jwt.exp() < time(NULL))) {
-                        /* token unauthorized */
-                        authrequest(resp);
-                    }
-
-                    if (!req.route().AUTHORIZE.check(ctx.jwt.roles())) {
-                        /* token does not have permission to access resouce */
-                        authrequest(resp, "Access to resource denied.");
-                    }
-
-                    ctx.token_hdr = tkhdr;
-                    ctx.send_tok = 1;
-                }
-            }
-
-            void after(request&, http::response& resp, Context& ctx) {
-                /* if authorized token should have been set */
-                if (ctx.send_tok) {
-                    zcstring tok{nullptr}, tok2{nullptr};
-                    /* send token in header */
-                    if (ctx.encode) {
-                        /* encode the current json web-token*/
-                        ctx.jwt.exp(time(NULL) + expiry);
-                        zcstring encoded(ctx.jwt.encode(key));
-                        tok = utils::catstr("Bearer ", encoded);
-                        tok2 = std::move(encoded);
-                    }
-                    else {
-                        /* move header from request */
-                        tok = std::move(ctx.token_hdr);
-                    }
-
-                    if (use.use == JwtUse::HEADER) {
-                        resp.header(use.key.peek(), std::move(tok));
-                    }
-                    else {
-                        cookie_t cookie(use.key.cstr);
-                        cookie.domain(domain.peek());
-                        cookie.path(path.peek());
-                        if (tok2) {
-                            cookie.value(std::move(tok2));
-                        } else {
-                            cookie.value(std::move(tok));
-                        }
-                        cookie.expires(time(NULL) + expiry);
-                        resp.cookie(cookie);
-                    }
-                } else if(!ctx.logout_url.empty()) {
-                    resp.redirect(Status::FOUND, ctx.logout_url.cstr);
-                    if (use.use == JwtUse::COOKIE) {
-                        // delete cookie
-                        delete_cookie(resp);
-                    }
-                } else if (ctx.request_auth) {
-                    /* send authentication request */
-                    resp.header("WWW-Authenticate", authenticate);
-                    if (ctx.token_hdr) {
-                        throw error::unauthorized(ctx.token_hdr.cstr);
-                    }
-                    else {
-                        throw error::unauthorized();
-                    }
-                }
-            }
+            void after(Request&, http::Response& resp, Context& ctx);
 
             template <typename __Opts>
             void configure(__Opts& opts) {
@@ -365,7 +260,7 @@ namespace suil {
                 /* configure key */
                 if (tmp) {
                     key = std::move(tmp.dup());
-                    idebug("jwt key changed to %s", key.cstr);
+                    idebug("jwt key changed to %s", key());
                 }
 
                 /* configure authenticate header string */
@@ -397,23 +292,23 @@ namespace suil {
                 configure(opts);
             }
 
-            jwt_authorization()
+            JwtAuthorization()
                 : key(rand_8byte_salt()("")),
                   authenticate(zcstring("Bearer").dup())
             {
-                idebug("generated secret is %s", key.cstr);
+                idebug("generated secret is %s", key());
             }
 
         private:
-            inline void delete_cookie(response& resp) {
-                cookie_t cookie(use.key.cstr);
+            inline void delete_cookie(Response& resp) {
+                Cookie cookie(use.key());
                 cookie.value("");
                 cookie.domain(domain.peek());
                 cookie.path(path.peek());
                 cookie.expires(time(NULL)-2);
                 resp.cookie(cookie);
             }
-            inline void authrequest(response& resp, const char *msg = "")
+            inline void authrequest(Response& resp, const char *msg = "")
             {
                 resp.header("WWW-Authenticate", authenticate);
                 throw error::unauthorized(msg);
@@ -430,8 +325,8 @@ namespace suil {
 
         namespace auth {
             template <typename __C>
-            static bool getuser(__C& conn, user_t& user) {
-                buffer_t qb(32);
+            static bool getuser(__C& conn, User& user) {
+                zbuffer qb(32);
                 qb << "SELECT * FROM suildb.users WHERE username=";
                 __C::params(qb, 1);
 
@@ -439,9 +334,9 @@ namespace suil {
             }
 
             template <typename __C>
-            static bool hasuser(__C& conn, user_t& user) {
+            static bool hasuser(__C& conn, User& user) {
                 size_t users = 0;
-                buffer_t qb(32);
+                zbuffer qb(32);
                 qb << "SELECT COUNT(username) FROM suildb.users WHERE username=";
                 __C::params(qb, 1);
 
@@ -457,38 +352,38 @@ namespace suil {
             }
 
             template <typename __C>
-            static bool updateuser(__C& conn, user_t& user) {
-                sql::orm<__C,user_t> orm("suildb.users", conn);
-                return orm.update(user);
+            static bool updateuser(__C& conn, User& user) {
+                sql::Orm<__C,User> Orm("suildb.users", conn);
+                return Orm.update(user);
             }
 
             template <typename __C>
-            static void removeuser(__C& conn, user_t& user) {
-                sql::orm<__C,user_t> orm("suildb.users", conn);
-                orm.remove(user);
+            static void removeuser(__C& conn, User& user) {
+                sql::Orm<__C,User> Orm("suildb.users", conn);
+                Orm.remove(user);
             }
 
             template <typename __C>
-            static bool adduser(__C& conn, const zcstring& key, user_t& user) {
+            static bool adduser(__C& conn, const zcstring& key, User& user) {
                 /* generate random salt for user */
                 user.salt   = rand_8byte_salt()(nullptr);
                 user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
-                sql::orm<__C,user_t> orm("suildb.users", conn);
-                return orm.insert(user);
+                sql::Orm<__C,User> Orm("suildb.users", conn);
+                return Orm.insert(user);
             }
 
             template <typename __C>
-            static bool updateuser(__C& conn, const zcstring& key, user_t& user) {
+            static bool updateuser(__C& conn, const zcstring& key, User& user) {
                 /* generate random salt for user */
                 user.salt   = rand_8byte_salt()(nullptr);
                 user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
-                sql::orm<__C,user_t> orm("suildb.users", conn);
-                return orm.update(user);
+                sql::Orm<__C,User> Orm("suildb.users", conn);
+                return Orm.update(user);
             }
 
             template <typename __C>
-            static bool seedusers(__C& conn, const zcstring& key, std::vector<user_t> users) {
-                sql::orm<__C,user_t> orm("suildb.users", conn);
+            static bool seedusers(__C& conn, const zcstring& key, std::vector<User> users) {
+                sql::Orm<__C,User> Orm("suildb.users", conn);
                 if (hasusers(conn)) {
                     /* table does not exist */
                     swarn("seeding to non-empty table prohibited");
@@ -498,8 +393,8 @@ namespace suil {
                 for (auto& user : users) {
                     user.salt   = rand_8byte_salt()(nullptr);
                     user.passwd = pbkdf2_sha1_hash(key)(user.passwd, user.salt);
-                    if ((orm.insert(user)) != 1) {
-                        swarn("seed database table with user '%' failed", user.username.cstr);
+                    if ((Orm.insert(user)) != 1) {
+                        swarn("seed database table with user '%' failed", user.username());
                         return false;
                     }
                 }
@@ -509,7 +404,7 @@ namespace suil {
 
             template <typename __C>
             static bool seedusers(__C& conn, const zcstring& key, const char *json) {
-                decltype(iod::D(prop(data, std::vector<user_t>))) users;
+                decltype(iod::D(prop(data, std::vector<User>))) users;
                 zcstring jstr = utils::fs::readall(json);
                 if (!jstr) {
                     swarn("reading file %s failed", json);
@@ -520,8 +415,8 @@ namespace suil {
             }
 
             template <typename __C>
-            static bool verifyuser(__C& conn, const zcstring& key, user_t& user) {
-                user_t u;
+            static bool verifyuser(__C& conn, const zcstring& key, User& user) {
+                User u;
                 u.username = std::move(user.username);
                 if (getuser(conn, u)) {
                     /* user exists */
@@ -537,7 +432,7 @@ namespace suil {
             }
 
             template <typename __C>
-            zcstring reguser(__C& conn, const zcstring& key, user_t& user, bool verified = true) {
+            zcstring reguser(__C& conn, const zcstring& key, User& user, bool verified = true) {
                 if (hasuser(conn, user)) {
                     return utils::catstr("User '", user.username, "' already exists");
                 }
@@ -555,18 +450,18 @@ namespace suil {
             }
 
             template <typename __C, typename __P>
-            bool _setuserprops(__C& conn, user_t& user, __P& props) {
+            bool _setuserprops(__C& conn, User& user, __P& props) {
                 if (props.has(sym(verified)))
                     user.verified = props.get(sym(verified));
                 if (props.has(sym(locked)))
                     user.locked = props.get(sym(locked));
 
-                sql::orm<__C,user_t> orm("users", conn);
-                return orm.update(user);
+                sql::Orm<__C,User> Orm("users", conn);
+                return Orm.update(user);
             }
 
             template <typename __C, typename... Props>
-            inline bool setuserprops(__C& conn, user_t& user, Props... props) {
+            inline bool setuserprops(__C& conn, User& user, Props... props) {
                 auto opts = iod::D(props...);
                 return _setuserprops(conn, user, opts);
             }

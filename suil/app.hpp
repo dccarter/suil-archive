@@ -11,18 +11,18 @@ namespace suil {
 
     define_log_tag(APP_TASK);
 
-    struct app_task : LOGGER(dtag(APP_TASK)) {
-        app_task(const char *name)
+    struct AppTask : LOGGER(dtag(APP_TASK)) {
+        AppTask(const char *name)
             : name(zcstring(name).dup())
         {}
 
-        virtual ~app_task() {
+        virtual ~AppTask() {
             if (running)
                 stop(EXIT_SUCCESS);
         }
 
     protected:
-        friend struct application;
+        friend struct Application;
         virtual int start() = 0;
         virtual void stop(int code = EXIT_SUCCESS) {
         }
@@ -34,10 +34,10 @@ namespace suil {
 
     define_log_tag(APPLICATION);
 
-    struct application : LOGGER(dtag(APPLICATION)) {
+    struct Application : LOGGER(dtag(APPLICATION)) {
 
         template <typename... __Opts>
-        application(const char *name, __Opts... opts)
+        Application(const char *name, __Opts... opts)
             : name(zcstring(name).dup())
         {
             log::setup(opt(name, name));
@@ -71,13 +71,13 @@ namespace suil {
             killsig(o...);
         }
 
-        ~application();
+        ~Application();
 
     private:
         void flush();
         bool check(const char *name);
-        static coroutine void runtask(application& app, app_task *task);
-        static coroutine void wait_notify(application& app);
+        static coroutine void runtask(Application& app, AppTask *task);
+        static coroutine void wait_notify(Application& app);
 
         uint32_t started{0};
         bool stopped{true};
@@ -85,9 +85,9 @@ namespace suil {
         uint32_t running_tasks{0};
         int64_t timeout{-1};
         zcstring name;
-        zcstr_map_t<app_task*>  tasks;
-        async_t<app_task*> stopsync{nullptr};
-        async_t<int> startwait{-EINVAL};
+        zmap<AppTask*>  tasks;
+        Async<AppTask*> stopsync{nullptr};
+        Async<int>      startwait{-EINVAL};
     };
 }
 #endif //SUIL_APP_HPP

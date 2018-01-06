@@ -77,11 +77,11 @@ namespace suil {
 
             sid = setsid();
             if (sid < 0) {
-                serror("Creating session ID for daemon failed: %s", errno_s);
+                serror("Creating Session ID for daemon failed: %s", errno_s);
                 closelog();
                 exit(EXIT_FAILURE);
             }
-            sinfo("Created session ID %d for suil daemon", sid);
+            sinfo("Created Session ID %d for suil daemon", sid);
 
             std::string tmp(wdir);
             if (wdir.empty())
@@ -109,7 +109,6 @@ namespace suil {
         }
     }
 
-
     datetime::datetime(time_t t)
         : t_(t)
     {
@@ -133,7 +132,7 @@ namespace suil {
         : datetime(HTTP_FMT, http_time)
     {}
 
-    buffer_t::buffer_t(size_t init_size)
+    zbuffer::zbuffer(size_t init_size)
         : data_{nullptr},
           size_((uint32_t) init_size),
           offset_(0)
@@ -142,7 +141,7 @@ namespace suil {
             grow(init_size);
     }
 
-    buffer_t::buffer_t(buffer_t && other)
+    zbuffer::zbuffer(zbuffer && other)
         : data_(other.data_),
           size_(other.size_),
           offset_(other.offset_)
@@ -152,7 +151,7 @@ namespace suil {
         other.data_ = nullptr;
     }
 
-    buffer_t& buffer_t::operator=(buffer_t &&other) {
+    zbuffer& zbuffer::operator=(zbuffer &&other) {
         size_ = other.size_;
         data_ = other.data_;
         offset_ = other.offset_;
@@ -162,7 +161,7 @@ namespace suil {
         return *this;
     }
 
-    buffer_t::~buffer_t() {
+    zbuffer::~zbuffer() {
         if (data_ != nullptr) {
             memory::free(data_);
             data_ = nullptr;
@@ -171,32 +170,32 @@ namespace suil {
         }
     }
 
-    void buffer_t::appendf(const char *fmt, ...) {
+    void zbuffer::appendf(const char *fmt, ...) {
         va_list args;
         va_start(args, fmt);
         appendv(fmt, args);
         va_end(args);
     }
 
-    void buffer_t::appendv(const char *fmt, va_list args) {
+    void zbuffer::appendv(const char *fmt, va_list args) {
         char	sb[2048];
         int ret;
         ret = vsnprintf(sb, sizeof(sb), fmt, args);
         if (ret == -1) {
             throw std::runtime_error(
-                    "buffer_t::appendv(): error: " + std::string(errno_s));
+                    "zbuffer::appendv(): error: " + std::string(errno_s));
         }
         append(sb, (uint32_t) ret);
     }
 
-    void buffer_t::appendnf(uint32_t hint, const char *fmt, ...) {
+    void zbuffer::appendnf(uint32_t hint, const char *fmt, ...) {
         va_list args;
         va_start(args, fmt);
         appendnv(hint, fmt, args);
         va_end(args);
     }
 
-    void buffer_t::appendnv(uint32_t hint, const char *fmt, va_list args) {
+    void zbuffer::appendnv(uint32_t hint, const char *fmt, va_list args) {
         if ((size_-offset_) < hint)
             grow(hint);
 
@@ -205,12 +204,12 @@ namespace suil {
         ret = vsnprintf((char *)(data_+offset_), (size_-offset_), fmt, args);
         if (ret == -1 || (ret + offset_) > size_) {
             throw std::runtime_error(
-                    "buffer_t::appendnv(): error: " + std::string(errno_s));
+                    "zbuffer::appendnv(): error: " + std::string(errno_s));
         }
         offset_ += ret;
     }
 
-    void buffer_t::append(const void *data, size_t len) {
+    void zbuffer::append(const void *data, size_t len) {
         if ((size_-offset_) < len) {
             grow(len);
         }
@@ -220,7 +219,7 @@ namespace suil {
         offset_ += len;
     }
 
-    void buffer_t::append(time_t t, const char *fmt) {
+    void zbuffer::append(time_t t, const char *fmt) {
         // reserve 64 bytes
         reserve(64);
         const char *pfmt = fmt? fmt : datetime::HTTP_FMT;
@@ -232,17 +231,17 @@ namespace suil {
         offset_ += sz;
     }
 
-    void buffer_t::grow(uint32_t add) {
-        // check if the current buffer_t fits
+    void zbuffer::grow(uint32_t add) {
+        // check if the current zbuffer fits
         data_ = (uint8_t *)memory::realloc(data_,(size_+add+1));
         if (data_ == nullptr)
             throw std::runtime_error(
-                    "buffer_t::grow(): error: " + std::string(errno_s));
+                    "zbuffer::grow(): error: " + std::string(errno_s));
         // change the size of the memory
         size_ = (uint32_t) memory::fits(data_, (size_+add+1));
     }
 
-    void buffer_t::reset(size_t size, bool keep) {
+    void zbuffer::reset(size_t size, bool keep) {
         offset_ = 0;
         if (!keep || (size_ < size)) {
             size = (size < 8) ? 8 : size;
@@ -250,7 +249,7 @@ namespace suil {
         }
     }
 
-    void buffer_t::seek(off_t off = 0) {
+    void zbuffer::seek(off_t off = 0) {
         off_t to = offset_ + off;
         if (off <= 0 || to > size_) {
             offset_ = 0;
@@ -260,20 +259,20 @@ namespace suil {
         }
     }
 
-    void buffer_t::bseek(off_t off) {
+    void zbuffer::bseek(off_t off) {
         if (off < size_ && off >= 0) {
             offset_ = (uint32_t) off;
         }
     }
 
-    void buffer_t::reserve(size_t size) {
+    void zbuffer::reserve(size_t size) {
         size_t  remaining = size_ - offset_;
         if (size > remaining) {
             grow((uint32_t) (size-remaining));
         }
     }
 
-    char* buffer_t::release() {
+    char* zbuffer::release() {
         if (data_) {
             char *raw = (char *) (*this);
             data_ = nullptr;
@@ -283,7 +282,7 @@ namespace suil {
         return (char *)"";
     }
 
-    void buffer_t::clear() {
+    void zbuffer::clear() {
         if (data_) {
             memory::free(data_);
             data_ = nullptr;
@@ -292,26 +291,26 @@ namespace suil {
         size_ = 0;
     }
 
-    buffer_t::operator char*() {
+    zbuffer::operator char*() {
         if (data_ && data_[offset_] != '\0') {
             data_[offset_] = '\0';
         }
         return data();
     }
 
-    buffer_t::operator strview_t() {
+    zbuffer::operator strview_t() {
         if (data_ && offset_) {
             return boost::string_view((const char *) data_, offset_);
         }
         return strview_t();
     }
 
-    file_t::file_t(mfile fd)
+    File::File(mfile fd)
         : fd(fd)
     {}
 
-    file_t::file_t(const char *pname, int flags, mode_t mode)
-        : file_t(mfopen(pname, flags, mode))
+    File::File(const char *pname, int flags, mode_t mode)
+        : File(mfopen(pname, flags, mode))
     {
         if (fd == nullptr) {
             throw suil_error::create("opening file '", pname, "' failed: ",
@@ -319,7 +318,7 @@ namespace suil {
         }
     }
 
-    void file_t::close() {
+    void File::close() {
         if (fd != nullptr) {
             flush(500);
             mfclose(fd);
@@ -327,7 +326,7 @@ namespace suil {
         }
     }
 
-    void file_t::flush(int64_t timeout) {
+    void File::flush(int64_t timeout) {
         assert(fd);
         mfflush(fd, utils::after(timeout));
         if (errno) {
@@ -335,27 +334,27 @@ namespace suil {
         }
     }
 
-    off_t file_t::seek(off_t off) {
+    off_t File::seek(off_t off) {
         assert(fd);
         return mfseek(fd, off);
     }
 
-    bool file_t::eof() {
+    bool File::eof() {
         assert(fd);
         return mfeof(fd) != 0;
     }
 
-    off_t file_t::tell() {
+    off_t File::tell() {
         assert(fd);
         return mftell(fd);
     }
 
-    bool file_t::read(void *buf, size_t &len, int64_t timeout) {
+    bool File::read(void *buf, size_t &len, int64_t timeout) {
         bool status{true};
         assert(fd);
         size_t ret = mfread(fd, buf, len, utils::after(timeout));
         if (errno) {
-            strace("%p: file_t read error: %s", fd, errno_s);
+            strace("%p: File read error: %s", fd, errno_s);
             status = false;
         }
         len = ret;
@@ -363,35 +362,35 @@ namespace suil {
     }
 
 
-    size_t file_t::write(const void *buf, size_t len, int64_t timeout) {
+    size_t File::write(const void *buf, size_t len, int64_t timeout) {
         assert(fd);
         size_t ret = mfwrite(fd, buf, len, utils::after(timeout));
         if (errno) {
-            strace("%p: file_t write error: %s", fd, errno_s);
+            strace("%p: File write error: %s", fd, errno_s);
         }
         return ret;
     }
 
-    file_t::~file_t() {
+    File::~File() {
         close();
     }
 
-    file_logger::file_logger(const std::string dir, const std::string prefix)
+    FileLogger::FileLogger(const std::string dir, const std::string prefix)
         : dst(nullptr)
     {
         open(dir, prefix);
     }
 
-    void file_logger::open(const std::string &dir, const std::string& prefix) {
+    void FileLogger::open(const std::string &dir, const std::string& prefix) {
         if (!utils::fs::exists(dir.c_str())) {
             sdebug("creating file logger directory: %s", dir.c_str());
             utils::fs::mkdir(dir.c_str(), true, 0777);
         }
         zcstring tmp{utils::catstr(dir, "/", prefix, "-", datetime()("%Y%m%d_%H%M%S"), ".log")};
-        dst = std::move(file_t(tmp.cstr, O_WRONLY|O_APPEND|O_CREAT, 0666));
+        dst = std::move(File(tmp.data(), O_WRONLY|O_APPEND|O_CREAT, 0666));
     }
 
-    void file_logger::log(const char *data, size_t sz, log::level) {
+    void FileLogger::log(const char *data, size_t sz, log::level) {
         dst.write(data, sz, 1500);
         dst.flush(1500);
     }
@@ -447,7 +446,7 @@ namespace suil {
     }
 
     zcstring base64::decode(const uint8_t *in, size_t size) {
-        buffer_t b((uint32_t) (size/4)*3);
+        zbuffer b((uint32_t) (size/4)*3);
         static const unsigned char ASCII_LOOKUP[256] =
         {
             /* ASCII table */
@@ -526,10 +525,10 @@ namespace suil {
         }
 
         errno = 0;
-        l = strtoll(str.str, &ep, base);
-        if (errno != 0 || str.str == ep || !matchany(*ep, '.', '\0')) {
+        l = strtoll(str.data(), &ep, base);
+        if (errno != 0 || str.data() == ep || !matchany(*ep, '.', '\0')) {
             strace("strtoll error: (str = %p, ep = %p), *ep = %02X, errno = %d",
-                    str.str, ep, *ep, errno);
+                    str(), ep, *ep, errno);
             throw std::range_error("invalid converting t o number failed");
         }
 
@@ -545,8 +544,8 @@ namespace suil {
     }
 
     zcstring utils::find(zcstring &src, char what, size_t after) {
-        char *pos = nullptr, *end = src.str + src.len;
-        while ((pos = strchr(src.str, what)) && 0 != after--);
+        char *pos = nullptr, *end = src.data() + src.size();
+        while ((pos = strchr(src.data(), what)) && 0 != after--);
         if (pos == nullptr) {
             return zcstring();
         }
@@ -558,7 +557,7 @@ namespace suil {
 
     const std::vector<char *> utils::strsplit(zcstring &str, const char *delim) {
         int		count;
-        char		*ap = NULL, *ptr = str.str, *eptr = ptr + str.len;
+        char		*ap = NULL, *ptr = str.data(), *eptr = ptr + str.size();
         std::vector<char*> out;
 
         count = 0;
@@ -574,14 +573,14 @@ namespace suil {
     }
 
     zcstring utils::strstrip(zcstring &str, char strip, bool ends) {
-        size_t	len = str.len;
+        size_t	len = str.size();
         char		*s, *p, *e;
 
-        buffer_t b(str.len);
+        zbuffer b(str.size());
         void *tmp = b;
         p = (char *)tmp;
-        s = str.str;
-        e = str.str + (str.len-1);
+        s = str.data();
+        e = str.data() + (str.size()-1);
         while (strip == *s) s++;
         while (strip == *e) e--;
         e++;
@@ -648,7 +647,7 @@ namespace suil {
     }
 
     void utils::bytes(const zcstring &str, uint8_t *out, size_t olen) {
-        size_t size = str.len>>1;
+        size_t size = str.size()>>1;
         if (out == nullptr || olen < size) {
             suil_error::create("utils::bytes - output buffer invalid");
         }
@@ -656,15 +655,15 @@ namespace suil {
         int i{0};
         char v;
 
-        char *p = str.str;
+        const char *p = str.data();
         for (i; i < size; i++) {
             out[i] = (uint8_t) (suil::c2i(*p++) << 4 | suil::c2i(*p++));
         }
     }
 
     zcstring utils::urlencode(const zcstring &str) {
-        uint8_t *buf((uint8_t *) memory::alloc(str.len*3));
-        char *src = str.str, *end = src + str.len;
+        uint8_t *buf((uint8_t *) memory::alloc(str.size()*3));
+        const char *src = str.data(), *end = src + str.size();
         uint8_t *dst = buf;
         register uint8_t c;
         while (src != end) {
@@ -708,7 +707,7 @@ namespace suil {
         if (data == nullptr)
             return zcstring{};
 
-        uint8_t *result = HMAC(EVP_sha256(), secret.cstr, secret.len,
+        uint8_t *result = HMAC(EVP_sha256(), secret.data(), secret.size(),
                                   data, len, nullptr, nullptr);
         if (b64) {
             return base64::encode(result, SHA256_DIGEST_LENGTH);
@@ -769,9 +768,9 @@ namespace suil {
         }
 
         if (recursive)
-            status = _mkpath(tmp.str, mode);
+            status = _mkpath(tmp.data(), mode);
         else
-            status = _mkdir(tmp.cstr, mode);
+            status = _mkdir(tmp.data(), mode);
 
         if (!status) {
             /* creating directory failed */
@@ -781,7 +780,7 @@ namespace suil {
 
     static void _forall(const char *base, zcstring& path, std::function<bool(const zcstring&, bool)> h, bool recursive, bool pod) {
         zcstring cdir(utils::catstr(base, "/", path));
-        DIR *d = opendir(cdir.cstr);
+        DIR *d = opendir(cdir.data());
 
         if (d == nullptr) {
             /* openining directory failed */
@@ -852,7 +851,7 @@ namespace suil {
         utils::fs::forall(path,
         [&](const zcstring& name, bool d) -> bool {
             zcstring tmp = utils::catstr(path, "/", name);
-            __remove(tmp.cstr);
+            __remove(tmp.data());
             return true;
         }, true, true);
     }
@@ -891,7 +890,7 @@ namespace suil {
             throw suil_error::create("opening file '", path, "' failed: ", errno_s);
         }
 
-        buffer_t b((uint32_t) st.st_size);
+        zbuffer b((uint32_t) st.st_size);
         char *data = b.data();
         ssize_t nread = 0, rc = 0;
         do {
@@ -909,7 +908,7 @@ namespace suil {
     }
 
     void utils::fs::append(const char *path, const void *data, size_t sz, bool async) {
-        file_t f(path, O_WRONLY|O_CREAT|O_APPEND, 0666);
+        File f(path, O_WRONLY|O_CREAT|O_APPEND, 0666);
         f.write(data, sz, 1500);
         f.close();
     }
@@ -945,8 +944,8 @@ namespace suil {
     }
 
     const char *utils::mimetype(const zcstring filename) {
-        const char *ext = strrchr(filename.cstr, '.');
-        static zcstr_map_t<const char*> mimetypes = {
+        const char *ext = strrchr(filename.data(), '.');
+        static zmap<const char*> mimetypes = {
             {".html", "text/html"},
             {".css",  "text/css"},
             {".csv",  "text/csv"},

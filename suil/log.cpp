@@ -102,7 +102,7 @@ namespace suil {
             return (size_t) wr;
         }
 
-        void default_handler::operator()(const char *log, size_t sz, level l) {
+        void DefaultHandler::operator()(const char *log, size_t sz, level l) {
             printf_colors c = printf_colors::DEFAULT;
             int bold = 0;
             switch (l) {

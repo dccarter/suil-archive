@@ -279,7 +279,7 @@ namespace suil {
 
         std::vector<char *> query_string::get_all(const char* name) const {
             std::vector<char *> ret;
-            buffer_t search(0);
+            zbuffer search(0);
             search << name << "[]";
             char *element = nullptr;
 

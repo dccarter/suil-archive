@@ -51,10 +51,10 @@ namespace suil {
         friend struct worker;
         static inline bool spin_lock(__lock_t& l, int64_t tout = -1) {
             bool status{true};
-            /* request lock ticket */
+            /* Request lock ticket */
             int ticket = __sync_fetch_and_add(&l.next, 1);
 
-            strace("{%ld} lock-%d request (ticket %d,  next %d serving %d)",
+            strace("{%ld} lock-%d Request (ticket %d,  next %d serving %d)",
                    mnow(), l.id, ticket, l.next, l.serving);
             if (tout > 0) {
                 /* compute the time at which we should giveup */
@@ -106,7 +106,7 @@ namespace suil {
 #define SYSTEM                  64
     };
 
-    using ipc_get_handle = async_t<void*, 16>;
+    using ipc_get_handle = Async<void*, 16>;
     struct ipc_get_payload {
         ipc_get_handle  *handle;
         int64_t         deadline;
@@ -135,12 +135,12 @@ namespace suil {
             return send(dst, msg, str, strlen(str));
         }
 
-        static inline ssize_t send(uint8_t dst, uint8_t msg, const buffer_t& b) {
+        static inline ssize_t send(uint8_t dst, uint8_t msg, const zbuffer& b) {
             return send(dst, msg, b.data(), b.size());
         }
 
         static inline ssize_t send(uint8_t dst, uint8_t msg, const zcstring& str) {
-            return send(dst, msg, str.cstr, str.len);
+            return send(dst, msg, str.data(), str.size());
         }
 
         static inline ssize_t send(uint8_t dst, uint8_t msg, strview_t& sv) {
@@ -149,18 +149,18 @@ namespace suil {
 
         static void broadcast(uint8_t, const void *, size_t);
 
-        static uint8_t broadcast(async_t<int>& ch, uint8_t msg, const void *data, size_t len);
+        static uint8_t broadcast(Async<int>& ch, uint8_t msg, const void *data, size_t len);
 
         static inline void broadcast(uint8_t msg, const char *str) {
             broadcast(msg, str, strlen(str));
         }
 
-        static inline void broadcast(uint8_t msg, const buffer_t& b) {
+        static inline void broadcast(uint8_t msg, const zbuffer& b) {
             broadcast(msg, b.data(), b.size());
         }
 
         static inline void broadcast(uint8_t msg, const zcstring& str) {
-            broadcast(msg, str.cstr, str.len);
+            broadcast(msg, str.data(), str.size());
         }
 
         static inline void broadcast(uint8_t msg, const strview_t& sv) {
@@ -177,9 +177,9 @@ namespace suil {
 
         static void spinunlock(const uint8_t idx);
 
-        static network_buffer get(uint8_t msg, uint8_t w, int64_t tout = -1);
+        static NetworkBuffer get(uint8_t msg, uint8_t w, int64_t tout = -1);
 
-        static std::vector<network_buffer> gather(uint8_t msg, int64_t tout = -1);
+        static std::vector<NetworkBuffer> gather(uint8_t msg, int64_t tout = -1);
 
         static void send_get_response(const void *token, uint8_t to, const void *data, size_t len);
 

@@ -379,7 +379,7 @@ struct is_integer_for_rounding
 
 #if ((defined(__linux__) && !defined(__UCLIBC__) && !defined(BOOST_MATH_HAVE_FIXED_GLIBC)) || defined(__QNX__) || defined(__IBMCPP__)) && !defined(BOOST_NO_FENV_H)
 //
-// This code was introduced in response to this glibc bug: http://sourceware.org/bugzilla/show_bug.cgi?id=2445
+// This code was introduced in Response to this glibc bug: http://sourceware.org/bugzilla/show_bug.cgi?id=2445
 // Basically powl and expl can return garbage when the result is small and certain exception flags are set
 // on entrance to these functions.  This appears to have been fixed in Glibc 2.14 (May 2011).
 // Much more information in this message thread: https://groups.google.com/forum/#!topic/boost-list/ZT99wtIFlb4

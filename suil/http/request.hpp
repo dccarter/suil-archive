@@ -13,29 +13,29 @@ namespace suil {
     namespace http {
 
         template <typename __H, typename... __Mws>
-        struct connection;
+        struct Connection;
 
         define_log_tag(HTTP_REQ);
 
         using form_data_it_t = std::function<bool(const zcstring&, const zcstring&)>;
-        using form_file_it_t = std::function<bool(const upfile_t&)>;
+        using form_file_it_t = std::function<bool(const UploadedFile&)>;
 
-        struct request;
+        struct Request;
         struct request_form_t {
-            request_form_t(const request& req);
+            request_form_t(const Request& req);
             void operator|(form_data_it_t f);
             void operator|(form_file_it_t f);
             const zcstring operator[](const char*);
-            const upfile_t&operator()(const char*);
+            const UploadedFile&operator()(const char*);
         private:
             bool find(zcstring& out, const char *name);
 
-            const request& req;
+            const Request& req;
         };
 
-        struct request : public parser, LOGGER(dtag(HTTP_REQ)) {
+        struct Request : public parser, LOGGER(dtag(HTTP_REQ)) {
 
-            request(sock_adaptor& sock, http_config_t& config)
+            Request(SocketAdaptor& sock, HttpConfig& config)
                 : stage(0),
                   sock(sock),
                   config(config)
@@ -49,11 +49,11 @@ namespace suil {
                 return sock.port();
             }
 
-            sock_adaptor& adator() {
+            SocketAdaptor& adator() {
                 return sock;
             }
 
-            ~request() {
+            ~Request() {
                 clear();
             }
 
@@ -71,7 +71,7 @@ namespace suil {
                 auto it = headers.find(h);
                 if (it != headers.end()) {
                     const zcstring& v = it->second;
-                    return strview_t(v.cstr, v.len);
+                    return strview_t(v.data(), v.size());
                 }
                 return strview_t();
             }
@@ -94,14 +94,14 @@ namespace suil {
 
             void *middleware_context{};
 
-            inline cookie_it operator()() {
-                return cookie_it(cookies);
+            inline CookieIterator operator()() {
+                return CookieIterator(cookies);
             }
 
             template <typename _F>
             void operator|(_F f) const {
                 for(auto h: headers) {
-                    f(h.first.cstr, h.second.cstr);
+                    f(h.first.data(), h.second.data());
                 }
             }
 
@@ -118,8 +118,8 @@ namespace suil {
 
         private:
             template <typename __H, typename... __Mws>
-            friend struct connection;
-            friend struct system_attrs;
+            friend struct Connection;
+            friend struct SystemAttrs;
             friend struct request_form_t;
 
             Status process_headers();
@@ -133,31 +133,31 @@ namespace suil {
             inline bool any_method() const {
                 return false;
             }
-            inline bool any_method(method_t m) const {
+            inline bool any_method(Method m) const {
                 return (uint8_t)m == method;
             }
 
             template <typename... __M>
-            inline bool any_method(method_t m, __M... mm) const {
+            inline bool any_method(Method m, __M... mm) const {
                 return any_method(m) || any_method(mm...);
             }
 
-            Status receive_headers(server_stats_t& stats);
-            Status receive_body(server_stats_t& stats);
+            Status receive_headers(ServerStats& stats);
+            Status receive_body(ServerStats& stats);
 
-            zcstr_map_t<zcstring>    cookies;
+            zmap<zcstring>    cookies;
             bool                     cookied{false};
 
-            zcstr_map_t<upfile_t>    files;
-            zcstr_map_t<zcstring>    form;
+            zmap<UploadedFile>    files;
+            zmap<zcstring>    form;
             zcstring                 form_str;
             bool                     formed{false};
 
-            struct body_offload : file_t {
-                body_offload(buffer_t& path);
+            struct BodyOffload : File {
+                BodyOffload(zbuffer& path);
                 zcstring  path;
                 size_t    length;
-                virtual ~body_offload()
+                virtual ~BodyOffload()
                 {}
             };
 
@@ -170,13 +170,13 @@ namespace suil {
             };
 
             uint32_t                body_offset{0};
-            body_offload            *offload{nullptr};
-            buffer_t                stage{0};
+            BodyOffload            *offload{nullptr};
+            zbuffer                stage{0};
 
-            sock_adaptor&       sock;
-            http_config_t&      config;
+            SocketAdaptor&       sock;
+            HttpConfig&      config;
 
-            friend class router_t;
+            friend class Router;
             request_params_t params;
         };
     }

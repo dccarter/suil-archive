@@ -146,16 +146,16 @@ namespace suil {
             }
 
             template <typename __T>
-            static inline void vhod_to_vnod_append(buffer_t& b,
+            static inline void vhod_to_vnod_append(zbuffer& b,
                   const typename  std::enable_if<std::is_arithmetic<__T>::value, __T>::type & d)
             { b << d; }
 
-            static inline void vhod_to_vnod_append(buffer_t& b, const zcstring &d) {
+            static inline void vhod_to_vnod_append(zbuffer& b, const zcstring &d) {
                 b << '"' << d << '"';
             }
 
             template <typename __T>
-            static char *vhod_to_vnod(buffer_t& b, const std::vector<__T>& data) {
+            static char *vhod_to_vnod(zbuffer& b, const std::vector<__T>& data) {
                 b << "{";
                 bool  first{true};
                 for (auto& d: data) {
@@ -290,7 +290,7 @@ namespace suil {
                 if (async) {
                     int status = PQsendQueryParams(
                             conn,
-                            stmt.str,
+                            stmt.data(),
                             (int) sizeof...(__T),
                             oids,
                             values,
@@ -298,15 +298,15 @@ namespace suil {
                             bins,
                             0);
                     if (!status) {
-                        ierror("ASYNC QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
+                        ierror("ASYNC QUERY: %s failed: %s", stmt.data(), PQerrorMessage(conn));
                         throw std::runtime_error("executing async query failed");
                     }
 
                     bool wait = true, err = false;
                     while (!err && PQflush(conn)) {
-                        trace("ASYNC QUERY: %s wait write %ld", stmt.cstr, timeout);
+                        trace("ASYNC QUERY: %s wait write %ld", stmt.data(), timeout);
                         if (wait_write()) {
-                            ierror("ASYNC QUERY: % wait write failed: %s", stmt.cstr, errno_s);
+                            ierror("ASYNC QUERY: % wait write failed: %s", stmt.data(), errno_s);
                             err  = true;
                             continue;
                         }
@@ -314,9 +314,9 @@ namespace suil {
 
                     while (wait && !err) {
                         if (PQisBusy(conn)) {
-                            trace("ASYNC QUERY: %s wait read %ld", stmt.cstr, timeout);
+                            trace("ASYNC QUERY: %s wait read %ld", stmt.data(), timeout);
                             if (wait_read()) {
-                                ierror("ASYNC QUERY: %s wait read failed: %s", stmt.cstr, errno_s);
+                                ierror("ASYNC QUERY: %s wait read failed: %s", stmt.data(), errno_s);
                                 err = true;
                                 continue;
                             }
@@ -324,7 +324,7 @@ namespace suil {
 
                         // asynchronously wait for results
                         if (!PQconsumeInput(conn)) {
-                            ierror("ASYNC QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
+                            ierror("ASYNC QUERY: %s failed: %s", stmt.data(), PQerrorMessage(conn));
                             err = true;
                             continue;
                         }
@@ -354,7 +354,7 @@ namespace suil {
 
                             default:
                                 ierror("ASYNC QUERY: % failed: %s",
-                                      stmt.cstr, PQerrorMessage(conn));
+                                      stmt.data(), PQerrorMessage(conn));
                                 wait = false;
                         }
                     }
@@ -369,7 +369,7 @@ namespace suil {
                 else {
                     PGresult *result = PQexecParams(
                             conn,
-                            stmt.str,
+                            stmt.data(),
                             (int) sizeof...(__T),
                             oids,
                             values,
@@ -379,13 +379,13 @@ namespace suil {
                     ExecStatusType status = PQresultStatus(result);
 
                     if ((status != PGRES_TUPLES_OK && status != PGRES_COMMAND_OK)) {
-                        ierror("QUERY: %s failed: %s", stmt.cstr, PQerrorMessage(conn));
+                        ierror("QUERY: %s failed: %s", stmt(), PQerrorMessage(conn));
                         PQclear(result);
                         results.fail();
                     }
                     else if ((PQntuples(result) == 0)) {
                         idebug("QUERY: %s has zero entries: %s",
-                              stmt.cstr, PQerrorMessage(conn));
+                              stmt(), PQerrorMessage(conn));
                         PQclear(result);
                     }
                     else {
@@ -525,9 +525,9 @@ namespace suil {
             }
 
             void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, zcstring& s) {
-                val = s.cstr;
+                val = s.data();
                 oid  =  TEXTOID;
-                len  = s.len;
+                len  = s.size();
                 bin  = 1;
                 return nullptr;
             }
@@ -550,7 +550,7 @@ namespace suil {
 
             template <typename __V>
             void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const std::vector<__V>& v) {
-                buffer_t b(32);
+                zbuffer b(32);
                 val  = __internal::vhod_to_vnod(b, v);
                 oid  = __internal::type_to_pgsql_oid_type(v);
                 len  = (int) b.size();
@@ -663,26 +663,26 @@ namespace suil {
             pgsql_result results;
         };
 
-        struct pgsql_connection: LOGGER(dtag(PGSQL_CONN)) {
-            typedef std::vector<pgsql_connection*>::iterator active_conns_iterator_t;
-            typedef zcstr_map_t <PGSQLStatement> stmt_map_t;
+        struct PgSqlConnection: LOGGER(dtag(PGSQL_CONN)) {
+            typedef std::vector<PgSqlConnection*>::iterator active_conns_iterator_t;
+            typedef zmap <PGSQLStatement> stmt_map_t;
             typedef std::shared_ptr<stmt_map_t>  stmt_map_ptr_t;
-            using free_conn_t = std::function<void(pgsql_connection*)>;
+            using free_conn_t = std::function<void(PgSqlConnection*)>;
 
-            pgsql_connection(PGconn *conn, bool async, int64_t timeout, free_conn_t free_conn)
+            PgSqlConnection(PGconn *conn, bool async, int64_t timeout, free_conn_t free_conn)
                 : conn(conn),
                   async(async),
                   timeout(timeout),
                   free_conn(free_conn)
             {}
 
-            pgsql_connection(const pgsql_connection&) = delete;
-            pgsql_connection&operator=(const pgsql_connection&) = delete;
+            PgSqlConnection(const PgSqlConnection&) = delete;
+            PgSqlConnection&operator=(const PgSqlConnection&) = delete;
 
-            PGSQLStatement operator()(buffer_t& req) {
+            PGSQLStatement operator()(zbuffer& req) {
                 /* temporary zero copy string */
                 zcstring tmp(req, false);
-                trace("%s", tmp.cstr);
+                trace("%s", tmp());
 
                 auto it = stmt_cache.find(tmp);
                 if (it != stmt_cache.end()) {
@@ -703,14 +703,14 @@ namespace suil {
             PGSQLStatement operator()(const char *req) {
                 /* temporary zero copy string */
                 zcstring tmp(req);
-                trace("%s", tmp.cstr);
+                trace("%s", tmp());
 
                 auto it = stmt_cache.find(tmp);
                 if (it != stmt_cache.end()) {
                     return it->second;
                 }
 
-                buffer_t breq;
+                zbuffer breq;
                 breq << req;
                 return (*this)(breq);
             }
@@ -733,7 +733,7 @@ namespace suil {
                 return false;
             }
 
-            inline pgsql_connection& get() {
+            inline PgSqlConnection& get() {
                 refs++;
                 return (*this);
             }
@@ -746,11 +746,11 @@ namespace suil {
                 destroy(false);
             }
 
-            static inline void params(buffer_t& req, int i) {
+            static inline void params(zbuffer& req, int i) {
                 req << "$" << i;
             }
 
-            inline ~pgsql_connection() {
+            inline ~PgSqlConnection() {
                 if (conn) {
                     destroy(true);
                 }
@@ -760,11 +760,11 @@ namespace suil {
 
             void destroy(bool dctor = false ) {
                 if (conn == nullptr || --refs > 0) {
-                    /* connection still being used */
+                    /* Connection still being used */
                     return;
                 }
 
-                trace("destroying connection dctor %d %d", dctor, refs);
+                trace("destroying Connection dctor %d %d", dctor, refs);
                 if (async) {
                     PGresult *res;
                     while ((res = PQgetResult(conn)) != nullptr)
@@ -772,11 +772,11 @@ namespace suil {
                 }
 
                 if (free_conn) {
-                    /* call the function that will free the connection */
+                    /* call the function that will free the Connection */
                     free_conn(this);
                 }
                 else {
-                    /* no function to free connection, finish */
+                    /* no function to free Connection, finish */
                     PQfinish(conn);
                 }
                 conn = nullptr;
@@ -788,7 +788,7 @@ namespace suil {
                 }
             }
 
-            friend struct pgsql_db;
+            friend struct PgSqlDb;
             PGconn      *conn;
             stmt_map_t  stmt_cache;
             bool        async{false};
@@ -798,11 +798,11 @@ namespace suil {
             int         refs{1};
             bool        deleting{false};
         };
-        typedef std::vector<pgsql_connection*> active_conns_t;
+        typedef std::vector<PgSqlConnection*> active_conns_t;
 
-        struct pgsql_db : LOGGER(dtag(PGSQL_DB)) {
-            typedef pgsql_connection Connection;
-            pgsql_db()
+        struct PgSqlDb : LOGGER(dtag(PGSQL_DB)) {
+            typedef PgSqlConnection Connection;
+            PgSqlDb()
             {}
 
             Connection& operator()() {
@@ -812,12 +812,12 @@ namespace suil {
             Connection& connection() {
                 PGconn *conn;
                 if (conns.empty()) {
-                    /* open a new connection */
+                    /* open a new Connection */
                     conn = open();
                 }
                 else {
                     conn_handle_t h = conns.back();
-                    /* cancel connection expiry */
+                    /* cancel Connection expiry */
                     h.alive = -1;
                     conn = h.conn;
                     conns.pop_back();
@@ -840,7 +840,7 @@ namespace suil {
             template <typename __O>
             void configure(__O& opts, const char *constr) {
                 if (conn_str) {
-                    /* database connection already initialized */
+                    /* database Connection already initialized */
                     throw std::runtime_error("database already initialized");
                 }
 
@@ -851,16 +851,16 @@ namespace suil {
 
                 if (keep_alive > 0 && keep_alive < 3000) {
                     /* limit cleanup to 3 seconds */
-                    iwarn("changing db connection keep alive from %ld ms to 3 seconds", keep_alive);
+                    iwarn("changing db Connection keep alive from %ld ms to 3 seconds", keep_alive);
                     keep_alive = 3000;
                 }
 
-                /* open and close connetion to verify the connection string*/
+                /* open and close connetion to verify the Connection string*/
                 PGconn *conn = open();
                 PQfinish(conn);
             }
 
-            ~pgsql_db() {
+            ~PgSqlDb() {
                 if (cleaning) {
                     /* unschedule the cleaning coroutine */
                     trace("notifying cleanup routine to exit");
@@ -883,14 +883,14 @@ namespace suil {
 
             PGconn *open() {
                 PGconn *conn;
-                conn = PQconnectdb(conn_str.cstr);
+                conn = PQconnectdb(conn_str.data());
                 if (conn == nullptr || (PQstatus(conn) != CONNECTION_OK)) {
                     ierror("CONNECT: %s", PQerrorMessage(conn));
                     throw std::runtime_error("connecting to database failed");
                 }
 
                 if (async) {
-                    /* connection should be set to non blocking */
+                    /* Connection should be set to non blocking */
                     if (PQsetnonblocking(conn, 1)) {
                         ierror("CONNECT: %s", PQerrorMessage(conn));
                         throw std::runtime_error("connecting to database failed");
@@ -900,7 +900,7 @@ namespace suil {
                 return conn;
             }
 
-            static coroutine void cleanup(pgsql_db& db) {
+            static coroutine void cleanup(PgSqlDb& db) {
                 /* cleanup all expired connections */
                 bool status;
                 int64_t expires = db.keep_alive + 5;
@@ -982,13 +982,13 @@ namespace suil {
             bool          async{false};
             int64_t       keep_alive{-1};
             int64_t       timeout{-1};
-            async_t<bool> notify{false};
+            Async<bool>   notify{false};
             bool          cleaning{false};
             zcstring      conn_str;
         };
 
         namespace mw {
-            using postgres = sql::middleware<pgsql_db>;
+            using Postgres = sql::Middleware<PgSqlDb>;
         }
     }
 }

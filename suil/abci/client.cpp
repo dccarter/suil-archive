@@ -15,7 +15,7 @@ namespace suil {
             process(res, req, resp);
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Failed to process echo request";
+                res() << "Failed to process echo Request";
             }
             else {
                 const std::string &ecmsg = resp.echo().message();
@@ -40,7 +40,7 @@ namespace suil {
             process(res, req, resp);
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing flush request failed";
+                res() << "Processing flush Request failed";
             }
         }
 
@@ -55,7 +55,7 @@ namespace suil {
 
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing info request failed";
+                res() << "Processing info Request failed";
             }
 
             out = std::move(rsif);
@@ -75,7 +75,7 @@ namespace suil {
 
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing setoption request failed";
+                res() << "Processing setoption Request failed";
             }
             else {
                 const ResponseSetOption &rsopt = resp.set_option();
@@ -97,7 +97,7 @@ namespace suil {
 
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing delivertx request failed";
+                res() << "Processing delivertx Request failed";
             }
             else {
                 rsdt = std::move(*resp.mutable_deliver_tx());
@@ -118,7 +118,7 @@ namespace suil {
 
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing delivertx request failed";
+                res() << "Processing delivertx Request failed";
             }
             else {
                 rscx = std::move(*resp.mutable_check_tx());
@@ -140,7 +140,7 @@ namespace suil {
 
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing query request failed";
+                res() << "Processing query Request failed";
             }
             else {
                 rsq = std::move(*resp.mutable_query());
@@ -162,7 +162,7 @@ namespace suil {
             process(res, req, resp);
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "processing query request failed";
+                res() << "processing query Request failed";
             }
             else {
                 rscm = std::move(*resp.mutable_commit());
@@ -183,7 +183,7 @@ namespace suil {
 
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "processing initchain request failed";
+                res() << "processing initchain Request failed";
             }
 
             req.release_init_chain();
@@ -200,7 +200,7 @@ namespace suil {
             process(res, req, resp);
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing beginblock request failed";
+                res() << "Processing beginblock Request failed";
             }
 
             req.release_begin_block();
@@ -216,7 +216,7 @@ namespace suil {
             process(res, req, resp);
             if (!res.Ok()) {
                 // sending echo failed
-                res() << "Processing endblock request failed";
+                res() << "Processing endblock Request failed";
             }
 
             rseb = std::move(*resp.mutable_end_block());
@@ -226,13 +226,13 @@ namespace suil {
 
         void base_client::sendreq(Result& res, types::Request &req) {
             int rqlen = req.ByteSize();
-            buffer_t out((uint32_t)(rqlen+2));
+            zbuffer out((uint32_t)(rqlen+2));
             char *data = out.data();
 
             if (!req.SerializeToArray(data, rqlen)) {
-                // serializing request failed
+                // serializing Request failed
                 res(CodeType::BaseEncodingError)
-                        .appendf("serializing request failed");
+                        .appendf("serializing Request failed");
                 return;
             }
 
@@ -246,7 +246,7 @@ namespace suil {
             if (sent != 1) {
                 // failed to size of variable size buffer
                 res(CodeType::InternalError)
-                        .appendf("sending request header failed: ", errno_s);
+                        .appendf("sending Request header failed: ", errno_s);
                 return;
             }
 
@@ -254,7 +254,7 @@ namespace suil {
             if (sent != vitlen) {
                 // failed to send variable size
                 res(CodeType::InternalError)
-                        .appendf("sending response header failed %lu/%lu: ", sent, vitlen, errno_s);
+                        .appendf("sending Response header failed %lu/%lu: ", sent, vitlen, errno_s);
                 return;
             }
 
@@ -304,7 +304,7 @@ namespace suil {
 
             size  = len.read<uint64_t>();
 
-            buffer_t rxb(size+2);
+            zbuffer rxb(size+2);
             char *data = rxb.data();
             size_t trd = 0, total = 0;
             do {
@@ -327,14 +327,14 @@ namespace suil {
         void base_client::process(Result& res, types::Request &req, Response &resp) {
             sendreq(res, req);
             if (!res.Ok()) {
-                // failed to send request
+                // failed to send Request
                 return;
             }
 
             recvresp(res, resp);
             if (!res.Ok()) {
-                // failed to received response
-                res() << "receiving response from application failed";
+                // failed to received Response
+                res() << "receiving Response from application failed";
                 return;
             }
 

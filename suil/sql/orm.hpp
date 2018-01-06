@@ -32,7 +32,7 @@ namespace suil {
         }
 
         template<typename __C, typename __O>
-        struct orm {
+        struct Orm {
             typedef __O object_t;
             typedef __internal::remove_auto_increment_t<__O> without_auto_inc_type;
             typedef __internal::extract_primary_keys_t<__O>  primary_keys;
@@ -42,7 +42,7 @@ namespace suil {
             static_assert(!std::is_same<primary_keys, void>::value,
                 "ORM requires that at least 1 member of CRUD be a primary key");
 
-            orm(const std::string& tbl, __C& conn)
+            Orm(const std::string& tbl, __C& conn)
                 : conn(conn.get()),
                   table(tbl)
             {}
@@ -50,7 +50,7 @@ namespace suil {
             template<typename  __T>
             bool find(int id, __T& o)
             {
-                buffer_t qb(32);
+                zbuffer qb(32);
                 bool first = true;
 
                 qb << "select ";
@@ -72,7 +72,7 @@ namespace suil {
             template<typename __T>
             bool insert(const __T& o)
             {
-                buffer_t qb(32), vb(32);
+                zbuffer qb(32), vb(32);
 
                 qb << "insert into " << table << "(";
 
@@ -103,7 +103,7 @@ namespace suil {
 
             template <typename __F>
             void forall(__F f) {
-                buffer_t qb(32);
+                zbuffer qb(32);
                 qb << "select * from " << table;
                 conn(qb)() | f;
             }
@@ -114,7 +114,7 @@ namespace suil {
                 static_assert(decltype(pk)::size() > 0,
                         "primary key required in order to update an object.");
 
-                buffer_t qb(32);
+                zbuffer qb(32);
                 qb << "update " << table << " set ";
                 bool first = true;
                 int i = 1;
@@ -155,7 +155,7 @@ namespace suil {
 
             template <typename __T>
             void remove(__T& o) {
-                buffer_t qb(32);
+                zbuffer qb(32);
 
                 qb << "delete from " << table << " where ";
                 bool first = true;
@@ -176,8 +176,8 @@ namespace suil {
                 iod::apply(values, conn(qb));
             }
 
-            ~orm() {
-                /* return connection reference */
+            ~Orm() {
+                /* return Connection reference */
                 conn.put();
             }
 

@@ -12,29 +12,29 @@ namespace suil {
 
     namespace http {
 
-        class base_rule_t {
+        class BaseRule {
         public:
-            base_rule_t(std::string rule)
+            BaseRule(std::string rule)
                 : rule_(std::move(rule))
             {}
 
-            virtual ~base_rule_t() = default;
+            virtual ~BaseRule() = default;
 
             virtual void validate() = 0;
 
-            virtual void handle(const request&,
-                                response&,
+            virtual void handle(const Request&,
+                                Response&,
                                 const suil::detail::routing_params &) = 0;
 
             uint32_t get_methods() {
                 return methods_;
             }
 
-            friend class router_t;
+            friend class Router;
             route_attributes_t attrs_{false, false, false, false};
 
         protected:
-            uint32_t methods_{1 << (uint16_t) method_t::Get};
+            uint32_t methods_{1 << (uint16_t) Method::Get};
 
             std::string rule_;
             std::string name_;
@@ -55,8 +55,8 @@ namespace suil {
                 struct call_params {
                     H1 &handler;
                     const suil::detail::routing_params &params;
-                    const request &req;
-                    response &res;
+                    const Request &req;
+                    Response &res;
                 };
 
                 template<typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2>
@@ -114,11 +114,11 @@ namespace suil {
                 struct Wrapped {
                     template<typename ... Args>
                     void set(Func f, typename std::enable_if<
-                            !std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request &>::value, int>::type = 0) {
+                            !std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const Request &>::value, int>::type = 0) {
                         handler_ = (
                                 [f = std::move(f)]
-                                        (const request &, response &res, Args... args) {
-                                    res = response(f(args...));
+                                        (const Request &, Response &res, Args... args) {
+                                    res = Response(f(args...));
                                     res.end();
                                 });
                     }
@@ -129,8 +129,8 @@ namespace suil {
                                 : f(std::move(f)) {
                         }
 
-                        void operator()(const request &req, response &res, Args... args) {
-                            res = response(f(req, args...));
+                        void operator()(const Request &req, Response &res, Args... args) {
+                            res = Response(f(req, args...));
                             res.end();
                         }
 
@@ -139,45 +139,45 @@ namespace suil {
 
                     template<typename ... Args>
                     void set(Func f, typename std::enable_if<
-                            std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request &>::value &&
-                            !std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response &>::value, int>::type = 0) {
+                            std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const Request &>::value &&
+                            !std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, Response &>::value, int>::type = 0) {
                         handler_ = req_handler_wrapper<Args...>(std::move(f));
                         /*handler_ = (
                             [f = std::move(f)]
-                            (const request& req, response& res, Args... args){
-                                 res = response(f(req, args...));
+                            (const Request& req, Response& res, Args... args){
+                                 res = Response(f(req, args...));
                                  res.end();
                             });*/
                     }
 
                     template<typename ... Args>
                     void set(Func f, typename std::enable_if<
-                            std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request &>::value &&
-                            std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response &>::value, int>::type = 0) {
+                            std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const Request &>::value &&
+                            std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, Response &>::value, int>::type = 0) {
                         handler_ = std::move(f);
                     }
 
                     template<typename ... Args>
                     struct handler_type_helper {
-                        using type = std::function<void(const request &, response &, Args...)>;
+                        using type = std::function<void(const Request &, Response &, Args...)>;
                         using args_type = magic::S<typename magic::promote_t<Args>...>;
                     };
 
                     template<typename ... Args>
-                    struct handler_type_helper<const request &, Args...> {
-                        using type = std::function<void(const request &, response &, Args...)>;
+                    struct handler_type_helper<const Request &, Args...> {
+                        using type = std::function<void(const Request &, Response &, Args...)>;
                         using args_type = magic::S<typename magic::promote_t<Args>...>;
                     };
 
                     template<typename ... Args>
-                    struct handler_type_helper<const request &, response &, Args...> {
-                        using type = std::function<void(const request &, response &, Args...)>;
+                    struct handler_type_helper<const Request &, Response &, Args...> {
+                        using type = std::function<void(const Request &, Response &, Args...)>;
                         using args_type = magic::S<typename magic::promote_t<Args>...>;
                     };
 
                     typename handler_type_helper<ArgsWrapped...>::type handler_;
 
-                    void operator()(const request &req, response &res, const suil::detail::routing_params &params) {
+                    void operator()(const Request &req, Response &res, const suil::detail::routing_params &params) {
                         detail::routing_handler_call_helper::call<
                         detail::routing_handler_call_helper::call_params<
                         decltype(handler_)>,
@@ -205,14 +205,14 @@ namespace suil {
                 return (self_t&)*this;
             }
 
-            self_t& methods(method_t method)
+            self_t& methods(Method method)
             {
                 ((self_t*)this)->methods_ = 1 << (int)method;
                 return (self_t&)*this;
             }
 
             template <typename ... MethodArgs>
-            self_t& methods(method_t method, MethodArgs ... args_method)
+            self_t& methods(Method method, MethodArgs ... args_method)
             {
                 methods(args_method...);
                 ((self_t*)this)->methods_ |= 1 << (int)method;
@@ -220,12 +220,12 @@ namespace suil {
             }
         };
 
-        class dynamic_rule : public base_rule_t, public rule_parameter_traits<dynamic_rule>
+        class DynamicRule : public BaseRule, public rule_parameter_traits<DynamicRule>
         {
         public:
 
-            dynamic_rule(std::string rule)
-                : base_rule_t(std::move(rule))
+            DynamicRule(std::string rule)
+                : BaseRule(std::move(rule))
             {
             }
 
@@ -237,22 +237,22 @@ namespace suil {
                 }
             }
 
-            void handle(const request& req, response& res, const suil::detail::routing_params& params) override
+            void handle(const Request& req, Response& res, const suil::detail::routing_params& params) override
             {
                 erased_handler_(req, res, params);
             }
 
-            dynamic_rule&operator()(method_t m) {
+            DynamicRule&operator()(Method m) {
                 return methods(m);
             }
 
             template <typename... _Methods>
-            dynamic_rule& operator()(method_t m, _Methods... ms) {
+            DynamicRule& operator()(Method m, _Methods... ms) {
                 return methods(m, ms...);
             }
 
             template <typename... __Opts>
-            dynamic_rule& attrs(__Opts... opts) {
+            DynamicRule& attrs(__Opts... opts) {
                 /* apply configuration options */
                 utils::apply_config(attrs_, opts...);
                 return *this;
@@ -265,11 +265,11 @@ namespace suil {
                 erased_handler_ = wrap(std::move(f), magic::gen_seq<function_t::arity>());
             }
 
-            // enable_if Arg1 == request && Arg2 == response
-            // enable_if Arg1 == request && Arg2 != resposne
-            // enable_if Arg1 != request
+            // enable_if Arg1 == Request && Arg2 == Response
+            // enable_if Arg1 == Request && Arg2 != resposne
+            // enable_if Arg1 != Request
             template <typename Func, unsigned ... Indices>
-            std::function<void(const request&, response&, const suil::detail::routing_params&)>
+            std::function<void(const Request&, Response&, const suil::detail::routing_params&)>
             wrap(Func f, magic::seq<Indices...>)
             {
                 using function_t = function_traits<Func>;
@@ -294,17 +294,17 @@ namespace suil {
                 (*this).template operator()<Func>(std::forward(f));
             }
         private:
-            std::function<void(const request&, response&, const suil::detail::routing_params&)> erased_handler_;
+            std::function<void(const Request&, Response&, const suil::detail::routing_params&)> erased_handler_;
 
         };
 
         template <typename ... Args>
-        class tagged_rule : public base_rule_t, public rule_parameter_traits<tagged_rule<Args...>> {
+        class TaggedRule : public BaseRule, public rule_parameter_traits<TaggedRule<Args...>> {
         public:
-            using self_t = tagged_rule<Args...>;
+            using self_t = TaggedRule<Args...>;
 
-            tagged_rule(std::string rule)
-                : base_rule_t(std::move(rule))
+            TaggedRule(std::string rule)
+                : BaseRule(std::move(rule))
             {}
 
             void validate() override {
@@ -318,24 +318,24 @@ namespace suil {
             typename std::enable_if<magic::CallHelper<Func, magic::S<Args...>>::value, void>::type
             operator()(Func &&f) {
                 static_assert(magic::CallHelper<Func, magic::S<Args...>>::value ||
-                              magic::CallHelper<Func, magic::S<request, Args...>>::value,
+                              magic::CallHelper<Func, magic::S<Request, Args...>>::value,
                               "Handler type is mismatched with URL parameters");
                 static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value,
                               "Handler function cannot have void return type; valid return types: string, int, resposne, json object");
 
-                handler_ = [f = std::move(f)](const request &, response &res, Args ... args) {
-                    res = response(f(args...));
+                handler_ = [f = std::move(f)](const Request &, Response &res, Args ... args) {
+                    res = Response(f(args...));
                     res.end();
                 };
             }
 
-            self_t &operator()(method_t m) {
-                return rule_parameter_traits<tagged_rule< Args...>>::methods(m);
+            self_t &operator()(Method m) {
+                return rule_parameter_traits<TaggedRule< Args...>>::methods(m);
             }
 
             template<typename... _Methods>
-            self_t &operator()(method_t m, _Methods... ms) {
-                return rule_parameter_traits<tagged_rule<Args...>>::methods(m, ms...);
+            self_t &operator()(Method m, _Methods... ms) {
+                return rule_parameter_traits<TaggedRule<Args...>>::methods(m, ms...);
             }
 
             template <typename... __Opts>
@@ -348,17 +348,17 @@ namespace suil {
             template<typename Func>
             typename std::enable_if<
                     !magic::CallHelper<Func, magic::S<Args...>>::value &&
-                    magic::CallHelper<Func, magic::S<request, Args...>>::value,
+                    magic::CallHelper<Func, magic::S<Request, Args...>>::value,
                     void>::type
             operator()(Func &&f) {
                 static_assert(magic::CallHelper<Func, magic::S<Args...>>::value ||
-                              magic::CallHelper<Func, magic::S<request, Args...>>::value,
+                              magic::CallHelper<Func, magic::S<Request, Args...>>::value,
                               "Handler type is mismatched with URL parameters");
-                static_assert(!std::is_same<void, decltype(f(std::declval<request>(), std::declval<Args>()...))>::value,
+                static_assert(!std::is_same<void, decltype(f(std::declval<Request>(), std::declval<Args>()...))>::value,
                               "Handler function cannot have void return type; valid return types: string, Status, resposne, IOD objects");
 
-                handler_ = [f = std::move(f)](const request &req, response &res, Args ... args) {
-                    res = response(f(req, args...));
+                handler_ = [f = std::move(f)](const Request &req, Response &res, Args ... args) {
+                    res = Response(f(req, args...));
                     res.end();
                 };
             }
@@ -366,16 +366,16 @@ namespace suil {
             template<typename Func>
             typename std::enable_if<
                     !magic::CallHelper<Func, magic::S<Args...>>::value &&
-                    !magic::CallHelper<Func, magic::S<request, Args...>>::value,
+                    !magic::CallHelper<Func, magic::S<Request, Args...>>::value,
                     void>::type
             operator()(Func &&f) {
                 static_assert(magic::CallHelper<Func, magic::S<Args...>>::value ||
-                              magic::CallHelper<Func, magic::S<request, Args...>>::value ||
-                              magic::CallHelper<Func, magic::S<request, response &, Args...>>::value,
+                              magic::CallHelper<Func, magic::S<Request, Args...>>::value ||
+                              magic::CallHelper<Func, magic::S<Request, Response &, Args...>>::value,
                               "Handler type is mismatched with URL parameters");
-                static_assert(std::is_same<void, decltype(f(std::declval<request>(), std::declval<response &>(),
+                static_assert(std::is_same<void, decltype(f(std::declval<Request>(), std::declval<Response &>(),
                                                             std::declval<Args>()...))>::value,
-                              "Handler function with response argument should have void return type");
+                              "Handler function with Response argument should have void return type");
 
                 handler_ = std::move(f);
             }
@@ -386,7 +386,7 @@ namespace suil {
                 (*this).template operator()<Func>(std::forward(f));
             }
 
-            void handle(const request &req, response &res, const suil::detail::routing_params &params) override {
+            void handle(const Request &req, Response &res, const suil::detail::routing_params &params) override {
                 detail::routing_handler_call_helper::call <
                 detail::routing_handler_call_helper::call_params <
                 decltype(handler_) > ,
@@ -398,13 +398,13 @@ namespace suil {
             }
 
         private:
-            std::function<void(const request &, response &, Args...)>
+            std::function<void(const Request &, Response &, Args...)>
             handler_;
         };
 
         const int RULE_SPECIAL_REDIRECT_SLASH = 1;
 
-        class trie_t
+        class Trie
         {
         public:
             struct node_t
@@ -424,7 +424,7 @@ namespace suil {
                 }
             };
 
-            trie_t()
+            Trie()
                 : nodes_(1)
             {}
 
@@ -488,20 +488,20 @@ namespace suil {
         };
 
         define_log_tag(HTTP_ROUTER);
-        class router_t : LOGGER(dtag(HTTP_ROUTER))
+        class Router : LOGGER(dtag(HTTP_ROUTER))
         {
         public:
-            router_t(std::string& base)
+            Router(std::string& base)
                 : rules_(2),
                   api_base(base)
             {}
 
-            dynamic_rule& new_rule_dynamic(const std::string& rule);
+            DynamicRule& new_rule_dynamic(const std::string& rule);
 
             template <uint64_t N>
-            typename suil::magic::arguments<N>::type::template rebind<tagged_rule>& new_rule_tagged(const std::string& rule)
+            typename suil::magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule)
             {
-                using rule_t = typename suil::magic::arguments<N>::type::template rebind<tagged_rule>;
+                using rule_t = typename suil::magic::arguments<N>::type::template rebind<TaggedRule>;
                 auto rule_obj = new rule_t(rule);
 
                 internal_add_rule_object(rule, rule_obj);
@@ -509,11 +509,11 @@ namespace suil {
                 return *rule_obj;
             }
 
-            void internal_add_rule_object(const std::string& rule, base_rule_t* rule_obj);
+            void internal_add_rule_object(const std::string& rule, BaseRule* rule_obj);
 
             void validate();
 
-            void handle(const request& req, response& res);
+            void handle(const Request& req, Response& res);
 
             void debug_print() {
                 trie_.debug_print();
@@ -521,20 +521,20 @@ namespace suil {
 
         private:
             template <typename __H, typename... __Mws>
-            friend struct connection;
-            void before(request& req, response& resp);
-            std::vector<std::unique_ptr<base_rule_t>> rules_{};
-            trie_t trie_;
+            friend struct Connection;
+            void before(Request& req, Response& resp);
+            std::vector<std::unique_ptr<BaseRule>> rules_{};
+            Trie trie_;
             std::string api_base{""};
         };
 
-        struct system_attrs {
+        struct SystemAttrs {
             struct Context{
             };
 
-            void before(request& req, response&, Context&);
+            void before(Request& req, Response&, Context&);
 
-            void after(request&, http::response&, Context&);
+            void after(Request&, http::Response&, Context&);
 
             template<typename __T>
             void configure(__T& opts) {
