@@ -46,12 +46,12 @@ namespace suil {
         template <typename __T, typename... __Args>
         __T& regtask(const char *name, __Args... args) {
             if (check(name)) {
-                throw suil_error::create("application task '",
+                throw SuilError::create("application task '",
                             name, "' already registered.");
             }
             __T* task(new __T(name, args...));
             if (task == nullptr) {
-                throw suil_error::create("unable to allocate memory for task '",
+                throw SuilError::create("unable to allocate memory for task '",
                             name, "'");
             }
             zcstring tmp(name);

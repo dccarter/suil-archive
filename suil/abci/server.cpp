@@ -42,7 +42,7 @@ namespace suil {
                 catch (...) {
                     // log unhandled errors and abort
                     ierror("un handled application error: %s",
-                           suil_error::getmsg(std::current_exception()));
+                           SuilError::getmsg(std::current_exception()));
                     break;
                 }
 

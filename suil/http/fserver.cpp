@@ -105,9 +105,9 @@ namespace suil {
             cached_file_t& cf = sf->second;
             if (mm.allow_caching) {
                 // if file supports cache headers employ cache headers
-                strview_t cc = req.header("If-Modified-Since");
+                strview cc = req.header("If-Modified-Since");
                 if (!cc.empty()) {
-                    time_t if_mod = datetime(cc.data());
+                    time_t if_mod = DateTime(cc.data());
                     if (if_mod >= cf.last_mod) {
                         // file was not modified
                         resp.end(Status::NOT_MODIFIED);
@@ -143,9 +143,9 @@ namespace suil {
             cached_file_t& cf = sf->second;
             if (mm.allow_caching) {
                 // if file supports cache headers employ cache headers
-                strview_t cc = req.header("If-Modified-Since");
+                strview cc = req.header("If-Modified-Since");
                 if (!cc.empty()) {
-                    time_t if_mod = datetime(cc.data());
+                    time_t if_mod = DateTime(cc.data());
                     if (if_mod >= cf.last_mod) {
                         // file was not modified
                         resp.end(Status::NOT_MODIFIED);
@@ -179,7 +179,7 @@ namespace suil {
             }
 
             // check for range base Request support
-            strview_t range = req.header("Range");
+            strview range = req.header("Range");
             if (!range.empty() && mm.allow_range) {
                 // prepare range based Request
                 build_range_resp(req, resp, range, cf, mm);
@@ -200,7 +200,7 @@ namespace suil {
         }
 
         void FileServer::build_range_resp(
-                const Request &req, Response &resp, strview_t &rng, cached_file_t &cf, mime_type_t &mm)
+                const Request &req, Response &resp, strview &rng, cached_file_t &cf, mime_type_t &mm)
         {
             const char *pend = rng.data() + rng.size();
             const char *it = strchr(rng.data(), '=');
@@ -260,7 +260,7 @@ namespace suil {
                 const Request &req, Response &resp, cached_file_t &cf, mime_type_t &mm)
         {
             // get http data format
-            zcstring dt(datetime(cf.last_mod)(datetime::HTTP_FMT));
+            zcstring dt(DateTime(cf.last_mod)(DateTime::HTTP_FMT));
             resp.header("Last-Modified", dt);
             // add cache control header
             if (mm.cache_expires > 0) {

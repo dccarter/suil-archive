@@ -589,7 +589,7 @@ namespace suil {
                 const char *str;
                 uint32_t len;
 
-                strparams(strview_t &sv)
+                strparams(strview &sv)
                         : str(sv.data()),
                           len(sv.size()) {}
 
@@ -603,8 +603,8 @@ namespace suil {
                     return *this;
                 }
 
-                operator strview_t() {
-                    return strview_t(str, len);
+                operator strview() {
+                    return strview(str, len);
                 }
             };
 
@@ -772,7 +772,7 @@ namespace suil {
         }
 
         template<>
-        inline void routing_params::push<strview_t>(strview_t v) {
+        inline void routing_params::push<strview>(strview v) {
             strparams str(v);
             string_params.push(str);
         }
@@ -793,7 +793,7 @@ namespace suil {
         }
 
         template<>
-        inline void routing_params::pop<strview_t>(strview_t) {
+        inline void routing_params::pop<strview>(strview) {
             string_params.pop();
         }
 

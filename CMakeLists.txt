@@ -61,7 +61,7 @@ set(SUIL_LIBRARIES
         ${OpenSSL_LIBRARIES})
 
 set(SUIL_STATIC_LIBRARIES
-        uuid.a sqlite3.a pq ssl.a crypto.a)
+        uuid.a sqlite3.a pq ssl.a crypto)
 
 if (SUIL_BUILD_ABCI)
     find_package(Protobuf REQUIRED)
@@ -70,6 +70,7 @@ if (SUIL_BUILD_ABCI)
 endif()
 
 message(STATUS "Suil dependecies ${SUIL_LIBRARIES}")
+message(STATUS "Suil static dependecies ${SUIL_STATIC_LIBRARIES}")
 
 add_definitions(${SUIL_DEFINES})
 
@@ -91,7 +92,7 @@ if (SUIL_BUILD_DEV_PACKAGE)
         set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil sabci_s)
     else()
         set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s)
-        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil sabci_s)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil)
     endif()
 
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})
@@ -169,6 +170,7 @@ endif()
 
 if (SUIL_DEV_IDE)
 #    add_subdirectory(apps/suil-web)
+    add_subdirectory(apps/molly)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

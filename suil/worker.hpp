@@ -143,7 +143,7 @@ namespace suil {
             return send(dst, msg, str.data(), str.size());
         }
 
-        static inline ssize_t send(uint8_t dst, uint8_t msg, strview_t& sv) {
+        static inline ssize_t send(uint8_t dst, uint8_t msg, strview& sv) {
             return send(dst, msg, sv.data(), sv.size());
         }
 
@@ -163,7 +163,7 @@ namespace suil {
             broadcast(msg, str.data(), str.size());
         }
 
-        static inline void broadcast(uint8_t msg, const strview_t& sv) {
+        static inline void broadcast(uint8_t msg, const strview& sv) {
             broadcast(msg, sv.data(), sv.size());
         }
 

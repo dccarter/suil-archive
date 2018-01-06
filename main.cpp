@@ -126,7 +126,7 @@ int main(int argc, const char *argv[])
         iod::json_decode(d, jstr);
     }
     catch(...) {
-        sinfo("error: %s", suil_error::getmsg(std::current_exception()));
+        sinfo("error: %s", SuilError::getmsg(std::current_exception()));
     }
     json::Object& obj = d.name;
     double num = obj["num"].number_value();

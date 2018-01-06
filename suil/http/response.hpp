@@ -174,20 +174,20 @@ namespace suil {
                 header(std::move(h.dup()), std::move(v));
             }
 
-            strview_t header(zcstring& field) const {
+            strview header(zcstring& field) const {
                 auto it = headers.find(field);
                 if (it != headers.end()) {
                     return it->second;
                 }
-                return strview_t();
+                return strview();
             }
 
-            strview_t header(const char *field) const {
+            strview header(const char *field) const {
                 zcstring tmp(field);
                 return header(field);
             }
 
-            strview_t header(std::string& field) const {
+            strview header(std::string& field) const {
                 zcstring tmp(field.data(), field.size(), false);
                 return header(field);
             }

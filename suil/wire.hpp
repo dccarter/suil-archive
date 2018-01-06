@@ -9,26 +9,26 @@
 
 namespace suil {
 
-    wire& wire::operator<<(const char *str) {
+    Wire& Wire::operator<<(const char *str) {
         zcstring tmp{str};
         Ego << tmp;
         return Ego;
     }
 
-    wire& wire::operator<<(const std::string &str) {
+    Wire& Wire::operator<<(const std::string &str) {
         zcstring tmp{str.data(), str.size(), false};
         Ego << tmp;
         return Ego;
     }
 
-    wire& wire::operator>>(std::string &str) {
+    Wire& Wire::operator>>(std::string &str) {
         varint v{0};
         Ego >> v;
         uint64_t tmp{v.read<uint64_t>()};
         if (tmp > 0) {
             str.resize(tmp, '\0');
             if (!reverse((uint8_t *)str.data(), tmp)) {
-                suil_error::create("pulling string from wire failed");
+                SuilError::create("pulling string from wire failed");
             }
         }
 
@@ -36,7 +36,7 @@ namespace suil {
     }
 
     template <typename __T>
-    wire& wire::operator<<(const std::vector<__T> &vec) {
+    Wire& Wire::operator<<(const std::vector<__T> &vec) {
         varint sz{vec.size()};
         Ego << sz;
         for (auto& e: vec) {
@@ -47,7 +47,7 @@ namespace suil {
     }
 
     template <typename... __T>
-    wire& wire::operator<<(const std::vector<iod::sio<__T...>> &vec) {
+    Wire& Wire::operator<<(const std::vector<iod::sio<__T...>> &vec) {
         varint sz{vec.size()};
         Ego << sz;
         for (const iod::sio<__T...>& e: vec) {
@@ -58,7 +58,7 @@ namespace suil {
     }
 
     template <typename... __T>
-    wire& wire::operator>>(std::vector<iod::sio<__T...>> &vec) {
+    Wire& Wire::operator>>(std::vector<iod::sio<__T...>> &vec) {
         varint sz{0};
         Ego >> sz;
         uint64_t entries{sz.read<uint64_t>()};
@@ -72,7 +72,7 @@ namespace suil {
     }
 
     template <typename __T>
-    wire& wire::operator>>(std::vector<__T> &vec) {
+    Wire& Wire::operator>>(std::vector<__T> &vec) {
         varint sz{0};
         Ego >> sz;
         uint64_t entries{sz.read<uint64_t>()};
@@ -86,7 +86,7 @@ namespace suil {
     }
 
     template <typename... __T>
-    wire& wire::operator<<(const iod::sio<__T...> &o) {
+    Wire& Wire::operator<<(const iod::sio<__T...> &o) {
         //typedef __internal::remove_unwired<decltype(o)> wireble;
         iod::foreach2(o) |
         [&](auto &m) {
@@ -99,7 +99,7 @@ namespace suil {
     }
 
     template <typename... __T>
-    wire& wire::operator>>(iod::sio<__T...> &o) {
+    Wire& Wire::operator>>(iod::sio<__T...> &o) {
         //typedef __internal::remove_unwired<decltype(o)> wireble;
         iod::foreach2(o) |
         [&](auto &m) {
@@ -113,7 +113,7 @@ namespace suil {
 
     using rawbuffer = const std::pair<const uint8_t*, size_t>;
 
-    struct breadboard : wire {
+    struct breadboard : Wire {
 
         breadboard(uint8_t* buf, size_t sz)
             : sink(buf),
@@ -138,6 +138,18 @@ namespace suil {
             return m;
         }
 
+        virtual uint8_t *rd() {
+            return &sink[H];
+        }
+
+        virtual bool move(size_t size) {
+            if (Ego.size() >= size) {
+                Ego.H += size;
+                return true;
+            }
+            return false;
+        }
+
         inline void reset() {
             H = T = 0;
         }
@@ -150,13 +162,13 @@ namespace suil {
             return T - H;
         }
 
-        rawbuffer raw() const {
-            return {&sink[H], size()};
+        Data raw() const {
+            return Data{&sink[H], size(), false};
         };
 
         zcstring hexstr() const {
             auto tmp = Ego.raw();
-            return utils::hexstr(tmp.first, tmp.second);
+            return utils::hexstr(tmp.data(), tmp.size());
         }
 
         bool fromhexstr(zcstring& str) {
@@ -190,35 +202,110 @@ namespace suil {
         {
             // push some data into it;
             Ego.sink = data;
-            Ego.M    = M;
+            Ego.M    = size;
             Ego.T    = size;
             Ego.H    = 0;
         }
 
-        heapboard(const heapboard&) = delete;
-        heapboard(heapboard&&) = delete;
-        heapboard&operator=(const heapboard&) = delete;
-        heapboard&operator=(heapboard&&) = delete;
+        explicit heapboard(Data& data)
+            : heapboard(data.data(), data.size())
+        {}
+
+        heapboard(const heapboard& hb)
+            : heapboard()
+        {
+            if (hb.data != nullptr)
+                Ego.copyfrom(hb.data, hb.M);
+        }
+
+        heapboard&operator=(const heapboard& hb) {
+            if (hb.data != nullptr)
+                Ego.copyfrom(hb.data, hb.M);
+        }
+
+        heapboard(heapboard&& hb)
+            : heapboard(hb.data, hb.M)
+        {
+            Ego.own = hb.own;
+            Ego.H = hb.H;
+            Ego.T = hb.T;
+            hb.own  = false;
+            hb.data = hb.sink = nullptr;
+            hb.M = hb.H = hb.T = 0;
+        }
+
+        heapboard&operator=(heapboard&& hb) {
+            Ego.sink = Ego.data = hb.data;
+            Ego.own = hb.own;
+            Ego.H = hb.H;
+            Ego.T = hb.T;
+            hb.own  = false;
+            hb.data = hb.sink = nullptr;
+            hb.M = hb.H = hb.T = 0;
+        }
 
         void copyfrom(const uint8_t* data, size_t sz) {
             if (data && sz>0) {
                 clear();
-                data = (uint8_t *)memory::alloc(sz);
-                M    = sz;
-                own  = true;
+                Ego.data = (uint8_t *)memory::alloc(sz);
+                Ego.sink = Ego.data;
+                Ego.M    = sz;
+                Ego.own  = true;
+                Ego.H    = 0;
+                Ego.T    = sz;
                 memcpy(Ego.data, data, sz);
             }
         }
 
+        bool seal() {
+            size_t tmp{size()};
+            if (Ego.own && tmp) {
+                /* 65 K maximum size
+                 * if (size()) < 75% */
+                if (tmp < (M-(M>>1))) {
+                    void* td = memory::alloc(tmp);
+                    size_t tm{M}, tt{T}, th{H};
+                    memcpy(td, &Ego.data[H], tmp);
+                    clear();
+                    Ego.sink = Ego.data = (uint8_t *)td;
+                    Ego.own = true;
+                    Ego.M   = tm;
+                    Ego.T   = tt;
+                    Ego.H   = th;
+
+                    return true;
+                }
+            }
+            return false;
+        }
+
         inline void clear() {
-            if (own && data) {
-                memory::free(data);
-                data = nullptr;
+            if (Ego.own && Ego.data) {
+                memory::free(Ego.data);
+                Ego.sink = Ego.data = nullptr;
+                Ego.H = Ego.M = Ego.T;
+                Ego.own = false;
             }
         }
 
         ~heapboard() {
             clear();
+        }
+
+        void in(Wire& w);
+        void out(Wire& w) const;
+
+        Data release() {
+            if (Ego.size()) {
+                // seal buffer
+                Ego.seal();
+                Data tmp{Ego.data, Ego.size(), Ego.own};
+                Ego.own = false;
+                Ego.clear();
+                return std::move(tmp);
+            }
+
+            return Data{};
         }
 
     private:

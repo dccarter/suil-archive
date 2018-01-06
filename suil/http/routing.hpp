@@ -446,7 +446,7 @@ namespace suil {
             }
 
             suil::http::router_params_t find(
-                    const strview_t& req_url,
+                    const strview& req_url,
                     const node_t* node = nullptr,
                     unsigned pos = 0,
                     suil::detail::routing_params* params = nullptr) const;

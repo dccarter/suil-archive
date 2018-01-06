@@ -59,7 +59,7 @@ namespace suil {
             { return TEXTOID; }
             inline Oid type_to_pgsql_oid_type(const zcstring&)
             { return TEXTOID; }
-            inline Oid type_to_pgsql_oid_type(const strview_t&)
+            inline Oid type_to_pgsql_oid_type(const strview&)
             { return TEXTOID; }
 
             inline Oid type_to_pgsql_oid_type(const unsigned char&)
@@ -536,7 +536,7 @@ namespace suil {
                 return bind(val, oid, len, bin, norder, *const_cast<zcstring*>(&s));
             }
 
-            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, strview_t& v) {
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, strview& v) {
                 val = v.data();
                 oid  = TEXTOID;
                 len  = (int) v.size();
@@ -544,8 +544,8 @@ namespace suil {
                 return nullptr;
             }
 
-            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const strview_t& v) {
-                return bind(val, oid, len, bin, norder, *const_cast<strview_t*>(&v));
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const strview& v) {
+                return bind(val, oid, len, bin, norder, *const_cast<strview*>(&v));
             }
 
             template <typename __V>

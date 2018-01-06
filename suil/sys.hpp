@@ -23,6 +23,7 @@
 #include <suil/mem.hpp>
 #include <suil/log.hpp>
 #include <netinet/in.h>
+#include <set>
 
 #define errno_s strerror(errno)
 
@@ -104,17 +105,17 @@ namespace suil {
         prop(vminor, uint64_t),
         prop(vpatch, uint64_t),
         prop(vbuild, uint64_t),
-        prop(vtag, std::string),
-        prop(vdate, std::string),
-        prop(vtime, std::string)
-    )) version_t;
-    extern const version_t& ver_json;
+        prop(vtag,   std::string),
+        prop(vdate,  std::string),
+        prop(vtime,  std::string)
+    )) Version;
+    extern const Version& ver_json;
 
-    struct datetime {
-        datetime(time_t);
-        datetime();
-        datetime(const char *http_time);
-        datetime(const char *fmt, const char *str);
+    struct DateTime {
+        DateTime(time_t);
+        DateTime();
+        DateTime(const char *http_time);
+        DateTime(const char *fmt, const char *str);
         const char* str(char *out, size_t sz, const char *fmt) {
             if (!out || !sz || !fmt) {
                 return nullptr;
@@ -161,16 +162,16 @@ namespace suil {
         static constexpr char *LOG_FMT  = (char *) "%Y-%m-%d %H:%M:%S";
     };
 
-    struct suil_error: public std::runtime_error {
+    struct SuilError: public std::runtime_error {
         template <typename... __A>
-        inline static suil_error create(__A... args) {
+        inline static SuilError create(__A... args) {
             std::stringstream ss;
             if (sizeof...(__A) == 0) {
-                ss << "suil_error: " << errno_s;
+                ss << "SuilError: " << errno_s;
             } else {
                 msg(ss, args...);
             }
-            return suil_error(ss.str());
+            return SuilError(ss.str());
         }
 
         inline static const char* getmsg(std::exception_ptr ex) {
@@ -186,7 +187,7 @@ namespace suil {
         }
 
     private:
-        suil_error(std::string str)
+        SuilError(std::string str)
             : std::runtime_error(str)
         {}
 
@@ -205,6 +206,144 @@ namespace suil {
             msg(ss, a);
             msg(ss, args...);
         }
+    };
+
+    struct Data {
+    private:
+        union {
+            uint8_t       *_data;
+            const uint8_t *_cdata;
+        };
+        struct {
+#ifdef BIG_ENDIAN
+            uint32_t _own:  8;
+            uint32_t _size: 26;
+#else
+            uint32_t _size: 26;
+            uint32_t _own:  8;
+#endif
+        };
+    public:
+
+        Data()
+                : Data(nullptr, 0)
+        {}
+
+        Data(uint8_t *data, size_t size, bool own = true)
+                : _cdata(data),
+                  _size((uint32_t)(size)),
+                  _own(own?1:0)
+        {}
+
+        Data(const Data& d)
+                : Data()
+        {
+            if (d._size) {
+                Ego._data = (uint8_t *) memory::alloc(d._size);
+                Ego._size = d._size;
+                memcmp(Ego._data, d._data, d._size);
+                Ego._own  = 1;
+            }
+        }
+
+        Data& operator=(const Data& d) {
+            Ego.clear();
+            if (d._size) {
+                Ego._data = (uint8_t *) memory::alloc(d._size);
+                Ego._size = d._size;
+                memcmp(Ego._data, d._data, d._size);
+                Ego._own  = 1;
+            }
+
+            return Ego;
+        }
+
+        Data(Data&& d)
+                : Data(d._data, d._size, (d._own!=0))
+        {
+            d._data = nullptr;
+            d._size = 0;
+            d._own  = 0;
+        }
+
+        Data& operator=(Data&& d) {
+            Ego.clear();
+            Ego._data = d._data;
+            Ego._size = d._size;
+            Ego._own  = d._own;
+            d._data = nullptr;
+            d._size = 0;
+            d._own  = 0;
+        }
+
+        inline Data peek() {
+            Data d{Ego._data, Ego._size, false};
+            return std::move(d);
+        }
+
+        inline bool empty() {
+            return Ego._size == 0;
+        }
+
+        inline size_t size() const {
+            return Ego._size;
+        }
+
+        inline uint8_t* data() {
+            return Ego._data;
+        }
+
+        inline const uint8_t* cdata() const {
+            return Ego._cdata;
+        }
+
+        inline bool operator==(const Data& other) {
+            return (Ego._size == other._size) &&
+                   Ego._size &&
+                   (memcmp(Ego._data, other._data, Ego._size) == 0);
+        }
+
+        inline bool operator!=(const Data& other) {
+
+        }
+
+        void clear() {
+            if (Ego._own && Ego._data) {
+                memory::free(Ego._data);
+                Ego._data = nullptr;
+                Ego._size = 0;
+                Ego._own  = 0;
+            }
+        }
+
+        ~Data() {
+            Ego.clear();
+        }
+
+    } __attribute__((aligned(1)));
+
+    template <typename Type>
+    struct Wrapper {
+        Wrapper(Type& w)
+            : wrapped(std::move(w))
+        {}
+
+        Wrapper(Type&& w)
+            : wrapped(std::move(w))
+        {}
+
+        Wrapper()
+        {}
+
+        operator Type&() {
+            return wrapped;
+        }
+        Type&operator()() {
+            return wrapped;
+        }
+        Type&self() { return wrapped; }
+    private:
+        Type wrapped{};
     };
 
     /**
@@ -240,7 +379,7 @@ namespace suil {
      * string view as defined by
      * @see http://www.boost.org/doc/libs/1_62_0/boost/utility/string_view.hpp
      */
-    using strview_t = boost::string_view;
+    using strview = boost::string_view;
 
     namespace utils {
         /**
@@ -281,11 +420,11 @@ namespace suil {
         }
     }
 
-    struct wire;
+    struct Wire;
     struct current {
     };
 
-    struct wire {
+    struct Wire {
 
         inline bool push(const uint8_t e[], size_t es) {
             return forward(e, es) == es;
@@ -296,57 +435,75 @@ namespace suil {
         }
 
         template <typename __T, typename std::enable_if<std::is_arithmetic<__T>::value>::type* = nullptr>
-        inline wire& operator<<(const __T val) {
-            forward((uint8_t *)&val, sizeof(val));
+        inline Wire& operator<<(const __T val) {
+            uint64_t tmp = htole64((uint64_t) val);
+            forward((uint8_t *)&tmp, sizeof(val));
             return Ego;
         };
 
         template <typename __T, typename std::enable_if<std::is_arithmetic<__T>::value>::type* = nullptr>
-        inline wire& operator>>(__T& val) {
-            reverse((uint8_t *)&val, sizeof(val));
+        inline Wire& operator>>(__T& val) {
+            uint64_t tmp{0};
+            reverse((uint8_t *)&tmp, sizeof(val));
+            val = (__T) le64toh(tmp);
             return Ego;
         };
 
         template <typename __T, typename std::enable_if<!std::is_arithmetic<__T>::value>::type* = nullptr>
-        inline wire& operator<<(const __T& curr) {
+        inline Wire& operator<<(const __T& curr) {
             curr.out(Ego);
             return Ego;
         };
 
         template <typename __T, typename std::enable_if<!std::is_arithmetic<__T>::value>::type* = nullptr>
-        inline wire& operator>>(__T& curr) {
+        inline Wire& operator>>(__T& curr) {
             curr.in(Ego);
             return Ego;
         };
 
         template <typename... __T>
-        inline wire& operator<<(const iod::sio<__T...>& o);
+        inline Wire& operator<<(const iod::sio<__T...>& o);
 
         template <typename... __T>
-        inline wire& operator>>(iod::sio<__T...>& o);
+        inline Wire& operator>>(iod::sio<__T...>& o);
 
         template <typename __T>
-        inline wire& operator<<(const std::vector<__T>& curr);
+        inline Wire& operator<<(const Wrapper<__T>& o) {
+            // serialize wrapped type
+            Ego << o();
+        }
 
         template <typename __T>
-        inline wire& operator>>(std::vector<__T>& curr);
+        inline Wire& operator>>(Wrapper<__T>& o) {
+            // deserialize wrapped type
+            Ego >> o();
+        }
+
+        template <typename __T>
+        inline Wire& operator<<(const std::vector<__T>& curr);
+
+        template <typename __T>
+        inline Wire& operator>>(std::vector<__T>& curr);
 
         template <typename... __T>
-        inline wire& operator<<(const std::vector<iod::sio<__T...>>& curr);
+        inline Wire& operator<<(const std::vector<iod::sio<__T...>>& curr);
 
         template <typename... __T>
-        inline wire& operator>>(std::vector<iod::sio<__T...>>& curr);
+        inline Wire& operator>>(std::vector<iod::sio<__T...>>& curr);
 
-        inline wire& operator<<(const char* str);
+        inline Wire& operator<<(const char* str);
 
-        inline wire& operator<<(const std::string& str);
+        inline Wire& operator<<(const std::string& str);
 
-        inline wire& operator>>(std::string& str);
+        inline Wire& operator>>(std::string& str);
 
-        inline wire& operator()(bool always) {
+        inline Wire& operator()(bool always) {
             Ego.always = always;
             return Ego;
         }
+
+        virtual uint8_t *rd() = 0;
+        virtual bool    move(size_t size) = 0;
 
     protected:
         virtual size_t forward(const uint8_t e[], size_t es) = 0;
@@ -476,7 +633,7 @@ namespace suil {
             return std::string((char*)data_, offset_);
         }
 
-        operator strview_t();
+        operator strview();
 
         operator bool() {
             return (offset_ != 0) &&
@@ -516,7 +673,7 @@ namespace suil {
             return *this;
         }
 
-        zbuffer&operator+=(const strview_t& sv) {
+        zbuffer&operator+=(const strview& sv) {
             append(sv.data(), sv.size());
             return *this;
         }
@@ -620,7 +777,7 @@ namespace suil {
             return *this;
         }
 
-        zbuffer& operator<<(const strview_t& sv) {
+        zbuffer& operator<<(const strview& sv) {
             append(sv.data(), sv.size());
             return *this;
         }
@@ -643,8 +800,8 @@ namespace suil {
             throw std::runtime_error("index out of bounds");
         }
 
-        void in(wire& w);
-        void out(wire& w) const;
+        void in(Wire& w);
+        void out(Wire& w) const;
 
     private:
         void grow(uint32_t);
@@ -696,7 +853,7 @@ namespace suil {
 
         zcstring(const char *str);
 
-        explicit zcstring(const strview_t str, bool own = 0);
+        explicit zcstring(const strview str, bool own = 0);
 
         explicit zcstring(const std::string& str, bool own = 0);
 
@@ -726,8 +883,8 @@ namespace suil {
             return !empty();
         }
 
-        operator strview_t() const {
-            return strview_t(_str, _len);
+        operator strview() const {
+            return strview(_str, _len);
         }
 
         bool operator==(const zcstring& s) const;
@@ -789,7 +946,7 @@ namespace suil {
         template <typename S>
         void encjv(S& ss) const {
             if (!empty()) {
-                suil::strview_t tmp(_cstr, _len);
+                suil::strview tmp(_cstr, _len);
                 ss << '"' << tmp << '"';
             }
             else {
@@ -799,8 +956,8 @@ namespace suil {
 
         static void decjv(iod::jdecit& it, zcstring& out);
 
-        void in(wire& w);
-        void out(wire& w) const;
+        void in(Wire& w);
+        void out(Wire& w) const;
 
         ~zcstring();
 
@@ -818,7 +975,7 @@ namespace suil {
         size_t   _hash{0};
     };
 
-    inline void suil_error::msg(std::stringstream& ss, suil::zcstring& a) {
+    inline void SuilError::msg(std::stringstream& ss, suil::zcstring& a) {
         ss.write(a.data(), a.size());
     }
 
@@ -933,7 +1090,7 @@ namespace suil {
             return decode((const uint8_t *)in, strlen(in));
         }
 
-        static zcstring decode(strview_t& sv) {
+        static zcstring decode(strview& sv) {
             return std::move(decode((const uint8_t*)sv.data(), sv.size()));
         }
         static zcstring decode(const zcstring& zc) {
@@ -953,6 +1110,13 @@ namespace suil {
         inline bool operator()(const zcstring& l, const zcstring& r) const
         {
             return l == r;
+        }
+    };
+
+    struct zcstring_cmp {
+        inline bool operator()(const zcstring& l, const zcstring& r) const
+        {
+            return l < r;
         }
     };
 
@@ -1313,7 +1477,7 @@ namespace suil {
             return !(*this == other);
         }
 
-        File& operator<<(strview_t& sv) {
+        File& operator<<(strview& sv) {
             size_t nwr = write(sv.data(), sv.size(), -1);
             if (nwr != sv.size()) {
                 throw std::runtime_error("writing failed to file failed");
@@ -1370,7 +1534,39 @@ namespace suil {
     template <typename _T>
     using hmap_t = std::unordered_map<std::string, _T, hasher, strmap_eq>;
 
+    template <typename Cmp = zcstring_cmp>
+    using Set = std::set<suil::zcstring, Cmp>;
+
     namespace utils {
+        template <typename Map, typename V>
+        void mapvalues(const Map& mp, std::vector<V>& out, zcstring prefix = nullptr) {
+            std::vector<zcstring> keys;
+            for (auto& kv: mp) {
+                bool cap{true};
+                if (!prefix.empty()) {
+                    cap = (prefix.size() <= kv.first.len) &&
+                            memcmp(prefix.data(), kv.first.cstr, prefix.size());
+                }
+                if (cap) {
+                    keys.emplace_back(&kv.second);
+                }
+            }
+        }
+
+        template <typename Map>
+        void mapkeys(const Map& mp, Set<>& out, zcstring prefix = nullptr) {
+            for (auto& kv: mp) {
+                bool cap{true};
+                if (!prefix.empty()) {
+                    cap = (prefix.size() <= kv.first.size()) &&
+                          memcmp(prefix.data(), kv.first.data(), prefix.size());
+                }
+                if (cap) {
+                    out.insert(kv.first.peek());
+                }
+            }
+        }
+
         namespace __internal {
 
             template <typename __T>
@@ -1452,7 +1648,7 @@ namespace suil {
                         return zcstring();
                 }
 
-                return std::move(zcstring(base).dup());
+                return std::move(zcstring{base}.dup());
             }
 
             inline size_t size(const char *path) {
@@ -1460,12 +1656,12 @@ namespace suil {
                 if (stat(path, &st) == 0) {
                     return (size_t) st.st_size;
                 }
-                throw suil_error::create("file '", path, "' does not exist");
+                throw SuilError::create("file '", path, "' does not exist");
             }
 
             inline void touch(const char *path, mode_t mode=0777) {
                 if (::open(path, O_CREAT|O_TRUNC|O_WRONLY, mode) < 0) {
-                    throw suil_error::create("touching file '", path, "' failed: ", errno_s);
+                    throw SuilError::create("touching file '", path, "' failed: ", errno_s);
                 }
             }
 
@@ -1529,7 +1725,7 @@ namespace suil {
                 append(path, s.data(), s.size(), async);
             }
 
-            inline void append(const char *path, const strview_t& s, bool async = true) {
+            inline void append(const char *path, const strview& s, bool async = true) {
                 append(path, s.data(), s.size(), async);
             }
 
@@ -1539,7 +1735,7 @@ namespace suil {
 
             inline void clear(const char *path) {
                 if ((::truncate(path, 0) < 0) && errno != EEXIST) {
-                    throw suil_error::create("clearing file '", path, "' failed: ", errno_s);
+                    throw SuilError::create("clearing file '", path, "' failed: ", errno_s);
                 }
             }
 
@@ -1605,7 +1801,7 @@ namespace suil {
         }
 
         inline zcstring tozcstr(const char *str) {
-            return zcstring(str).dup();
+            return zcstring{str}.dup();
         }
 
         inline zcstring tozcstr(const std::string& str) {
@@ -1667,7 +1863,7 @@ namespace suil {
         inline zcstring env(const char *name, zcstring def = zcstring{}) {
             const char *v = std::getenv(name);
             if (v != nullptr) {
-                def = std::move(zcstring(v).dup());
+                def = std::move(zcstring{v}.dup());
             }
 
             return std::move(def);
@@ -1746,6 +1942,24 @@ namespace suil {
         }
 
         const char *mimetype(const zcstring filename);
+
+        inline int clz(uint64_t num) {
+            if (num) {
+                return  __builtin_clz(num);
+            }
+            return 0;
+        }
+
+        inline int ctz(uint64_t num) {
+            if (num) {
+                return  __builtin_ctz(num);
+            }
+            return sizeof(uint64_t);
+        }
+
+        inline uint64_t np2(uint64_t num) {
+            return (uint64_t)(1<<(sizeof(num)-utils::ctz(num)));
+        }
     }
 
     template <typename __T>
@@ -1763,7 +1977,7 @@ namespace suil {
         } else if (c >= 'A' && c <= 'F') {
             return (uint8_t) (c - '7');
         }
-        throw suil_error::create("invalid hex number");
+        throw SuilError::create("invalid hex number");
     };
 
     inline char i2c(uint8_t c, bool caps = false) {
@@ -1777,7 +1991,7 @@ namespace suil {
             else
                 return c + 'W';
         }
-        throw suil_error::create("invalid hex number");
+        throw SuilError::create("invalid hex number");
     };
 
 
@@ -1903,8 +2117,8 @@ namespace suil {
             return Ego.begin()[I];
         }
 
-        void in(wire& w);
-        void out(wire& w) const;
+        void in(Wire& w);
+        void out(Wire& w) const;
 
     } __attribute__((aligned(1)));
 
@@ -1950,22 +2164,22 @@ namespace suil {
 
         uint8_t length() const;
 
-        void in(wire& w);
+        void in(Wire& w);
 
-        void out(wire& w) const;
+        void out(Wire& w) const;
     };
 
     template <size_t N>
-    void Blob<N>::in(wire &w) {
+    void Blob<N>::in(Wire &w) {
         if (!w.pull(Ego.begin(), Ego.size())) {
-            suil_error::create("pulling blob failed");
+            SuilError::create("pulling blob failed");
         }
     }
 
     template <size_t N>
-    void Blob<N>::out(wire &w) const {
+    void Blob<N>::out(Wire &w) const {
         if (!w.push(Ego.begin(), Ego.size())) {
-            suil_error::create("pushing blob failed");
+            SuilError::create("pushing blob failed");
         }
     }
 }

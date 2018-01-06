@@ -425,7 +425,7 @@ namespace suil {
 
             query_string();
 
-            query_string(strview_t& sv);
+            query_string(strview& sv);
 
             query_string(query_string&& qs);
 
@@ -447,14 +447,14 @@ namespace suil {
                 return os;
             }
 
-            strview_t get (const char* name) const;
+            strview get (const char* name) const;
 
             std::vector<char*> get_all (const char* name) const;
 
             template <typename __T>
             __T get(const char* name) const {
                 __T tmp{};
-                strview_t sv(get(name));
+                strview sv(get(name));
                 if (!sv.empty()) {
                     zcstring str(sv.data(), sv.size(), false);
                     utils::cast(str, tmp);

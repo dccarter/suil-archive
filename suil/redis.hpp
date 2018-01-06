@@ -80,12 +80,11 @@ namespace suil {
                 buffer << param << SUIL_REDIS_CRLF;
             }
 
-            void addparam(const breadboard& param) {
-                auto raw = param.raw();
-                size_t  sz =  raw.second << 1;
+            void addparam(const Data& param) {
+                size_t  sz =  param.size() << 1;
                 buffer << SUIL_REDIS_PREFIX_STRING << sz << SUIL_REDIS_CRLF;
                 buffer.reserve(sz);
-                sz = utils::hexstr(raw.first, raw.second,
+                sz = utils::hexstr(param.cdata(), param.size(),
                                    &buffer.data()[buffer.size()], buffer.capacity());
                 buffer.seek(sz);
                 buffer << SUIL_REDIS_CRLF;
@@ -185,7 +184,7 @@ namespace suil {
             template <typename __T>
             const __T get(int index = 0) const {
                 if (index > entries.size())
-                    throw suil_error::create("index '", index,
+                    throw SuilError::create("index '", index,
                                              "' out of range '", entries.size(), "'");
                 __T d{};
                 castreply(index, d);
@@ -218,7 +217,7 @@ namespace suil {
 
             const zcstring peek(int index = 0) {
                 if (index > entries.size())
-                    throw suil_error::create("index '", index,
+                    throw SuilError::create("index '", index,
                                              "' out of range '", entries.size(), "'");
                 return entries[0].data.peek();
             }
@@ -284,7 +283,7 @@ namespace suil {
                 if (data != params.end()) {
                     return data->second;
                 }
-                throw suil_error::create("parameter '", key, "' does not exist");
+                throw SuilError::create("parameter '", key, "' does not exist");
             }
 
         private:
@@ -334,7 +333,7 @@ namespace suil {
             __T get(zcstring&& key) {
                 Response resp = send("GET", key);
                 if (!resp) {
-                    throw suil_error::create("redis GET '", key,
+                    throw SuilError::create("redis GET '", key,
                                              "' failed: ", resp.error());
                 }
                 return (__T) resp;
@@ -353,7 +352,7 @@ namespace suil {
                     resp = send("INCRBY", by);
 
                 if (!resp) {
-                    throw suil_error::create("redis INCR '", key,
+                    throw SuilError::create("redis INCR '", key,
                                              "' failed: ", resp.error());
                 }
                 return (int64_t) resp;
@@ -367,7 +366,7 @@ namespace suil {
                     resp = send("DECRBY", by);
 
                 if (!resp) {
-                    throw suil_error::create("redis DECR '", key,
+                    throw SuilError::create("redis DECR '", key,
                                              "' failed: ", resp.error());
                 }
                 return (int64_t) resp;
@@ -383,7 +382,7 @@ namespace suil {
                 if (resp) {
                     return resp.get<zcstring>(0);
                 }
-                throw suil_error::create("redis SUBSTR '", key,
+                throw SuilError::create("redis SUBSTR '", key,
                                          "' start=", start, ", end=",
                                          end, " failed: ", resp.error());
             }
@@ -394,7 +393,7 @@ namespace suil {
                     return (int) resp == 0;
                 }
                 else {
-                    throw suil_error::create("redis EXISTS '", key,
+                    throw SuilError::create("redis EXISTS '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -405,7 +404,7 @@ namespace suil {
                     return (int) resp == 0;
                 }
                 else {
-                    throw suil_error::create("redis DEL '", key,
+                    throw SuilError::create("redis DEL '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -417,7 +416,7 @@ namespace suil {
                     return std::move(tmp);
                 }
                 else {
-                    throw suil_error::create("redis KEYS pattern = '", pattern,
+                    throw SuilError::create("redis KEYS pattern = '", pattern,
                                              "' failed: ", resp.error());
                 }
             }
@@ -428,7 +427,7 @@ namespace suil {
                     return (int) resp;
                 }
                 else {
-                    throw suil_error::create("redis EXPIRE  '", key, "' secs ", secs,
+                    throw SuilError::create("redis EXPIRE  '", key, "' secs ", secs,
                                              " failed: ", resp.error());
                 }
             }
@@ -439,7 +438,7 @@ namespace suil {
                     return (int) resp;
                 }
                 else {
-                    throw suil_error::create("redis TTL  '", key,
+                    throw SuilError::create("redis TTL  '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -451,7 +450,7 @@ namespace suil {
                     return (int) resp;
                 }
                 else {
-                    throw suil_error::create("redis RPUSH  '", key,
+                    throw SuilError::create("redis RPUSH  '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -463,7 +462,7 @@ namespace suil {
                     return (int) resp;
                 }
                 else {
-                    throw suil_error::create("redis LPUSH  '", key,
+                    throw SuilError::create("redis LPUSH  '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -474,7 +473,7 @@ namespace suil {
                     return (int) resp;
                 }
                 else {
-                    throw suil_error::create("redis LLEN  '", key,
+                    throw SuilError::create("redis LLEN  '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -486,7 +485,7 @@ namespace suil {
                     return  std::move(tmp);
                 }
                 else {
-                    throw suil_error::create("redis LRANGE  '", key,
+                    throw SuilError::create("redis LRANGE  '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -497,7 +496,7 @@ namespace suil {
                     return resp.status();
                 }
                 else {
-                    throw suil_error::create("redis LTRIM  '", key,
+                    throw SuilError::create("redis LTRIM  '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -509,7 +508,7 @@ namespace suil {
                     return (__T) resp;
                 }
                 else {
-                    throw suil_error::create("redis LINDEX  '", key,
+                    throw SuilError::create("redis LINDEX  '", key,
                                              "' failed: ", resp.error());
                 }
             }
@@ -599,7 +598,7 @@ namespace suil {
                 Proto proto;
                 trace("opening redis Connection");
                 if (!proto.connect(addr, config.timeout)) {
-                    throw suil_error::create("connecting to redis server '",
+                    throw SuilError::create("connecting to redis server '",
                             ipstr(addr), "' failed: ", errno_s);
                 }
                 trace("connected to redis server");
@@ -608,13 +607,13 @@ namespace suil {
                 if (passwd != nullptr) {
                     // authenticate
                     if (!cli.auth(passwd)) {
-                        throw suil_error::create("redis - authorizing client failed");
+                        throw SuilError::create("redis - authorizing client failed");
                     }
                 }
                 else {
                     // ensure that the server is accepting commands
                     if (!cli.ping()) {
-                        throw suil_error::create("redis - ping Request failed");
+                        throw SuilError::create("redis - ping Request failed");
                     }
                 }
 
@@ -622,7 +621,7 @@ namespace suil {
                     idebug("changing database to %d", db);
                     auto resp = cli("SELECT", 1);
                     if (!resp) {
-                        throw suil_error::create(
+                        throw SuilError::create(
                                 "redis - changing to selected database '",
                                 db, "' failed: ", resp.error());
                     }

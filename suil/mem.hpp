@@ -13,6 +13,7 @@
 #include <suil/symbols.h>
 
 #define prop(pp, tt)  s::_##pp = tt ()
+#define oprop(pp, tt) s::_##pp (s::_optional) = tt ()
 
 namespace suil {
 

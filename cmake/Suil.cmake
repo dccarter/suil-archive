@@ -41,7 +41,7 @@ function(SuilProject name)
     else ()
         set(options "")
         set(kvargs  VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
-        set(kvvargs STATIC_LINK LINK_DIR)
+        set(kvvargs STATIC_LINK LINK_DIRS)
         cmake_parse_arguments(SUIL_PROJECT "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
         # initialize project
@@ -66,16 +66,17 @@ function(SuilProject name)
         set(SUIL_PROJECT_DEFINES ${SUIL_PACKAGE_DEFINES} PARENT_SCOPE)
 
         ## push suil libraries to parent scope
-
+        message(STATUS "Pushing link libraries in build mode ${CMAKE_BUILD_TYPE}")
         # Executable linking mode
         if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
-            set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Os")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os" PARENT_SCOPE)
+            set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Os" PARENT_SCOPE)
             if (SUIL_PROJECT_STATIC_LINK)
-                link_directories(${SUIL_PROJECT_LINK_DIR})
+                message(STATUS "Project static linking enabled")
+                link_directories(${SUIL_PROJECT_LINK_DIRS})
                 set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_STATIC_LIBRARIES} PARENT_SCOPE)
-                set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
-                set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
+                set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static" PARENT_SCOPE)
+                set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static" PARENT_SCOPE)
             else()
                 set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_LIBRARIES} PARENT_SCOPE)
             endif()
@@ -114,17 +115,17 @@ function(SuilApp name)
     # parse function arguments
     set(options DEBUG IODSYMS_PATHBIN)
     set(kvargs)
-    set(kvvargs LIBRARY DEPENDS INSTALL VERSION SOURCES TEST DEFINES
+    set(kvvargs LIBRARY DEPENDS INSTALL VERSION SOURCES TEST DEFINES SYMBOLS
                 LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
     cmake_parse_arguments(SUIL_APP "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
     # get the source files
     set(${name}_SOURCES ${SUIL_APP_SOURCES})
     if (NOT SUIL_APP_SOURCES)
-        if (NOT SUIL_APP_TEST)
-            file(GLOB_RECURSE ${name}_SOURCES src/*.c src/*.cpp src/*.cc)
-        else()
-            file(GLOB_RECURSE ${name}_SOURCES test/*.c test/*.cpp test/*.cc)
+        file(GLOB_RECURSE ${name}_SOURCES src/*.c src/*.cpp src/*.cc)
+        if (SUIL_APP_TEST)
+            file(GLOB_RECURSE ${name}_TEST_SOURCES test/*.c test/*.cpp test/*.cc)
+            set(${name}_SOURCES ${${name}_SOURCES} ${${name}_TEST_SOURCES})
         endif()
     endif()
 
@@ -151,22 +152,25 @@ function(SuilApp name)
         target_compile_definitions(${name} PUBLIC "-DAPP_VERSION=\"${${name}_VERSION}\"")
         target_compile_definitions(${name} PUBLIC "-DAPP_NAME=\"${name}\"")
     endif()
+
     # generate symbols
-    set(${name}_SYMBOLS ${CMAKE_CURRENT_SOURCE_DIR}/${name}.sym)
-    if (NOT ${name}_SYMBOLS)
-        set(${name}_SYMBOLS symbols.sym)
+    set(${name}_SYMBOLS ${SUIL_APP_SYMBOLS})
+    if (NOT SUIL_APP_SYMBOLS)
+        set(${name}_SYMBOLS ${CMAKE_CURRENT_SOURCE_DIR}/${name}.sym)
     endif()
-    message(STATUS "using symbols: ${${name}_SYMBOLS}")
 
     if (EXISTS ${${name}_SYMBOLS})
+        message(STATUS "using symbols: ${${name}_SYMBOLS}")
         set(IODSYMS_BIN iodsyms)
         if (SUIL_APP_IODSYMS_PATHBIN)
             set(IODSYMS_BIN ${SUIL_BASE_PATH}/bin/iodsyms)
         endif()
         # generate symbols if project uses symbols
+        GET_FILENAME_COMPONENT(${name}_SYMBOLS_OUTPUT ${${name}_SYMBOLS} NAME)
         suil_iod_symbols(${name}
                 BINARY ${IODSYMS_BIN}
-                SYMBOLS ${${name}_SYMBOLS})
+                SYMBOLS ${${name}_SYMBOLS}
+                OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${${name}_SYMBOLS_OUTPUT}.h)
     endif()
 
     # add dependecy libraries
@@ -179,6 +183,9 @@ function(SuilApp name)
         add_dependencies(${name} ${SUIL_APP_DEPENDS})
     endif()
 
+    if (SUIL_APP_TEST)
+        list(APPEND SUIL_APP_DEFINES "-DSUIL_TESTING")
+    endif()
     # add custom definitions if provided
     if (SUIL_APP_DEFINES)
         message(STATUS "target '${name}' extra defines: ${SUIL_APP_DEFINES}")
@@ -231,9 +238,7 @@ macro(SuilTest name)
     SuilApp(${name}-test
             ${ARGN}
             TEST    ON
-            INSTALL OFF
-            DEPENDS ${name}
-            LIBRARIES ${name})
+            INSTALL OFF)
 endmacro()
 
 macro(SuilStatic name)

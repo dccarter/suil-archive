@@ -21,12 +21,12 @@ namespace suil {
 
         Cmd& Cmd::operator<<(Arg &&arg) {
             if (!arg.lf) {
-                throw suil_error::create(
+                throw SuilError::create(
                         "command line argument missing log format (--help) option");
             }
             for (auto& a : args) {
                 if (a.check(arg.sf, arg.lf)) {
-                    throw suil_error::create(
+                    throw SuilError::create(
                             "command line '", arg.sf, "' or \"",
                             arg.lf, "\" argument duplicated");
                 }
@@ -95,9 +95,9 @@ namespace suil {
             }
             else {
                 if (lf) {
-                    throw suil_error::create("error: command argument '--", lf, "' not recognized");
+                    throw SuilError::create("error: command argument '--", lf, "' not recognized");
                 } else {
-                    throw suil_error::create("error: command argument '-", sf, "' not recognized");
+                    throw SuilError::create("error: command argument '-", sf, "' not recognized");
                 }
             }
         }
@@ -129,7 +129,7 @@ namespace suil {
                 int dashes = Cmd::isvalid(carg);
                 // are we passing option (or value)
                 if (!dashes) {
-                    throw suil_error::create("error: Unsupported argument syntax: ", carg);
+                    throw SuilError::create("error: Unsupported argument syntax: ", carg);
                 }
 
                 if (dashes == 2) {
@@ -141,7 +141,7 @@ namespace suil {
                     }
 
                     if (passed.find(arg.lf) != passed.end()) {
-                        throw suil_error::create("error: command argument '",
+                        throw SuilError::create("error: command argument '",
                                                  arg.lf, "' appearing more than once");
                     }
                     zcstring val{"1"};
@@ -149,7 +149,7 @@ namespace suil {
                         if (cval == nullptr) {
                             pos++;
                             if (pos >= argc) {
-                                throw suil_error::create("error: command argument '",
+                                throw SuilError::create("error: command argument '",
                                                          arg.lf,
                                                          "' expects a value but none provided");
                             }
@@ -158,7 +158,7 @@ namespace suil {
                         val = zcstring{cval}.dup();
                     }
                     else if (cval != nullptr) {
-                        throw suil_error::create("error: command argument '",
+                        throw SuilError::create("error: command argument '",
                                                  arg.lf, "' assigned value but is an option");
                     }
                     passed.emplace(std::make_pair(arg.lf.dup(), std::move(val)));
@@ -178,7 +178,7 @@ namespace suil {
                         zcstring val{"1"};
                         if (!arg.option) {
                             if (opos < nopts) {
-                                throw suil_error::create("error: command argument '",
+                                throw SuilError::create("error: command argument '",
                                                          arg.lf,
                                                          "' passed as an option but expects value");
                             }
@@ -186,7 +186,7 @@ namespace suil {
                             if (cval == nullptr) {
                                 pos++;
                                 if (pos >= argc) {
-                                    throw suil_error::create("error: command argument '",
+                                    throw SuilError::create("error: command argument '",
                                                              arg.lf,
                                                              "' expects a value but none provided");
                                 }
@@ -196,7 +196,7 @@ namespace suil {
                             val = zcstring{cval}.dup();
                         }
                         else if (cval != nullptr) {
-                            throw suil_error::create("error: command argument '",
+                            throw SuilError::create("error: command argument '",
                                             arg.lf, "' assigned value but is an option");
                         }
                         passed.emplace(std::make_pair(arg.lf.dup(), std::move(val)));
@@ -227,7 +227,7 @@ namespace suil {
 
                 if (missing) {
                     if (!Ego.inter) {
-                        throw suil_error::create(zcstring(msg));
+                        throw SuilError::create(zcstring(msg));
                     }
                     else {
                         printf("\n");
@@ -330,7 +330,7 @@ namespace suil {
                 globals.emplace_back(std::move(arg));
             }
             else {
-                throw suil_error::create(
+                throw SuilError::create(
                         "duplicate global argument '", arg.lf,
                         " already registered");
             }
@@ -357,7 +357,7 @@ namespace suil {
                 commands.emplace_back(std::move(cmd));
             }
             else {
-                throw suil_error::create(
+                throw SuilError::create(
                         "command with name '", cmd.name, " already registered");
             }
         }
@@ -504,7 +504,7 @@ namespace suil {
                 char  **args = nargs? &argv[2] : &argv[1];
                 showhelp[0] = cmd->parse(argc-2, args);
             }
-            catch (suil_error& ser) {
+            catch (SuilError& ser) {
                 showhelp[0] = true;
                 showhelp[1] = false;
                 errbuf << ser.what() << "\n";
@@ -531,7 +531,7 @@ namespace suil {
                 parsed->handler(*parsed);
                 return;
             }
-            throw suil_error::create("parser::parse should be "
+            throw SuilError::create("parser::parse should be "
                                              "invoked before invoking handle");
         }
 

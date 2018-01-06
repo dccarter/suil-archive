@@ -356,7 +356,7 @@ namespace suil {
                 hbuf.append(status);
                 hbuf.append("\r\n", 2);
                 if (!err) {
-                    const strview_t conn = req.header("Connection");
+                    const strview conn = req.header("Connection");
                     if (!conn.empty() && !strcasecmp(conn.data(), "Close")) {
                         // client requested Connection be closed
                         close_ = true;
@@ -486,7 +486,7 @@ namespace suil {
                 static char buf[64];
                 if ((point-rec) > 1000) {
                     rec = point;
-                    datetime()(buf, 64, datetime::HTTP_FMT);
+                    DateTime()(buf, 64, DateTime::HTTP_FMT);
                 }
                 return buf;
             }

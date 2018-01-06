@@ -79,7 +79,7 @@ namespace suil {
                 fd = ::open(file->path(), O_RDWR);
                 if (fd < 0) {
                     /* opening file failed */
-                    throw suil_error::create("open '", file->path(),
+                    throw SuilError::create("open '", file->path(),
                                              "' failed: ", errno_s);
                 }
 
@@ -99,11 +99,11 @@ namespace suil {
                     size_t nrd = tmp.capacity();
                     if (!sock.read(&tmp[0], nrd, timeout)) {
                         /* failed to receive headers*/
-                        throw suil_error::create("receiving Request failed: ", errno_s);
+                        throw SuilError::create("receiving Request failed: ", errno_s);
                     }
 
                     if (!feed(tmp.data(), nrd)) {
-                        throw suil_error::create("parsing headers failed: ",
+                        throw SuilError::create("parsing headers failed: ",
                               http_errno_name((enum http_errno) http_errno));
                     }
                 } while (!headers_complete);
@@ -122,13 +122,13 @@ namespace suil {
                     len = MIN(tmp.capacity(), left);
                     tmp.reset(len, true);
                     if (!sock.receive(&tmp[0], len, timeout)) {
-                        throw suil_error::create("receive failed: ", errno_s);
+                        throw SuilError::create("receive failed: ", errno_s);
                     }
 
                     tmp.seek(len);
                     // parse header line
                     if (!feed(tmp, len)) {
-                        throw suil_error::create("parsing  body failed: ",
+                        throw SuilError::create("parsing  body failed: ",
                                      http_errno_name((enum http_errno )http_errno));
                     }
                     left -= len;
@@ -193,13 +193,13 @@ namespace suil {
                 body_read = true;
             }
 
-            const strview_t Response::contenttype() const {
+            const strview Response::contenttype() const {
                 auto it = headers.find("Content-Type");
                 if (it != headers.end()) {
                     return it->second;
                 }
 
-                return strview_t();
+                return strview();
             }
 
             Request& Request::operator=(Request &&o) noexcept {
@@ -294,14 +294,14 @@ namespace suil {
                 head << method_name(method) << " " << resource;
                 encodeargs(head);
                 head << " HTTP/1.1" << CRLF;
-                hdrs("Date", datetime()(datetime::HTTP_FMT));
+                hdrs("Date", DateTime()(DateTime::HTTP_FMT));
                 encodehdrs(head);
                 head << CRLF;
 
                 size_t nwr = sock.send(head.data(), head.size(), timeout);
                 if (nwr != head.size()) {
                     /* sending headers failed, no need to send body */
-                    throw suil_error::create("send Request failed: (", nwr, ",",
+                    throw SuilError::create("send Request failed: (", nwr, ",",
                              head.size(), ")", errno_s);
                 }
                 if (content_length == 0) {
@@ -314,7 +314,7 @@ namespace suil {
                     nwr = sock.send(body.data(), body.size(), timeout);
                     if (nwr != body.size()) {
                         /* sending headers failed, no need to send body */
-                        throw suil_error::create("send Request failed: ", errno_s);
+                        throw SuilError::create("send Request failed: ", errno_s);
                     }
                 }
 
@@ -325,19 +325,19 @@ namespace suil {
                         nwr = sock.send(up.head(), up.head.size(), timeout);
                         if (nwr != up.head.size()) {
                             /* sending upload head failed, no need to send body */
-                            throw suil_error::create("send Request failed: ", errno_s);
+                            throw SuilError::create("send Request failed: ", errno_s);
                         }
 
                         /* send file */
                         nwr = sock.sendfile(fd, 0, up.file->size, timeout);
                         if (nwr != up.file->size) {
-                            throw suil_error::create("uploading file: '", up.file->path(),
+                            throw SuilError::create("uploading file: '", up.file->path(),
                                                      "' failed: ", errno_s);
                         }
 
                         nwr = sock.send(CRLF, sizeofcstr(CRLF), timeout);
                         if (nwr != sizeofcstr(CRLF)) {
-                            throw suil_error::create("send CRLF failed: ", errno_s);
+                            throw SuilError::create("send CRLF failed: ", errno_s);
                         }
 
                         /* close boundary*/
@@ -351,7 +351,7 @@ namespace suil {
 
                     nwr = sock.send(head.data(), head.size(), timeout);
                     if (nwr != head.size()) {
-                        throw suil_error::create("send terminal boundary failed: ", errno_s);
+                        throw SuilError::create("send terminal boundary failed: ", errno_s);
                     }
                 }
                 sock.flush();
@@ -369,13 +369,13 @@ namespace suil {
                 }
 
                 if (builder != nullptr && !builder(req)) {
-                    throw suil_error::create("building Request '", resource, "' failed");
+                    throw SuilError::create("building Request '", resource, "' failed");
                 }
 
                 if (!req.sock.isopen()) {
                     /* open a new socket for the Request */
                     if (!req.sock.connect(addr, timeout)) {
-                        throw suil_error::create("Connecting to '", host(), ":",
+                        throw SuilError::create("Connecting to '", host(), ":",
                                                  port, "' failed: ", errno_s);
                     }
                 }
@@ -391,7 +391,7 @@ namespace suil {
                 Response resp = std::move(perform(h, Method::Connect, "/"));
                 if (resp.status() != Status::OK) {
                     /* connecting to server failed */
-                    throw suil_error::create("sending CONNECT to '", host(), "' failed: ",
+                    throw SuilError::create("sending CONNECT to '", host(), "' failed: ",
                             http::Statusext(resp.status()));
                 }
 

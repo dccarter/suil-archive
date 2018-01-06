@@ -166,7 +166,7 @@ namespace suil {
 
             // Parse. If parse fails, return Json() and assign an error message to err.
             static size_t parse(Object& out,
-                                const strview_t &in,
+                                const strview &in,
                                 std::string &err,
                                 JsonParse strategy = JsonParse::STANDARD);
 
@@ -175,7 +175,7 @@ namespace suil {
                               JsonParse strategy = JsonParse::STANDARD) {
                 if (in) {
                     Object obj;
-                    strview_t inv(in, strlen(in));
+                    strview inv(in, strlen(in));
                     parse(obj, inv, err, strategy);
                     return std::move(obj);
                 } else {
@@ -186,13 +186,13 @@ namespace suil {
 
             // Parse multiple objects, concatenated or separated by whitespace
             static std::vector<Object> parse_multi(
-                    const strview_t &in,
+                    const strview &in,
                     std::string::size_type &parser_stop_pos,
                     std::string &err,
                     JsonParse strategy = JsonParse::STANDARD);
 
             static inline std::vector<Object> parse_multi(
-                    const strview_t &in,
+                    const strview &in,
                     std::string &err,
                     JsonParse strategy = JsonParse::STANDARD) {
                 std::string::size_type parser_stop_pos;

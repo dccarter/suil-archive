@@ -53,7 +53,7 @@ namespace suil {
         }
 
         suil::http::router_params_t Trie::find(
-                const strview_t &req_url,
+                const strview &req_url,
                 const node_t *node,
                 unsigned int pos,
                 suil::detail::routing_params *params) const

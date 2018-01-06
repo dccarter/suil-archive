@@ -61,27 +61,27 @@ namespace suil {
 
             bool body_seek(off_t off = 0);
 
-            strview_t get_body();
+            strview get_body();
 
             bool isvalid() const {
                 return body_error || offload_error;
             }
 
-            inline strview_t header(const zcstring& h) const {
+            inline strview header(const zcstring& h) const {
                 auto it = headers.find(h);
                 if (it != headers.end()) {
                     const zcstring& v = it->second;
-                    return strview_t(v.data(), v.size());
+                    return strview(v.data(), v.size());
                 }
-                return strview_t();
+                return strview();
             }
 
-            inline strview_t header(const char* h) const {
+            inline strview header(const char* h) const {
                 zcstring tmp(h);
                 return header(tmp);
             }
 
-            inline strview_t header(std::string& h) const {
+            inline strview header(std::string& h) const {
                 zcstring tmp(h.data(), h.size(), false);
                 return header(tmp);
             }

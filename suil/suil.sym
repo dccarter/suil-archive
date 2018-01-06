@@ -15,6 +15,7 @@ _on_close
 _logsink
 _logformat
 _key
+_val
 _authenticate
 _realm
 _appsdb
@@ -31,7 +32,7 @@ _printinfo
 # event bus
 _type
 _sequence
-_data
+#_data
 _uid
 _status
 _version
@@ -117,7 +118,7 @@ _claims
 # SQL User table
 # { id, username, email, passwd, fullname, salt, roles, verified, locked }
 #---------------------------------------------------
-$_id
+#_id
 _username
 _email
 _passwd
@@ -131,10 +132,10 @@ _locked
 # SQL Application Table
 # {id, tag, owner, name, version, description}
 #--------------------------------------------------
-$_id
-$_tag
-$_name
-$_version
+#_id
+#_tag
+#_name
+#_version
 _owner
 _description
 
@@ -142,9 +143,9 @@ _description
 # SQL Configuration table
 # {id, app_id, name, data, type}
 #--------------------------------------------------
-$_id
-$_name
-_data
+#_id
+#_name
+#_data
 _app_id
 _type
 

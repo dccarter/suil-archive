@@ -3,8 +3,7 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Install dependencies
 RUN apk update
-RUN apk  add libressl postgresql libressl2.6-libcrypto && \
-         apk add sqlite musl libstdc++ libuuid
+RUN apk  add libressl libstdc++
 
 # Copy Binaries
 COPY artifacts/ /usr/local/

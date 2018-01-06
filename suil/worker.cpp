@@ -30,8 +30,8 @@ namespace suil {
     const spid_t& spid = __spid;
     bool __started = 0;
     const bool& started = __started;
-    version_t __ver_json{};
-    const version_t& ver_json = __ver_json;
+    Version __ver_json{};
+    const Version& ver_json = __ver_json;
 
 #define SPID_PARENT 0
 

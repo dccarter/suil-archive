@@ -224,17 +224,17 @@ namespace suil {
                     return zcstring(tmp.data(), tmp.size(), false);
                 }
 
-                strview_t hdr(const char *name) const {
+                strview hdr(const char *name) const {
                     zcstring tmp(name);
                     return hdr(tmp);
                 }
 
-                strview_t hdr(zcstring& name) const {
+                strview hdr(zcstring& name) const {
                     auto it = headers.find(name);
                     if (it != headers.end()){
                         return it->second;
                     }
-                    return strview_t();
+                    return strview();
                 }
 
                 inline const zbuffer& operator()() const {
@@ -245,7 +245,7 @@ namespace suil {
                     return status() == Status::OK;
                 }
 
-                const strview_t contenttype() const;
+                const strview contenttype() const;
 
             private:
 
@@ -460,7 +460,7 @@ namespace suil {
                     // FIXME: zcstring sess(utils::fs::readall(path, true));
                     addr = ipremote(host.data(), port, 0, utils::after(timeout));
                     if (errno != 0) {
-                        throw suil_error::create("getting address '", host(),
+                        throw SuilError::create("getting address '", host(),
                                                  ":", port, "' failed:", errno_s);
                     }
 
@@ -512,7 +512,7 @@ namespace suil {
                         else if (data != nullptr){
                             size_t nwr = write(data, len, timeout);
                             if (nwr != len) {
-                                throw suil_error::create("writing to file failed: ",
+                                throw SuilError::create("writing to file failed: ",
                                                          errno_s);
                             }
                             offset += nwr;

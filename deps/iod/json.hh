@@ -48,8 +48,7 @@ namespace iod {
 
     inline std::string json_encode(const json_string &o);
 
-    struct jsonvalue {
-    };
+    struct jsonvalue {};
 
     namespace json_internals {
 

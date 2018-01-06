@@ -36,12 +36,12 @@ namespace suil {
 
             inline Result delivertx(const breadboard& data, ResponseDeliverTx& rsdt) {
                 auto  raw = data.raw();
-                return delivertx(raw.first, raw.second, rsdt);
+                return delivertx(raw.data(), raw.size(), rsdt);
             }
 
             inline Result checktx(const breadboard& data, ResponseCheckTx& rscx) {
                 auto  raw = data.raw();
-                return checktx(raw.first, raw.second, rscx);
+                return checktx(raw.data(), raw.size(), rscx);
             }
 
             Result query(RequestQuery& , ResponseQuery& rsq);

@@ -45,11 +45,11 @@ namespace suil {
 
         void chwdir(const std::string& to) {
             if (!utils::fs::isdir(to.c_str())) {
-                throw suil_error::create("working directory: '", to, "' does not exist");
+                throw SuilError::create("working directory: '", to, "' does not exist");
             }
 
             if (::chdir(to.c_str())) {
-                throw suil_error::create("setting working dir to('", to, "') failed: ", errno_s);
+                throw SuilError::create("setting working dir to('", to, "') failed: ", errno_s);
             }
         }
 
@@ -109,17 +109,17 @@ namespace suil {
         }
     }
 
-    datetime::datetime(time_t t)
+    DateTime::DateTime(time_t t)
         : t_(t)
     {
         gmtime_r(&t_, &tm_);
     }
 
-    datetime::datetime()
-        : datetime(time(nullptr))
+    DateTime::DateTime()
+        : DateTime(time(nullptr))
     {}
 
-    datetime::datetime(const char *fmt, const char *str)
+    DateTime::DateTime(const char *fmt, const char *str)
     {
         const char *tmp = HTTP_FMT;
         if (fmt) {
@@ -128,8 +128,8 @@ namespace suil {
         strptime(str, tmp, &tm_);
     }
 
-    datetime::datetime(const char *http_time)
-        : datetime(HTTP_FMT, http_time)
+    DateTime::DateTime(const char *http_time)
+        : DateTime(HTTP_FMT, http_time)
     {}
 
     zbuffer::zbuffer(size_t init_size)
@@ -222,7 +222,7 @@ namespace suil {
     void zbuffer::append(time_t t, const char *fmt) {
         // reserve 64 bytes
         reserve(64);
-        const char *pfmt = fmt? fmt : datetime::HTTP_FMT;
+        const char *pfmt = fmt? fmt : DateTime::HTTP_FMT;
         ssize_t sz = strftime((char*)(data_+offset_), 64, pfmt, localtime(&t));
         if (sz < 0) {
             strace("formatting time failed: %s", errno_s);
@@ -298,11 +298,11 @@ namespace suil {
         return data();
     }
 
-    zbuffer::operator strview_t() {
+    zbuffer::operator strview() {
         if (data_ && offset_) {
             return boost::string_view((const char *) data_, offset_);
         }
-        return strview_t();
+        return strview();
     }
 
     File::File(mfile fd)
@@ -313,7 +313,7 @@ namespace suil {
         : File(mfopen(pname, flags, mode))
     {
         if (fd == nullptr) {
-            throw suil_error::create("opening file '", pname, "' failed: ",
+            throw SuilError::create("opening file '", pname, "' failed: ",
                                      errno_s);
         }
     }
@@ -386,7 +386,7 @@ namespace suil {
             sdebug("creating file logger directory: %s", dir.c_str());
             utils::fs::mkdir(dir.c_str(), true, 0777);
         }
-        zcstring tmp{utils::catstr(dir, "/", prefix, "-", datetime()("%Y%m%d_%H%M%S"), ".log")};
+        zcstring tmp{utils::catstr(dir, "/", prefix, "-", DateTime()("%Y%m%d_%H%M%S"), ".log")};
         dst = std::move(File(tmp.data(), O_WRONLY|O_APPEND|O_CREAT, 0666));
     }
 
@@ -649,7 +649,7 @@ namespace suil {
     void utils::bytes(const zcstring &str, uint8_t *out, size_t olen) {
         size_t size = str.size()>>1;
         if (out == nullptr || olen < size) {
-            suil_error::create("utils::bytes - output buffer invalid");
+            SuilError::create("utils::bytes - output buffer invalid");
         }
 
         int i{0};
@@ -764,7 +764,7 @@ namespace suil {
         zcstring tmp = zcstring{path}.dup();
         if (!tmp) {
             /* creating directory failed */
-            throw suil_error::create("mkdir '", path, "' failed: ",  errno_s);
+            throw SuilError::create("mkdir '", path, "' failed: ",  errno_s);
         }
 
         if (recursive)
@@ -774,7 +774,7 @@ namespace suil {
 
         if (!status) {
             /* creating directory failed */
-            throw suil_error::create("mkdir '", path, "' failed: ",  errno_s);
+            throw SuilError::create("mkdir '", path, "' failed: ",  errno_s);
         }
     }
 
@@ -784,7 +784,7 @@ namespace suil {
 
         if (d == nullptr) {
             /* openining directory failed */
-            throw suil_error::create("opendir('", path, "') failed: ", errno_s);
+            throw SuilError::create("opendir('", path, "') failed: ", errno_s);
         }
 
         struct dirent *tmp;
@@ -843,7 +843,7 @@ namespace suil {
 
     static inline void __remove(const char *path) {
         if (::remove(path) != 0) {
-            throw suil_error::create("remove '", path, "' failed: ", errno_s);
+            throw SuilError::create("remove '", path, "' failed: ", errno_s);
         }
     }
 
@@ -869,25 +869,25 @@ namespace suil {
     zcstring utils::fs::readall(const char *path, bool async) {
         /* read file contents into a buffer */
         if (!exists(path)) {
-            throw suil_error::create("file '", path, "' does not exist");
+            throw SuilError::create("file '", path, "' does not exist");
         }
 
         struct stat st;
         if (::stat(path, &st)) {
             /* getting file information failed */
-            throw suil_error::create("stat('", path, "') failed: ", errno_s);
+            throw SuilError::create("stat('", path, "') failed: ", errno_s);
         }
 
         if (st.st_size > 8188) {
             /* size too large to be read by this API */
-            throw suil_error::create("file '", path, "' to large (",
+            throw SuilError::create("file '", path, "' to large (",
                                      st.st_size, " bytes) to be read by fs::read_all");
         }
 
         int fd = open(path, O_RDONLY);
         if (fd < 0) {
             /* opening file failed */
-            throw suil_error::create("opening file '", path, "' failed: ", errno_s);
+            throw SuilError::create("opening file '", path, "' failed: ", errno_s);
         }
 
         zbuffer b((uint32_t) st.st_size);
@@ -897,7 +897,7 @@ namespace suil {
             rc = ::read(fd, &data[nread], (size_t)(st.st_size - nread));
             if (rc < 0) {
                 /* reading file failed */
-                throw suil_error::create("reading '", path, "' failed: ", errno_s);
+                throw SuilError::create("reading '", path, "' failed: ", errno_s);
             }
 
             nread += rc;

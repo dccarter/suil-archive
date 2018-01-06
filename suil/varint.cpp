@@ -29,7 +29,7 @@ namespace suil {
         return sz;
     }
 
-    void varint::in(wire& w) {
+    void varint::in(Wire& w) {
         uint8_t sz{0};
         if (w.pull(&sz, 1)) {
             // read actual size
@@ -39,16 +39,16 @@ namespace suil {
                 return;
             }
         }
-        suil_error::create("pulling varint failed");
+        SuilError::create("pulling varint failed");
     }
 
-    void varint::out(wire& w) const {
+    void varint::out(Wire& w) const {
         uint8_t sz{Ego.length()};
         if (w.push(&sz, 1)) {
             uint64_t val = Ego.read<uint64_t>();
             if (w.push((uint8_t *)&val, sz))
                 return;
         }
-        suil_error::create("pushing varint failed");
+        SuilError::create("pushing varint failed");
     }
 }

@@ -87,7 +87,7 @@ namespace suil {
                 case level::CRITICAL:
                 case level::WARNING:
                     wr = snprintf(tmp, sz, "%s: [%s] [%3s] [%10.10s] ",
-                                  name, datetime()(), LOGLVL_STR[(unsigned char)l], tag);
+                                  name, DateTime()(), LOGLVL_STR[(unsigned char)l], tag);
                     break;
                 default:
                     wr = snprintf(tmp, sz, "%s: ",name);

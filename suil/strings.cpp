@@ -17,7 +17,7 @@ namespace suil {
           _own(0)
     {}
 
-    zcstring::zcstring(const strview_t str, bool own)
+    zcstring::zcstring(const strview str, bool own)
         : _cstr(str.data()),
           _len((uint32_t) (str.size())),
           _own((uint8_t) (own ? 1 : 0))
@@ -148,15 +148,15 @@ namespace suil {
         return _hash;
     }
 
-    void zcstring::out(wire &w) const {
+    void zcstring::out(Wire &w) const {
         varint sz(Ego._len);
         w << sz;
         if (!w.push((uint8_t *) Ego._str, Ego._len)) {
-            suil_error::create("pushing zcstring failed");
+            SuilError::create("pushing zcstring failed");
         }
     }
 
-    void zcstring::in(wire &w) {
+    void zcstring::in(Wire &w) {
         zbuffer b;
         w >> b;
         Ego = std::move(zcstring(b));

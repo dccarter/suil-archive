@@ -52,7 +52,7 @@ namespace suil {
     void Email::Attachment::send(SocketAdaptor &sock, const zcstring &boundary, int64_t timeout) {
         if (data == NULL && !load()) {
             // could not load attachment
-            throw suil_error::create("Loading attachment failed");
+            throw SuilError::create("Loading attachment failed");
         }
 
         size_t twrite = 0, written = 0, towrite = 0;
@@ -61,7 +61,7 @@ namespace suil {
 
             written = sock.send(&data[twrite], towrite, timeout);
             if (written == 0) {
-                throw suil_error::create("sending attachment '", fname.data(), "' failed: ", errno_s);
+                throw SuilError::create("sending attachment '", fname.data(), "' failed: ", errno_s);
             }
             twrite += written;
         } while (twrite < len);
@@ -261,7 +261,7 @@ namespace suil {
         // Append subject
         b << "Subject: " << subject << CRLF;
         b << "MIME-Version: 1.0" CRLF;
-        b << "Date: " << datetime()(datetime::HTTP_FMT) << CRLF;
+        b << "Date: " << DateTime()(DateTime::HTTP_FMT) << CRLF;
 
         if (attachments.empty()) {
             b << "Content-Type: " << body_type << "; charset=utf-8" CRLF;
@@ -301,33 +301,33 @@ namespace suil {
         int code{0};
         // send from
         if (!sendline(timeout, "MAIL FROM: <", from.email, ">")) {
-            throw suil_error::create("writing 'MAIL FROM: <", from.email, ">' failed");
+            throw SuilError::create("writing 'MAIL FROM: <", from.email, ">' failed");
         }
         if ((code = getresponse(timeout)) != 250)
         {
-            throw suil_error::create("'MAIL FROM: <", from.email, ">' failure: ", showerror(code));
+            throw SuilError::create("'MAIL FROM: <", from.email, ">' failure: ", showerror(code));
         }
 
         if (!sendhead(msg, timeout))
         {
-            throw suil_error::create("writing 'MAIL TO: <addresses>' failed.");
+            throw SuilError::create("writing 'MAIL TO: <addresses>' failed.");
         }
 
         // Send data
         if (!sendline(timeout, "DATA"))
         {
-            throw suil_error::create("writing DATA to server failed");
+            throw SuilError::create("writing DATA to server failed");
         }
         if ((code = getresponse(timeout)) != 354)
         {
-            throw suil_error::create(
+            throw SuilError::create(
                     "Server rejected 'DATA' command: ", showerror(code));
         }
 
         zcstring headers = msg.gethead(from);
         if (sock.send(headers, timeout) != headers.size())
         {
-            throw suil_error::create("sending email header failed: ", errno_s);
+            throw SuilError::create("sending email header failed: ", errno_s);
         }
 
         if (!msg.attachments.empty())
@@ -337,13 +337,13 @@ namespace suil {
               << "Content-Type: " << msg.body_type << "; charset=utf8" CRLF
               << "Content-Encoding: 8bit" CRLF CRLF;
             if (!sock.send(b.data(), b.size(), timeout)) {
-                throw suil_error::create("sending multipart email header failed: ", errno_s);
+                throw SuilError::create("sending multipart email header failed: ", errno_s);
             }
         }
         // append message
         if (!sock.send(msg.bodybuf.data(), msg.bodybuf.size(), timeout))
         {
-            throw suil_error::create("sending email message body failed: ", errno_s);
+            throw SuilError::create("sending email message body failed: ", errno_s);
         }
 
         // Send attachments
@@ -361,7 +361,7 @@ namespace suil {
                   << "Content-Transfer-Encoding: 8bit" CRLF CRLF;
                 // append message
                 if (!sock.send(b.data(), b.size(), timeout)) {
-                    throw suil_error::create("sending attachment '", at.filename(), "' failed: ", errno_s);
+                    throw SuilError::create("sending attachment '", at.filename(), "' failed: ", errno_s);
                 }
                 at.send(sock, msg.boundry, timeout);
                 b.clear();
@@ -370,18 +370,18 @@ namespace suil {
             // send end of boundary
             b << "--" << msg.boundry << CRLF;
             if (!sock.send(b.data(), b.size(), timeout)) {
-                throw suil_error::create("sending multipart closing failed: ", errno_s);
+                throw SuilError::create("sending multipart closing failed: ", errno_s);
             }
         }
 
         // send end of data token \r\n.\r\n
         if (!sendline(timeout, CRLF ".")) {
-            throw suil_error::create(L"sending end of data token '" CRLF "." CRLF "' ", errno_s);
+            throw SuilError::create(L"sending end of data token '" CRLF "." CRLF "' ", errno_s);
         }
 
         if ((code = getresponse(timeout)) != 250) {
             showerror(code);
-            throw suil_error::create("sending email message data failed: ", code);
+            throw SuilError::create("sending email message data failed: ", code);
         }
     }
 

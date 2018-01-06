@@ -182,7 +182,7 @@ namespace suil {
             int bind(sqlite3_stmt* stmt, int pos, zcstring& s) const {
                 return sqlite3_bind_text(stmt, pos, s.data(), s.size(), nullptr);
             }
-            int bind(sqlite3_stmt* stmt, int pos, strview_t& s) const {
+            int bind(sqlite3_stmt* stmt, int pos, strview& s) const {
                 return sqlite3_bind_text(stmt, pos, s.data(), s.size(), nullptr);
             }
 

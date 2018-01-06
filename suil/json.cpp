@@ -400,7 +400,7 @@ namespace suil {
 
                 /* State
                  */
-                const strview_t &str;
+                const strview &str;
                 size_t i;
                 string &err;
                 bool failed;
@@ -778,7 +778,7 @@ namespace suil {
             };
         }//namespace {
 
-        size_t Object::parse(Object& out, const strview_t &in, string &err, JsonParse strategy) {
+        size_t Object::parse(Object& out, const strview &in, string &err, JsonParse strategy) {
             JsonParser parser{in, 0, err, false, strategy};
             Object result = parser.parse_json(0);
 
@@ -791,7 +791,7 @@ namespace suil {
         }
 
 // Documented in json11.hpp
-        vector<Object> Object::parse_multi(const strview_t &in,
+        vector<Object> Object::parse_multi(const strview &in,
                                        std::string::size_type &parser_stop_pos,
                                        string &err,
                                        JsonParse strategy) {
@@ -813,7 +813,7 @@ namespace suil {
         }
 
         void Object::decjv(iod::jdecit &it, Object &out) {
-            strview_t view{it.start(), it.remaining()};
+            strview view{it.start(), it.remaining()};
             std::string err{};
             size_t consumed = Object::parse(out, view, err);
             it.consume(consumed);

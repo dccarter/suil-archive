@@ -225,7 +225,7 @@ namespace suil {
 
         query_string::query_string() {}
 
-        query_string::query_string(strview_t &sv)
+        query_string::query_string(strview &sv)
                 : url_(sv.empty() ? nullptr : utils::strndup(sv.data(), sv.size())) {
             if (sv.empty())
                 return;
@@ -270,11 +270,11 @@ namespace suil {
             nparams_ = 0;
         }
 
-        strview_t query_string::get(const char* name) const {
+        strview query_string::get(const char* name) const {
             if (params_) {
-                return strview_t(qs_k2v(name, params_, nparams_));
+                return strview(qs_k2v(name, params_, nparams_));
             }
-            return strview_t("");
+            return strview("");
         }
 
         std::vector<char *> query_string::get_all(const char* name) const {

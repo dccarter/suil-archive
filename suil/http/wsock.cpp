@@ -27,7 +27,7 @@ namespace suil {
 
         Status WebSock::handshake(const Request &req, Response &res, WebSockApi &api, size_t size) {
             SHA_CTX         sctx;
-            strview_t  key, version;
+            strview  key, version;
 
             key = req.header("Sec-WebSocket-Key");
             if (key.empty()) {

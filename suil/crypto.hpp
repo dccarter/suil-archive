@@ -13,18 +13,19 @@
 
 #define BASE58_ADDR_MAX_LEN     36
 #define BASE58_KEY_MAX_LEN      53
-#define SUIL_PUBKEY_LEN       33
-#define SUIL_CHECKSUM_LEN     4
-#define SUIL_VERSION_LEN      1
-#define SUIL_BINARY_KEYLEN    (SUIL_PUBKEY_LEN+SUIL_CHECKSUM_LEN+SUIL_VERSION_LEN)
+#define SUIL_PUBKEY_LEN         33
+#define SUIL_CHECKSUM_LEN       4
+#define SUIL_VERSION_LEN        1
+#define SUIL_BINARY_KEYLEN      (SUIL_PUBKEY_LEN+SUIL_CHECKSUM_LEN+SUIL_VERSION_LEN)
 
-namespace sodoin {
+namespace suil {
 
-    typedef suil::Blob<SUIL_PUBKEY_LEN>      PubkeyBlob;
-    typedef suil::Blob<32>                   PrivkeyBlob;
-    typedef suil::Blob<SHA256_DIGEST_LENGTH> Sha256Blob;
-    typedef suil::Blob<BASE58_ADDR_MAX_LEN>  Base58Blob;
-    typedef suil::Blob<64>                   EcdsaSigBlob;
+    typedef suil::Blob<SUIL_PUBKEY_LEN>         PubkeyBlob;
+    typedef suil::Blob<32>                      PrivkeyBlob;
+    typedef suil::Blob<SHA256_DIGEST_LENGTH>    SHA256Blob;
+    typedef suil::Blob<BASE58_ADDR_MAX_LEN>     Base58Blob;
+    typedef suil::Blob<64>                      ECDSASigBlob;
+    typedef suil::Blob<RIPEMD160_DIGEST_LENGTH> RIPEMD160Blob;
 
     namespace crypto {
         typedef suil::Blob<1 + RIPEMD160_DIGEST_LENGTH + SUIL_CHECKSUM_LEN> AddressBLOB;
@@ -50,7 +51,7 @@ namespace sodoin {
             bool  pub(Address&) const;
         } __attribute__((aligned(1)));
 
-        struct sha256_bin : Sha256Blob {
+        struct sha256_bin : SHA256Blob {
             inline uint8_t *sha()              { return Ego.begin(); };
             inline const uint8_t *csha() const { return Ego.cbegin(); };
         } __attribute__((aligned(1)));
@@ -108,7 +109,7 @@ namespace sodoin {
 
         namespace ecdsa {
 
-            struct signature_bin : EcdsaSigBlob {
+            struct signature_bin : ECDSASigBlob {
                 inline uint8_t *r()   { return &Ego.bin<0>();  }
                 inline uint8_t *s()   { return &Ego.bin<32>(); }
                 inline const uint8_t *cr()   const { return &Ego.cbin<0>();  }

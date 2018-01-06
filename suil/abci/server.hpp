@@ -133,12 +133,12 @@ namespace suil {
                 try {
                     status = backend.run();
                 }
-                catch (suil_error& ser) {
+                catch (SuilError& ser) {
                     ierror("critical abci server error: %s", ser.what());
                 }
                 catch (...) {
                     ierror("critical error: %s",
-                          suil_error::getmsg(std::current_exception()));
+                          SuilError::getmsg(std::current_exception()));
                 }
 
                 iinfo("abci server exiting with status %d", status);

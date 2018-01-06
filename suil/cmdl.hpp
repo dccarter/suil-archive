@@ -42,7 +42,7 @@ namespace suil {
             Cmd&operator<<(Arg&&arg);
             Cmd&operator()(std::function<void(Cmd&)> handler) {
                 if (Ego.handler != nullptr) {
-                    throw suil_error::create("command '", name,
+                    throw SuilError::create("command '", name,
                                              "' already assigned a handler");
                 }
                 Ego.handler = handler;
@@ -99,7 +99,7 @@ namespace suil {
             V getvalue(const zcstring& name, const V def) {
                 Arg *_;
                 if (!check(_, name, NOSF)) {
-                    throw suil_error::create("passed parameter '",
+                    throw SuilError::create("passed parameter '",
                             name, "' is not an argument");
                 }
                 V tmp = def;

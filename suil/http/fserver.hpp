@@ -54,7 +54,7 @@ namespace suil {
                             head(req, res, p, e);
                         }
                     } catch (...) {
-                        const char *emsg = suil::suil_error::getmsg(std::current_exception());
+                        const char *emsg = suil::SuilError::getmsg(std::current_exception());
                         res << "Error serving '" << path << "': " << emsg;
                         ierror("'%s': %s", path(), emsg);
                         res.end(Status::INTERNAL_ERROR);
@@ -209,7 +209,7 @@ namespace suil {
             void prepare_response(const Request&, Response&, cached_file_t&, mime_type_t&);
 
             void build_range_resp(
-                    const Request&, Response&, strview_t&, cached_file_t&, mime_type_t&);
+                    const Request&, Response&, strview&, cached_file_t&, mime_type_t&);
 
             mime_types_t    mime_types_;
             cached_files_t  cached_files_;

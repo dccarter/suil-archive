@@ -10,9 +10,7 @@
 
 #include "crypto.hpp"
 
-using namespace suil;
-
-namespace sodoin {
+namespace suil {
 
     namespace crypto {
 
@@ -138,6 +136,12 @@ namespace sodoin {
             // Double SHA256
             SHA256_Update(&sha256, p, len);
             SHA256_UpdateFinal(&sha256, sha);
+        }
+
+        void ripemd160(RIPEMD160Blob &ripemd, const void *p, size_t len) {
+            sha256_bin sha;
+            doubleSHA256(sha, p, len);
+            RIPEMD160(&sha.bin(), sizeof(sha), &ripemd.bin());
         }
 
         bool genPrivKey(privkey_bin& bin) {

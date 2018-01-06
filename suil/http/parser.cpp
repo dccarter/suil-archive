@@ -2336,12 +2336,12 @@ namespace suil {
         int parser::on_msg_complete(http_parser *s) {
             parser *p = static_cast<parser*>(s);
             // construct query string
-            strview_t sv = p->raw_url;
+            strview sv = p->raw_url;
             size_t pos = sv.find("?");
             auto url = sv.substr(0, pos);
             p->url = utils::strndup(url.data(), url.size());
             if (pos != sv.size()) {
-                strview_t tmp((sv.data()+pos-1), sv.length()-pos-1);
+                strview tmp((sv.data()+pos-1), sv.length()-pos-1);
                 p->qps = query_string(tmp);
             }
 

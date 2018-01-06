@@ -35,7 +35,7 @@ namespace suil {
     int Application::start() {
         idebug("starting application with %d tasks", tasks.size());
         if (started) {
-            throw suil_error::create("application aleady started");
+            throw SuilError::create("application aleady started");
         }
 
         if (pipe(__notifyfd)) {
@@ -124,7 +124,7 @@ namespace suil {
 
             idebug("{%ld} %u tasks exited", mnow(), requested);
             if (!status) {
-                throw suil_error::create(
+                throw SuilError::create(
                         "stopping tasks timed out");
             }
         }
@@ -175,8 +175,8 @@ namespace suil {
                 delete it->second;
                 tasks.erase(it++);
             }
-            catch (suil_error& ex) {
-                iwarn("delete task unhandled suil_error: %s",
+            catch (SuilError& ex) {
+                iwarn("delete task unhandled SuilError: %s",
                      ex.what());
             }
             catch (...) {

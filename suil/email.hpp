@@ -272,7 +272,7 @@ namespace suil {
         inline void send(Email& msg, Email::Address from, Params... params) {
             if (!proto.isopen()) {
                 // cannot send without logging
-                throw suil_error::create("Send email failed: not connected to server");
+                throw SuilError::create("Send email failed: not connected to server");
             }
             auto opts = iod::D(params...);
             do_send(msg, from, opts);
@@ -281,7 +281,7 @@ namespace suil {
         template <typename... Params>
         inline void login(const zcstring username, const zcstring passwd, Params... params) {
             if (proto.isopen()) {
-                throw suil_error::create("Already logged into mailserver");
+                throw SuilError::create("Already logged into mailserver");
             }
             auto opts = iod::D(params...);
             do_login(username, passwd, opts);

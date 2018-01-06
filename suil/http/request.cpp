@@ -503,7 +503,7 @@ namespace suil {
             return parser::msg_complete();
         }
 
-        strview_t Request::get_body() {
+        strview Request::get_body() {
             if (!has_body || body_read || body_error) {
                 return body;
             }
@@ -644,13 +644,13 @@ namespace suil {
             zcstring real_dir = utils::fs::realpath(dir);
             if (!real_dir || !utils::fs::isdir(real_dir.data())) {
                 /* directory is not valid */
-                throw suil_error::create("directory: '", dir, "' invalid.");
+                throw SuilError::create("directory: '", dir, "' invalid.");
             }
 
             zcstring path = utils::catstr(real_dir, "/", basename((char *)name_.data()));
             if (!path || utils::fs::isdir(path.data())) {
                 /* directory is not valid */
-                throw suil_error::create("file with name: '", name_(), "' not supported.");
+                throw SuilError::create("file with name: '", name_(), "' not supported.");
             }
 
             /* async write data to disk */
