@@ -3,8 +3,7 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Install dependencies
 RUN apk update
-RUN apk  add libressl libstdc++
+RUN apk  add bash libressl libstdc++
 
 # Copy Binaries
 COPY artifacts/ /usr/local/
-COPY sut        /usr/local/bin/sut
