@@ -421,6 +421,7 @@ namespace iod {
                 }
 
                 void eat(char c) {
+                    p.pos = this->pos;
                     p >> c;
                     pos += 1;
                 }

@@ -14,3 +14,5 @@
 # Use ./bootstrap.sh to make b2
 # ./b2 tools/bcp
 # ./dist/bin/bcp boost/<header>.hpp output_folder
+
+sudo apt-get install uuid-dev libsqlite3-dev libssl-dev libpq-dev postgres postgres-server-dev-9.5

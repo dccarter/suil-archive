@@ -399,8 +399,8 @@ namespace suil {
         {
             // we want to ensure that the file is within the base directory
             zbuffer b(0);
-            // append base, followed by file
-            b << www_dir << rel;
+            // append base, followed by file (notice rel(), ensure's const char* is used and size recomputed)
+            b << www_dir << rel();
             char absolute[PATH_MAX];
             realpath((char *)b, absolute);
             zcstring tmp(absolute, www_dir.size(), false);

@@ -39,16 +39,13 @@ struct http_task : public AppTask {
     template <typename... __Args>
     http_task(const char *name, __Args... args)
         : AppTask(name),
-          ep("/api/v1", args...)
+          ep("/api/v1", args...),
+          fs(ep, opt(root, "/home/dc/app/"))
     {
 //        ep.Middleware<sql::Postgres>().
 //                setup("dbname=test1 user=Postgres password=*******",
 //                      opt(EXPIRES, 10000),
 //                      opt(ASYNC, true));
-
-        // setup file server
-        http::FileServer fs(ep,
-                             opt(root, "/home/dc/app/"));
 
         eproute(ep, "/hello/<string>")
         ("GET"_method)
@@ -106,6 +103,7 @@ protected:
 
 private:
     http::TcpEndpoint<http::SystemAttrs, Middleware/*, sql::Postgres*/> ep;
+    http::FileServer fs;
 };
 
 coroutine void do_start(Application& app) {
@@ -117,28 +115,28 @@ int main(int argc, const char *argv[])
     auto opts = parse_cmd(argc, argv);
     suil::init();
 
-//    typedef decltype(iod::D(
-//            prop(name, json::Object),
-//            prop(age,  int)
-//    )) Dynamic;
-//
-//    std::string jstr = "{\"name\":{\"num\":1, \"boolean\":true}, \"age\":28}";
-//    Dynamic  d{};
-//    try {
-//        iod::json_decode(d, jstr);
-//    }
-//    catch(...) {
-//        sinfo("error: %s", suil_error::getmsg(std::current_exception()));
-//    }
-//    json::Object& obj = d.name;
-//    double num = obj["num"].number_value();
-//    double b   = obj["boolean"].bool_value();
-//
-//    auto out = iod::json_encode(d);
-//
-//    Application app("demo");
-//    /* setup logging options */
-//    log::setup(opt(name, "demo"));
+    typedef decltype(iod::D(
+            prop(name, json::Object),
+            prop(username,  suil::zcstring)
+    )) Dynamic;
+
+    std::string jstr = "{\"name\":{\"num\":1, \"boolean\":true}, \"username\":\"Carter Mbotho\"}";
+    Dynamic  d{};
+    try {
+        iod::json_decode(d, jstr);
+    }
+    catch(...) {
+        sinfo("error: %s", suil_error::getmsg(std::current_exception()));
+    }
+    json::Object& obj = d.name;
+    double num = obj["num"].number_value();
+    double b   = obj["boolean"].bool_value();
+
+    auto out = iod::json_encode(d);
+
+    Application app("demo");
+    /* setup logging options */
+    log::setup(opt(name, "demo"));
 
 
     /*auto browser = client::load("http://browser.dc1.suilteam.com");
