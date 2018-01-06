@@ -24,9 +24,9 @@ namespace suil {
     {}
 
     zcstring::zcstring(const std::string &str, bool own)
-        : _cstr(_own ? utils::strndup(str.data(), str.size()) : str.data()),
+        : _cstr(own ? utils::strndup(str.data(), str.size()) : str.data()),
           _len((uint32_t) (str.size())),
-          _own((uint8_t) (_own ? 1 : 0))
+          _own((uint8_t) (own ? 1 : 0))
     {}
 
     zcstring::zcstring(const char *str, size_t len, bool own)
@@ -44,7 +44,7 @@ namespace suil {
 
     zcstring::zcstring(zbuffer &b, bool own) {
         _len = (uint32_t) b.size();
-        Ego._own = (uint8_t) ((own && b.data() != nullptr) ? 1 : 0);
+        Ego._own = (uint8_t) ((own && (b.data() != nullptr)) ? 1 : 0);
         if (Ego._own) {
             _str = b.release();
         } else {

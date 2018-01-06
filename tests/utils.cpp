@@ -344,13 +344,13 @@ TEST_CASE("utils::filesystem", "[utils][fs]") {
         // Write data to file
         data = "The quick brown fox";
         utils::fs::append(fname, data);
-        REQUIRE(utils::fs::size("test/file.txt") == data.len);
+        REQUIRE(utils::fs::size("test/file.txt") == data.size());
         zcstring out = utils::fs::readall(fname);
         REQUIRE(data == out);
         // Append to file
         data = utils::catstr(data, "\n jumped over the lazy dog");
         utils::fs::append(fname, "\n jumped over the lazy dog");
-        REQUIRE(utils::fs::size(fname) == data.len);
+        REQUIRE(utils::fs::size(fname) == data.size());
         out = utils::fs::readall(fname);
         REQUIRE(data == out);
         // Clear the file
@@ -370,32 +370,32 @@ TEST_CASE("utils::zcstring", "[utils][zcstring]")
         // initialize from other types
         zcstring str1("Hello World");
         REQUIRE_FALSE(str1.empty());
-        REQUIRE(str1.own == 0);
-        REQUIRE(strcmp(str1.str, "Hello World") == 0);
+        REQUIRE(str1._own == 0);
+        REQUIRE(strcmp(str1.data(), "Hello World") == 0);
 
         std::string stdstr("Hello World");
 
         zcstring str2(stdstr);
         REQUIRE_FALSE(str2.empty());
-        REQUIRE(str2.own == 0);
-        REQUIRE(strcmp(str2.str, "Hello World") == 0);
+        REQUIRE(str2._own == 0);
+        REQUIRE(strcmp(str2.data(), "Hello World") == 0);
 
         zcstring str3(stdstr, true);
         REQUIRE_FALSE(str3.empty());
-        REQUIRE(str3.own == 1);
-        REQUIRE(strcmp(str3.str, "Hello World") == 0);
-        REQUIRE(str3.cstr != stdstr.data());
+        REQUIRE(str3._own == 1);
+        REQUIRE(strcmp(str3.data(), "Hello World") == 0);
+        REQUIRE(((void *)str3.data() != (void *)stdstr.data()));
 
         zcstring str4(utils::strdup("Hello World"), 12, true);
         REQUIRE_FALSE(str4.empty());
-        REQUIRE(str4.own == 1);
-        REQUIRE(strcmp(str4.str, "Hello World") == 0);
+        REQUIRE(str4._own == 1);
+        REQUIRE(strcmp(str4.data(), "Hello World") == 0);
 
         zbuffer b(15);
         b << "Hello World";
         zcstring str5(utils::strdup("Hello World"), 12, true);
         REQUIRE_FALSE(str5.empty());
-        REQUIRE(str5.own == 1);
-        REQUIRE(strcmp(str5.str, "Hello World") == 0);
+        REQUIRE(str5._own == 1);
+        REQUIRE(strcmp(str5.data(), "Hello World") == 0);
     }
 }

@@ -647,10 +647,10 @@ namespace suil {
                 throw suil_error::create("directory: '", dir, "' invalid.");
             }
 
-            zcstring path = utils::catstr(real_dir, "/", basename(name_._str));
+            zcstring path = utils::catstr(real_dir, "/", basename((char *)name_.data()));
             if (!path || utils::fs::isdir(path.data())) {
                 /* directory is not valid */
-                throw suil_error::create("file with name: '", name_._cstr, "' not supported.");
+                throw suil_error::create("file with name: '", name_(), "' not supported.");
             }
 
             /* async write data to disk */

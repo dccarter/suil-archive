@@ -636,9 +636,6 @@ namespace suil {
             return *this;
         }
 
-        template <typename __T>
-        zbuffer&operator>>(__T& out);
-
         uint8_t& operator[](size_t index) {
             if (index <= offset_) {
                 return data_[index];
@@ -692,14 +689,6 @@ namespace suil {
     };
 
     struct zcstring : iod::jsonvalue {
-        union {
-            char *_str;
-            const char *_cstr;
-        };
-
-        uint32_t _len{0};
-        uint8_t  _own{0};
-        size_t   _hash{0};
 
         zcstring();
 
@@ -707,13 +696,13 @@ namespace suil {
 
         zcstring(const char *str);
 
-        explicit zcstring(const strview_t str, bool _own = 0);
+        explicit zcstring(const strview_t str, bool own = 0);
 
-        explicit zcstring(const std::string& str, bool _own = 0);
+        explicit zcstring(const std::string& str, bool own = 0);
 
-        explicit zcstring(const char *str, size_t len, bool _own = true);
+        explicit zcstring(const char *str, size_t len, bool own = true);
 
-        zcstring(zbuffer& b, bool _own = true);
+        zcstring(zbuffer& b, bool own = true);
 
         zcstring(zcstring&& s) noexcept;
 
@@ -815,14 +804,19 @@ namespace suil {
 
         ~zcstring();
 
+#ifndef SUIL_TESTING
+    private:
+#endif
         friend struct hasher;
-    };
+        union {
+            char *_str;
+            const char *_cstr;
+        };
 
-    template <typename __Free>
-    zbuffer& operator>>(zbuffer& buf, zcstring& out) {
-        out = std::move(zcstring(buf.data(), buf.size(), false));
-        return buf;
-    }
+        uint32_t _len{0};
+        uint8_t  _own{0};
+        size_t   _hash{0};
+    };
 
     inline void suil_error::msg(std::stringstream& ss, suil::zcstring& a) {
         ss.write(a.data(), a.size());

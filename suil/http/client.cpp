@@ -51,7 +51,7 @@ namespace suil {
                         zbuffer tmp(127);
                         tmp << "--" << boundary << CRLF;
                         tmp << "Content-Disposition: form-data; name=\""
-                            << ff.name << "\"; filename=\"" << basename(ff.path._str)
+                            << ff.name << "\"; filename=\"" << basename((char *)ff.path.data())
                             << "\"" << CRLF;
                         if (ff.ctype) {
                             /* append content type header */
@@ -67,7 +67,7 @@ namespace suil {
                     }
 
                     /* --boundary--  will be appended */
-                    content_length += sizeofcstr("----") + boundary._len;
+                    content_length += sizeofcstr("----") + boundary.size();
                     return content_length;
                 }
             }
@@ -76,10 +76,10 @@ namespace suil {
                 if (fd > 0) {
                     return fd;
                 }
-                fd = ::open(file->path._cstr, O_RDWR);
+                fd = ::open(file->path(), O_RDWR);
                 if (fd < 0) {
                     /* opening file failed */
-                    throw suil_error::create("open '", file->path._cstr,
+                    throw suil_error::create("open '", file->path(),
                                              "' failed: ", errno_s);
                 }
 
@@ -322,8 +322,8 @@ namespace suil {
                     /* send upload files one after the other */
                     for (auto &up: form.uploads) {
                         int fd = up.open();
-                        nwr = sock.send(up.head._cstr, up.head._len, timeout);
-                        if (nwr != up.head._len) {
+                        nwr = sock.send(up.head(), up.head.size(), timeout);
+                        if (nwr != up.head.size()) {
                             /* sending upload head failed, no need to send body */
                             throw suil_error::create("send Request failed: ", errno_s);
                         }
@@ -331,7 +331,7 @@ namespace suil {
                         /* send file */
                         nwr = sock.sendfile(fd, 0, up.file->size, timeout);
                         if (nwr != up.file->size) {
-                            throw suil_error::create("uploading file: '", up.file->path._cstr,
+                            throw suil_error::create("uploading file: '", up.file->path(),
                                                      "' failed: ", errno_s);
                         }
 
@@ -364,7 +364,7 @@ namespace suil {
 
                 for(auto& hdr: headers) {
                     zcstring key(hdr.first.data(), hdr.first.size(), false);
-                    zcstring val(hdr.second._cstr, hdr.second._len, false);
+                    zcstring val(hdr.second(), hdr.second.size(), false);
                     req.hdr(std::move(key), std::move(val));
                 }
 
@@ -375,7 +375,7 @@ namespace suil {
                 if (!req.sock.isopen()) {
                     /* open a new socket for the Request */
                     if (!req.sock.connect(addr, timeout)) {
-                        throw suil_error::create("Connecting to '", host._cstr, ":",
+                        throw suil_error::create("Connecting to '", host(), ":",
                                                  port, "' failed: ", errno_s);
                     }
                 }
@@ -391,7 +391,7 @@ namespace suil {
                 Response resp = std::move(perform(h, Method::Connect, "/"));
                 if (resp.status() != Status::OK) {
                     /* connecting to server failed */
-                    throw suil_error::create("sending CONNECT to '", host._cstr, "' failed: ",
+                    throw suil_error::create("sending CONNECT to '", host(), "' failed: ",
                             http::Statusext(resp.status()));
                 }
 
