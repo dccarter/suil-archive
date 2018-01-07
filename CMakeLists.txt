@@ -61,7 +61,7 @@ set(SUIL_LIBRARIES
         ${OpenSSL_LIBRARIES})
 
 set(SUIL_STATIC_LIBRARIES
-        uuid.a sqlite3 pq ssl.a crypto)
+        uuid.a sqlite3 pq.a ssl.a crypto)
 
 if (SUIL_BUILD_ABCI)
     find_package(Protobuf REQUIRED)
@@ -87,23 +87,14 @@ if (SUIL_BUILD_DEV_PACKAGE)
             FILES_MATCHING PATTERN "*.h")
 
     # Packaging
-    if (SUIL_DEV_IDE)
-        if (SUIL_BUILD_ABCI)
-            set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s sabci_s)
-            set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil_s sabci_s)
-        else()
-            set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s)
-            set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil_s)
-        endif()
+    if (SUIL_BUILD_ABCI)
+        set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s sabci_s)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil_s sabci_s)
     else()
-        if (SUIL_BUILD_ABCI)
-            set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s.a suil_s.a sabci_s.a)
-            set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s.a suil_s.a sabci_s.a)
-        else()
-            set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s.a suil_s.a)
-            set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s.a suil_s.a)
-        endif()
+        set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil_s)
     endif()
+
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})
     set(SUIL_PACKAGE_DEFINES   ${SUIL_DEFINES})
 
