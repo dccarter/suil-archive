@@ -56,10 +56,10 @@ endif()
 find_package(PostgreSQL ${SUIL_PGSQL_VERSION} REQUIRED)
 
 set(SUIL_LIBRARIES
-        ssl crypto uuid sqlite3 pq)
+        ssl crypto uuid sqlite3 pq.a)
 
 set(SUIL_STATIC_LIBRARIES
-        ssl.a crypto.a uuid.a sqlite3 pq.a)
+        ssl crypto uuid sqlite3 pq.a)
 
 if (SUIL_BUILD_ABCI)
     find_package(Protobuf REQUIRED)
@@ -87,10 +87,10 @@ if (SUIL_BUILD_DEV_PACKAGE)
     # Packaging
     if (SUIL_BUILD_ABCI)
         set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s sabci_s)
-        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil_s sabci_s)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill suil sabci)
     else()
         set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s)
-        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill_s suil_s)
+        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill suil)
     endif()
 
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})

@@ -74,6 +74,7 @@ function(SuilProject name)
         endif()
 
         set(SUIL_PROJECT_LIBRARIES ${SUIL_PACKAGE_LIBRARIES} PARENT_SCOPE)
+        set(SUIL_PROJECT_STATIC_LIBRARIES ${SUIL_PACKAGE_STATIC_LIBRARIES} PARENT_SCOPE)
         # Some basic project definitions
         set(SUIL_PROJECT_NAME ${name} PARENT_SCOPE)
         set(SUIL_PROJECT_CREATED ON PARENT_SCOPE)
@@ -142,6 +143,7 @@ function(SuilApp name)
         add_executable(${name} ${${name}_SOURCES})
         target_compile_definitions(${name} PUBLIC "-DAPP_VERSION=\"${${name}_VERSION}\"")
         target_compile_definitions(${name} PUBLIC "-DAPP_NAME=\"${name}\"")
+        target_compile_definitions(${name} PUBLIC "-DLIB_VERSION=\"${${name}_VERSION}\"")
     endif()
 
     # generate symbols
@@ -164,15 +166,17 @@ function(SuilApp name)
                 OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${${name}_SYMBOLS_OUTPUT}.h)
     endif()
 
-    # add dependecy libraries
-    set(${name}_LIBRARIES ${SUIL_PROJECT_LIBRARIES} ${SUIL_APP_LIBRARIES})
-    message(STATUS "target '${name}' libraries: ${${name}_LIBRARIES}")
-    target_link_libraries(${name} ${${name}_LIBRARIES})
-
     if (SUIL_APP_DEPENDS)
         message(STATUS "adding dependencies to ${name}: ${SUIL_APP_DEPENDS}")
         add_dependencies(${name} ${SUIL_APP_DEPENDS})
+        set(${name}_LIBRARIES ${SUIL_PROJECT_LIBRARIES} ${SUIL_APP_LIBRARIES})
+    else()
+        set(${name}_LIBRARIES ${SUIL_PROJECT_STATIC_LIBRARIES} ${SUIL_APP_LIBRARIES})
     endif()
+
+    # add dependecy libraries
+    target_link_libraries(${name} ${${name}_LIBRARIES})
+    message(STATUS "target '${name}' libraries: ${${name}_LIBRARIES}")
 
     if (SUIL_APP_TEST)
         list(APPEND SUIL_APP_DEFINES "-DSUIL_TESTING")
