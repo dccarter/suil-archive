@@ -56,12 +56,10 @@ endif()
 find_package(PostgreSQL ${SUIL_PGSQL_VERSION} REQUIRED)
 
 set(SUIL_LIBRARIES
-        uuid sqlite3
-        ${PostgreSQL_LIBRARIES}
-        ${OpenSSL_LIBRARIES})
+        ssl crypto uuid sqlite3 pq.a)
 
 set(SUIL_STATIC_LIBRARIES
-        ssl.a crypto uuid.a sqlite3 pq.a)
+        ssl.a crypto.a uuid.a sqlite3 pq.a)
 
 if (SUIL_BUILD_ABCI)
     find_package(Protobuf REQUIRED)
