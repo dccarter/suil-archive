@@ -61,7 +61,7 @@ set(SUIL_LIBRARIES
         ${OpenSSL_LIBRARIES})
 
 set(SUIL_STATIC_LIBRARIES
-        uuid.a sqlite3 pq.a ssl.a crypto)
+        ssl.a crypto uuid.a sqlite3 pq.a)
 
 if (SUIL_BUILD_ABCI)
     find_package(Protobuf REQUIRED)
