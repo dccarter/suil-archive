@@ -56,7 +56,7 @@ endif()
 find_package(PostgreSQL ${SUIL_PGSQL_VERSION} REQUIRED)
 
 set(SUIL_LIBRARIES
-        ssl crypto uuid sqlite3 pq.a)
+        ssl crypto uuid sqlite3 pq)
 
 set(SUIL_STATIC_LIBRARIES
         ssl.a crypto.a uuid.a sqlite3 pq.a)
