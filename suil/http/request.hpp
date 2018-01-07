@@ -29,17 +29,7 @@ namespace suil {
             const UploadedFile&operator()(const char*);
 
             template <typename O>
-            void operator>>(O& o) {
-                iod::foreach2(o) |
-                [&](auto& m) {
-                    zcstring name{m.symbol().name()};
-                    auto it = req.form.find(name);
-                    if (it != req.form.end()) {
-                        // cast value to correct type
-                        utils::cast(it->second, m.value());
-                    }
-                };
-            }
+            void operator>>(O& o);
         private:
             bool find(zcstring& out, const char *name);
 
@@ -192,6 +182,19 @@ namespace suil {
             friend class Router;
             request_params_t params;
         };
+
+        template <typename O>
+        void RequestForm::operator>>(O& o) {
+            iod::foreach2(o) |
+            [&](auto& m) {
+                zcstring name{m.symbol().name()};
+                auto it = req.form.find(name);
+                if (it != req.form.end()) {
+                    // cast value to correct type
+                    utils::cast(it->second, m.value());
+                }
+            };
+        }
     }
 
 }
