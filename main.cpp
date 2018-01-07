@@ -75,7 +75,7 @@ struct http_task : public AppTask {
         ("POST"_method)
         .attrs(opt(PARSE_FORM, true))
         ([&](const http::Request& req) {
-            http::request_form_t form(req);
+            http::RequestForm form(req);
             form |
             [&](const zcstring& name, const zcstring& val) {
                 sinfo("argument: %s: %s", name(), val());

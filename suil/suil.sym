@@ -28,6 +28,7 @@ _domain
 _jwt_token_use
 _unwire
 _printinfo
+_text
 
 # event bus
 _type
@@ -154,6 +155,7 @@ _STATIC
 _AUTHORIZE
 _PARSE_FORM
 _PARSE_COOKIES
+_REPLY_TYPE
 
 # ABCI
 _host

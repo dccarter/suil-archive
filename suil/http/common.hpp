@@ -94,10 +94,11 @@ namespace suil {
     using Roles = Auth;
 
     typedef decltype(iod::D(
-        prop(STATIC,        bool),
-        prop(AUTHORIZE,     Auth),
-        prop(PARSE_COOKIES, bool),
-        prop(PARSE_FORM,    bool)
+        prop(STATIC,         bool),
+        prop(AUTHORIZE,      Auth),
+        prop(PARSE_COOKIES,  bool),
+        prop(PARSE_FORM,     bool),
+        prop(REPLY_TYPE,     zcstring)
     )) route_attributes_t;
 
     namespace magic {

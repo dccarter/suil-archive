@@ -402,7 +402,13 @@ namespace suil {
             }
         }
 
-        void SystemAttrs::after(Request &, http::Response &, Context &) {
+        void SystemAttrs::after(Request &req, http::Response &res, Context &) {
+            /* check for system attributes and setup response accordingly */
+            const route_attributes_t& attrs = req.route();
+            if (!attrs.REPLY_TYPE.empty()) {
+                /* override response encoding */
+                res.set_content_type(attrs.REPLY_TYPE());
+            }
         }
     }
 }

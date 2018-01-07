@@ -349,7 +349,7 @@ namespace suil {
                         value++;
                     }
                     zcstring tname(name);
-                    zcstring tvalue(value);
+                    zcstring tvalue = utils::urldecode(value, strlen(value));
                     form.emplace(std::move(tname), std::move(tvalue));
                 }
 
@@ -438,7 +438,7 @@ namespace suil {
 
         Status Request::receive_body(ServerStats& stats) {
             Status status = Status::OK;
-            if (!has_body || body_complete) {
+            if (body_complete) {
                 return status;
             }
             size_t len  = 0, left = content_length;
@@ -591,11 +591,11 @@ namespace suil {
             params.clear();
         }
 
-        request_form_t::request_form_t(const Request &req)
+        RequestForm::RequestForm(const Request &req)
             : req(req)
         {}
 
-        void request_form_t::operator|(form_data_it_t f) {
+        void RequestForm::operator|(form_data_it_t f) {
             for(const auto& dt : req.form) {
                 if (f(dt.first, dt.second)) {
                     break;
@@ -603,7 +603,7 @@ namespace suil {
             }
         }
 
-        void request_form_t::operator|(form_file_it_t f) {
+        void RequestForm::operator|(form_file_it_t f) {
             for(const auto& dt : req.files) {
                 if (f(dt.second)) {
                     break;
@@ -611,7 +611,7 @@ namespace suil {
             }
         }
 
-        const zcstring request_form_t::operator[](const char *key) {
+        const zcstring RequestForm::operator[](const char *key) {
             zcstring tmp(key);
             const auto it = req.form.find(tmp);
             if (it != req.form.end()) {
@@ -620,7 +620,7 @@ namespace suil {
             throw error::internal("form data not found in post form");
         }
 
-        const UploadedFile& request_form_t::operator()(const char *f) {
+        const UploadedFile& RequestForm::operator()(const char *f) {
             zcstring tmp(f);
             const auto it = req.files.find(tmp);
             if (it != req.files.end()) {
@@ -629,7 +629,7 @@ namespace suil {
             throw error::internal("file not found in form");
         }
 
-        bool request_form_t::find(zcstring& out, const char *name) {
+        bool RequestForm::find(zcstring& out, const char *name) {
             zcstring tmp(name);
             auto it = req.form.find(tmp);
             if (it != req.form.end()) {

@@ -164,7 +164,7 @@ namespace suil {
             }
 
             template <typename T>
-            T& Middleware()
+            T& middleware()
             {
                 return get_element_by_type<T, __Mws...>(basesrv_t::mws);
             }

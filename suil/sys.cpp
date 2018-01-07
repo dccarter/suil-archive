@@ -684,6 +684,82 @@ namespace suil {
         return zcstring((char *)buf, (dst - buf), true);
     }
 
+    char *__urldecode(const char *src, const int src_len, char *out, int& out_sz)
+    {
+#define IS_HEX_CHAR(ch) \
+        ((ch >= '0' && ch <= '9') || \
+         (ch >= 'a' && ch <= 'f') || \
+         (ch >= 'A' && ch <= 'F'))
+
+#define HEX_VALUE(ch, value) \
+        if (ch >= '0' && ch <= '9') \
+        { \
+            value = ch - '0'; \
+        } \
+        else if (ch >= 'a' && ch <= 'f') \
+        { \
+            value = ch - 'a' + 10; \
+        } \
+        else \
+        { \
+            value = ch - 'A' + 10; \
+        }
+
+        const unsigned char *start;
+        const unsigned char *end;
+        char *dest;
+        unsigned char c_high;
+        unsigned char c_low;
+        int v_high;
+        int v_low;
+
+        dest = out;
+        start = (unsigned char *)src;
+        end = (unsigned char *)src + src_len;
+        while (start < end)
+        {
+            if (*start == '%' && start + 2 < end)
+            {
+                c_high = *(start + 1);
+                c_low  = *(start + 2);
+
+                if (IS_HEX_CHAR(c_high) && IS_HEX_CHAR(c_low))
+                {
+                    HEX_VALUE(c_high, v_high);
+                    HEX_VALUE(c_low, v_low);
+                    *dest++ = (v_high << 4) | v_low;
+                    start += 3;
+                }
+                else
+                {
+                    *dest++ = *start;
+                    start++;
+                }
+            }
+            else if (*start == '+')
+            {
+                *dest++ = ' ';
+                start++;
+            }
+            else
+            {
+                *dest++ = *start;
+                start++;
+            }
+        }
+
+        out_sz = (int) (dest - out);
+        return dest;
+    }
+
+    zcstring utils::urldecode(const char *src, size_t len)
+    {
+        char out[1024];
+        int  size{1023};
+        (void)__urldecode(src, (int)len, out, size);
+        return zcstring{out, (size_t)size, false}.dup();
+    }
+
     void utils::randbytes(uint8_t out[], size_t size) {
         RAND_bytes(out, (int) size);
     }

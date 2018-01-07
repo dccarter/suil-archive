@@ -1125,7 +1125,7 @@ namespace suil {
         {
             if (l.data() != nullptr) {
                 return ((l.data() == r.data()) && (l.size() == r.size())) ||
-                       (strncmp(l.data(), r.data(), std::min(l.size(), r.size())) == 0);
+                       (strncasecmp(l.data(), r.data(), std::min(l.size(), r.size())) == 0);
             }
             return l.data() == r.data();
         }
@@ -1875,6 +1875,11 @@ namespace suil {
             return urlencode(tmp);
         }
 
+        zcstring urldecode(const char *src, size_t len);
+        inline zcstring urldecode(const zcstring& str) {
+            return urldecode(str.data(), str.size());
+        }
+
         void     randbytes(uint8_t *out, size_t size);
 
         zcstring randbytes(size_t size);
@@ -1960,6 +1965,9 @@ namespace suil {
         inline uint64_t np2(uint64_t num) {
             return (uint64_t)(1<<(sizeof(num)-utils::ctz(num)));
         }
+
+#define exmsg() SuilError::getmsg(std::current_exception())
+
     }
 
     template <typename __T>

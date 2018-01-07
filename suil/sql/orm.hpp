@@ -16,19 +16,19 @@ namespace suil {
 
             template <typename T>
             using remove_auto_increment_t =
-            decltype(remove_members_with_attribute(std::declval<T>(), sym(AUTO_INCREMENT)));
+            decltype(suil::__internal::remove_members_with_attribute(std::declval<T>(), sym(AUTO_INCREMENT)));
             template <typename T>
             using remove_ignore_fields_t =
-            decltype(remove_members_with_attribute(std::declval<T>(), sym(ignore)));
+            decltype(suil::__internal::remove_members_with_attribute(std::declval<T>(), sym(ignore)));
             template <typename T>
             using remove_read_only_fields_t =
-            decltype(remove_members_with_attribute(std::declval<T>(), sym(READ_ONLY)));
+            decltype(suil::__internal::remove_members_with_attribute(std::declval<T>(), sym(READ_ONLY)));
             template <typename T>
             using extract_primary_keys_t =
-            decltype(extract_members_with_attribute(std::declval<T>(), sym(PRIMARY_KEY)));
+            decltype(suil::__internal::extract_members_with_attribute(std::declval<T>(), sym(PRIMARY_KEY)));
             template <typename T>
             using remove_primary_keys_t =
-            decltype(remove_members_with_attribute(std::declval<T>(), sym(PRIMARY_KEY)));
+            decltype(suil::__internal::remove_members_with_attribute(std::declval<T>(), sym(PRIMARY_KEY)));
         }
 
         template<typename __C, typename __O>
@@ -42,9 +42,9 @@ namespace suil {
             static_assert(!std::is_same<primary_keys, void>::value,
                 "ORM requires that at least 1 member of CRUD be a primary key");
 
-            Orm(const std::string& tbl, __C& conn)
+            Orm(const suil::zcstring&& tbl, __C& conn)
                 : conn(conn.get()),
-                  table(tbl)
+                  table(std::move(tbl))
             {}
 
             template<typename  __T>
@@ -101,11 +101,48 @@ namespace suil {
                 return req.status();
             }
 
+            // initialize a table for this table
+            bool cifne() {
+                // pass the request to respective connection
+                if (!conn.has_table(table())) {
+                    return conn.create_table(table, without_ignore());
+                }
+                return false;
+            }
+
+            // create table if not exist and seed with users
+            bool cifne(std::vector<__O>& seed) {
+                // create table if does not exist
+                if (Ego.cifne()) {
+                    // if created seed with data
+                    if (!seed.empty()) {
+                        for(auto& data: seed) {
+                            if(!Ego.insert(data)) {
+                                // inserting seed user failed
+                                sdebug("inserting seed entry into table '%' failed", table());
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+
             template <typename __F>
             void forall(__F f) {
                 zbuffer qb(32);
                 qb << "select * from " << table;
                 conn(qb)() | f;
+            }
+
+            std::vector<__O> getAll() {
+                std::vector<__O> data;
+                Ego.forall([&](__O& o) {
+                    data.emplace_back(std::move(o));
+                });
+
+                return std::move(data);
             }
 
             template <typename __T>
@@ -128,7 +165,7 @@ namespace suil {
                     qb << m.symbol().name() << " = ";
                     __C::params(qb, i++);
 
-                    return m;
+                    return m.symbol() = m.symbol().member_access(o);
                 };
 
                 qb << " where ";
@@ -183,7 +220,7 @@ namespace suil {
 
         private:
             __C& conn;
-            const std::string& table;
+            suil::zcstring table{nullptr};
         };
     }
 }

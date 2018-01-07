@@ -387,7 +387,7 @@ namespace suil {
                     r = "HTTP/1.1 505 HTTP Version not supported";
                     break;
                 default:
-                    r = "";
+                    r = "HTTP/1.1 500  ";
                     break;
             }
             return (r);
@@ -569,6 +569,15 @@ namespace suil {
             prop(total_requests, uint64_t),
             prop(open_requests, uint64_t)
         )) ServerStats;
+
+        typedef decltype(iod::D(
+                prop(status,       zcstring),
+                prop(text,         zcstring)
+        )) Error;
+
+        inline Error mk_error(Status status, zcstring&& text) {
+            return Error{zcstring{&Statusext(status)[13]}, std::move(text)};
+        }
     }
 
     static auto parse_cmd(int argc, const char *argv[]) {

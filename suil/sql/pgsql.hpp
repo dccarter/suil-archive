@@ -39,6 +39,7 @@ namespace suil {
         };
 
         namespace __internal {
+
             inline Oid type_to_pgsql_oid_type(const char&)
             { return CHAROID; }
             inline Oid type_to_pgsql_oid_type(const short int&)
@@ -87,6 +88,34 @@ namespace suil {
 
             inline Oid type_to_pgsql_oid_type(const std::vector<zcstring>&)
             { return TEXTARRAYOID; }
+
+            template <typename T>
+            static const char* type_to_pgsql_string(const T& v) {
+                Oid t = type_to_pgsql_oid_type(v);
+                switch (t) {
+                    case CHAROID:
+                    case INT2OID:
+                        return "smallint";
+                    case INT4OID:
+                        return "integer";
+                    case INT8OID:
+                        return "bigint";
+                    case FLOAT4OID:
+                        return "real";
+                    case FLOAT8OID:
+                        return "double precision";
+                    case TEXTOID:
+                        return "text";
+                    case INT4ARRAYOID:
+                        return "integer[]";
+                    case FLOAT4ARRAYOID:
+                        return "real[]";
+                    case TEXTARRAYOID:
+                        return "text[]";
+                    default:
+                        return "text";
+                }
+            }
 
             inline char *vhod_to_vnod(unsigned long long& buf, const char& v) {
                 (*(char *) &buf) = v;
@@ -298,15 +327,15 @@ namespace suil {
                             bins,
                             0);
                     if (!status) {
-                        ierror("ASYNC QUERY: %s failed: %s", stmt.data(), PQerrorMessage(conn));
+                        ierror("ASYNC QUERY: %s failed: %s", stmt(), PQerrorMessage(conn));
                         throw std::runtime_error("executing async query failed");
                     }
 
                     bool wait = true, err = false;
                     while (!err && PQflush(conn)) {
-                        trace("ASYNC QUERY: %s wait write %ld", stmt.data(), timeout);
+                        trace("ASYNC QUERY: %s wait write %ld", stmt(), timeout);
                         if (wait_write()) {
-                            ierror("ASYNC QUERY: % wait write failed: %s", stmt.data(), errno_s);
+                            ierror("ASYNC QUERY: % wait write failed: %s", stmt(), errno_s);
                             err  = true;
                             continue;
                         }
@@ -324,7 +353,7 @@ namespace suil {
 
                         // asynchronously wait for results
                         if (!PQconsumeInput(conn)) {
-                            ierror("ASYNC QUERY: %s failed: %s", stmt.data(), PQerrorMessage(conn));
+                            ierror("ASYNC QUERY: %s failed: %s", stmt(), PQerrorMessage(conn));
                             err = true;
                             continue;
                         }
@@ -353,8 +382,8 @@ namespace suil {
                                 break;
 
                             default:
-                                ierror("ASYNC QUERY: % failed: %s",
-                                      stmt.data(), PQerrorMessage(conn));
+                                ierror("ASYNC QUERY: %s failed: %s",
+                                      stmt(), PQerrorMessage(conn));
                                 wait = false;
                         }
                     }
@@ -399,17 +428,15 @@ namespace suil {
             }
 
             template <typename... __O>
-            bool operator>>(iod::sio<__O...>& o) {
+            inline bool operator>>(iod::sio<__O...>& o) {
                 if (results.empty()) return false;
-                row_to_sio(o);
-
-                return true;
+                return row_to_sio(o);
             }
 
             template <typename __T>
             bool operator>>(__T& o) {
                 if (results.empty()) return false;
-                results.read(o, 0);
+                return results.read(o, 0);
             }
 
             template <typename __F>
@@ -476,19 +503,23 @@ namespace suil {
             }
 
             template <typename... __O>
-            void row_to_sio(iod::sio<__O...>& o) {
-                if (results.empty()) return;
+            bool row_to_sio(iod::sio<__O...>& o) {
+                if (results.empty()) return false;
 
                 int ncols = PQnfields(results.result());
-
+                bool status{true};
                 iod::foreach(suil::sql::__internal::remove_ignore_fields_t<decltype(o)>()) |
                 [&] (auto &m) {
-                    int fnumber = PQfnumber(results.result(), m.symbol().name());
-                    if (fnumber != -1) {
-                        // column found
-                        results.read(o[m], fnumber);
+                    if (status) {
+                        int fnumber = PQfnumber(results.result(), m.symbol().name());
+                        if (fnumber != -1) {
+                            // column found
+                            status = results.read(o[m], fnumber);
+                        }
                     }
                 };
+
+                return status;
             }
 
             template <typename __V, typename std::enable_if<std::is_arithmetic<__V>::value>::type* = nullptr>
@@ -585,39 +616,56 @@ namespace suil {
                 }
 
                 template <typename __V, typename std::enable_if<std::is_arithmetic<__V>::value,void>::type* = nullptr>
-                void read(__V& v, int col) {
+                bool read(__V& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
-                        //__internal::vnod_to_vhod(data, v);
-                        zcstring tmp(data);
-                        utils::cast(data, v);
+                        if (data != nullptr) {
+                            //__internal::vnod_to_vhod(data, v);
+                            zcstring tmp(data);
+                            utils::cast(data, v);
+                            return true;
+                        }
                     }
+                    return false;
                 }
 
                 template <typename __T>
-                void read(std::vector<__T>& v, int col) {
+                bool read(std::vector<__T>& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
-                        int len = PQgetlength(*it, row, col);
-                        __internal::parse_array(v, data);
+                        if (data != nullptr) {
+                            int len = PQgetlength(*it, row, col);
+                            __internal::parse_array(v, data);
+                            return true;
+                        }
                     }
+                    return false;
                 }
 
-                void read(std::string& v, int col) {
+                bool read(std::string& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
-                        int len = PQgetlength(*it, row, col);
-                        v.resize((size_t) len);
-                        memcpy(&v[0], data, (size_t) len);
+                        if (data != nullptr) {
+                            int len = PQgetlength(*it, row, col);
+                            v.resize((size_t) len);
+                            memcpy(&v[0], data, (size_t) len);
+                            return true;
+                        }
                     }
+                    return false;
                 }
 
-                void read(zcstring& v, int col) {
+                bool read(zcstring& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
-                        int len = PQgetlength(*it, row, col);
-                        v = std::move(zcstring(data, len, false).dup());
+                        if (data != nullptr) {
+                            int len = PQgetlength(*it, row, col);
+                            v = std::move(zcstring(data, len, false).dup());
+                            return true;
+                        }
                     }
+
+                    return false;
                 }
 
                 void clear() {
@@ -635,8 +683,8 @@ namespace suil {
                     row = 0;
                 }
 
-                inline bool empty() {
-                    return failure || results.empty();
+                inline bool empty(size_t idx = 0) {
+                    return failure || results.empty() || results.size() <= idx;
                 };
 
                 ~pgsql_result() {
@@ -669,11 +717,12 @@ namespace suil {
             typedef std::shared_ptr<stmt_map_t>  stmt_map_ptr_t;
             using free_conn_t = std::function<void(PgSqlConnection*)>;
 
-            PgSqlConnection(PGconn *conn, bool async, int64_t timeout, free_conn_t free_conn)
+            PgSqlConnection(PGconn *conn, zcstring& dname, bool async, int64_t timeout, free_conn_t free_conn)
                 : conn(conn),
                   async(async),
                   timeout(timeout),
-                  free_conn(free_conn)
+                  free_conn(free_conn),
+                  dbname(dname)
             {}
 
             PgSqlConnection(const PgSqlConnection&) = delete;
@@ -721,16 +770,60 @@ namespace suil {
             }
 
             bool has_table(const char* schema, const char* name) {
-                auto stmt = (*this)("SELECT COUNT(tablename) FROM pg_catalog.pg_tables"
-                                            " WHERE schemaname='$1' AND tablename='$2';");
+                auto stmt = (*this)("SELECT COUNT(*) FROM pg_catalog.pg_tables"
+                                            " WHERE schemaname=$1 AND tablename=$2;");
                 int found = 0;
-                return (stmt(schema, name) >> found) && found == 1;
+                stmt(schema, name) >> found;
+                return found;
             }
 
             template <typename __T>
-            bool create_table(const zcstring& name) {
-                // FIXME: implement create table
-                return false;
+            bool create_table(const zcstring& name, __T o) {
+                zbuffer b(64);
+                b << "CREATE TABLE " << name << "(";
+
+                bool first{true};
+                iod::foreach2(o)
+                | [&] (auto& m) {
+                    if (!first) {
+                        b << ", ";
+                    }
+                    first = false;
+
+                    // add symbol name and type
+                    b << m.symbol().name();
+
+                    if (m.attributes().has(var(AUTO_INCREMENT))) {
+                        // if symbol is auto increment, use serial type
+                        b << " serial";
+                    }
+                    else {
+                        // deduce type
+                        b << ' ' << __internal::type_to_pgsql_string(m.value());
+                    }
+
+                    if (m.attributes().has(var(UNIQUE))) {
+                        // symbol should marked as unique
+                        b << " UNIQUE";
+                    }
+
+                    if (m.attributes().has(var(PRIMARY_KEY))) {
+                        // symbol is a primary key
+                        b << " PRIMARY KEY";
+                    }
+                };
+
+                b << ")";
+                try {
+                    auto stmt = Ego(b);
+                    stmt();
+                    return true;
+                }
+                catch (...) {
+                    ierror("create_table '%s' failed: %s",
+                        name(), SuilError::getmsg(std::current_exception()));
+                    return false;
+                }
             }
 
             inline PgSqlConnection& get() {
@@ -797,6 +890,7 @@ namespace suil {
             active_conns_iterator_t handle;
             int         refs{1};
             bool        deleting{false};
+            suil::zcstring dbname{"public"};
         };
         typedef std::vector<PgSqlConnection*> active_conns_t;
 
@@ -824,7 +918,7 @@ namespace suil {
                 }
 
                 Connection *c = new Connection(
-                        conn, async, timeout,
+                        conn, dbname, async, timeout,
                         [&](Connection* _conn) {
                             free(_conn);
                         });
@@ -848,6 +942,7 @@ namespace suil {
                 async      = opts.get(var(ASYNC), false);
                 timeout    = opts.get(var(TIMEOUT), -1);
                 keep_alive = opts.get(var(EXPIRES), -1);
+                dbname     = zcstring{opts.get(var(name), "public")}.dup();
 
                 if (keep_alive > 0 && keep_alive < 3000) {
                     /* limit cleanup to 3 seconds */
@@ -985,6 +1080,7 @@ namespace suil {
             Async<bool>   notify{false};
             bool          cleaning{false};
             zcstring      conn_str;
+            zcstring      dbname{"public"};
         };
 
         namespace mw {

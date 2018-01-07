@@ -34,7 +34,7 @@ namespace suil {
             }
 
             typename __Db::Connection& conn() {
-                return db.Connection();
+                return db.connection();
             }
 
             void before(http::Request&, http::Response&, Context&) {

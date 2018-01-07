@@ -21,12 +21,25 @@ namespace suil {
         using form_file_it_t = std::function<bool(const UploadedFile&)>;
 
         struct Request;
-        struct request_form_t {
-            request_form_t(const Request& req);
+        struct RequestForm {
+            RequestForm(const Request& req);
             void operator|(form_data_it_t f);
             void operator|(form_file_it_t f);
             const zcstring operator[](const char*);
             const UploadedFile&operator()(const char*);
+
+            template <typename O>
+            void operator>>(O& o) {
+                iod::foreach2(o) |
+                [&](auto& m) {
+                    zcstring name{m.symbol().name()};
+                    auto it = req.form.find(name);
+                    if (it != req.form.end()) {
+                        // cast value to correct type
+                        utils::cast(it->second, m.value());
+                    }
+                };
+            }
         private:
             bool find(zcstring& out, const char *name);
 
@@ -120,7 +133,7 @@ namespace suil {
             template <typename __H, typename... __Mws>
             friend struct Connection;
             friend struct SystemAttrs;
-            friend struct request_form_t;
+            friend struct RequestForm;
 
             Status process_headers();
             virtual int handle_body_part(const char *at, size_t length);

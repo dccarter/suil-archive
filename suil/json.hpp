@@ -265,7 +265,30 @@ namespace suil {
 
             virtual ~JsonValue() {}
         };
+
+        template <typename O>
+        inline std::string encode(O& o) {
+            return iod::json_encode(o);
+        }
+
+        template <typename S, typename O>
+        static bool decode(const S& s, O& o) {
+            try {
+                iod::json_decode(o, s);
+                return true;
+            }
+            catch (...) {
+                sdebug("decoding json string failed: %s", exmsg());
+                return false;
+            }
+        }
+
+        template <typename S, typename O>
+        inline void decode(const S& s, O& o) {
+            iod::json_decode(o, s);
+        }
     } // namespace json
+
 } // namespace suil
 
 namespace iod {
