@@ -169,23 +169,23 @@ function(SuilApp name)
     if (SUIL_APP_DEPENDS)
         message(STATUS "adding dependencies to ${name}: ${SUIL_APP_DEPENDS}")
         add_dependencies(${name} ${SUIL_APP_DEPENDS})
-        set(${name}_LIBRARIES ${SUIL_PROJECT_LIBRARIES} ${SUIL_APP_LIBRARIES})
-    else()
-        set(${name}_LIBRARIES ${SUIL_PROJECT_STATIC_LIBRARIES} ${SUIL_APP_LIBRARIES})
     endif()
-
-    # add dependecy libraries
-    target_link_libraries(${name} ${${name}_LIBRARIES})
-    message(STATUS "target '${name}' libraries: ${${name}_LIBRARIES}")
 
     if (SUIL_APP_TEST)
         list(APPEND SUIL_APP_DEFINES "-DSUIL_TESTING")
+        set(${name}_LIBRARIES ${SUIL_PROJECT_LIBRARIES} ${SUIL_APP_LIBRARIES})
+    else()
+        set(${name}_LIBRARIES ${SUIL_PROJECT_STATIC_LIBRARIES} ${SUIL_APP_LIBRARIES})
     endif()
     # add custom definitions if provided
     if (SUIL_APP_DEFINES)
         message(STATUS "target '${name}' extra defines: ${SUIL_APP_DEFINES}")
         target_compile_definitions(${name} PUBLIC ${SUIL_APP_DEFINES})
     endif()
+    # add dependecy libraries
+    target_link_libraries(${name} ${${name}_LIBRARIES})
+    message(STATUS "target '${name}' libraries: ${${name}_LIBRARIES}")
+
 
     # add target include directories
     set(${name}_INCLUDES src includes)
