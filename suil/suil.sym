@@ -157,6 +157,10 @@ _PARSE_FORM
 _PARSE_COOKIES
 _REPLY_TYPE
 
+# Cors
+_allow_origin
+_allow_headers
+
 # ABCI
 _host
 _commit

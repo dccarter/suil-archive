@@ -339,6 +339,7 @@ namespace suil {
             req.params.index = params.first;
             req.params.decoded = std::move(params.second);
             req.params.attrs = &rules_[params.first]->attrs_;
+            req.params.methods = rules_[params.first]->methods_;
         }
 
         void Router::handle(const Request &req, Response &res) {

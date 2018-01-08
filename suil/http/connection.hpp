@@ -414,6 +414,10 @@ namespace suil {
                     hbuf.append("\r\n", 2);
                 }
 
+                for (auto& h: res.headers) {
+                    hbuf<< h.first << ": " << h.second << "\r\n";
+                }
+
                 hbuf.append("\r\n", 2);
                 obuf.emplace_back(hbuf.data(), hbuf.size());
 

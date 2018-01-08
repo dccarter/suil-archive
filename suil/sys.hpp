@@ -1440,7 +1440,7 @@ namespace suil {
 
 // function call to end of block
 #define defer(n, x) suil::__internal::defer_ctx __##n {[&]() { x ; } }
-#define scoped(n, x) auto& n = x ; suil::__internal::scoped_res<decltype( n )> _##n { x }
+#define scoped(n, x) auto& n = x ; suil::__internal::scoped_res<decltype( n )> _##n { n }
 
     struct File {
         File(mfile);

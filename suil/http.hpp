@@ -418,6 +418,30 @@ namespace suil {
             }
         }
 
+        static uint32_t method_from_string(const char *method) {
+            switch (::toupper(method[0])) {
+                case 'D':
+                    return (uint32_t) Method::Delete;
+                case 'G':
+                    return (uint32_t) Method::Get;
+                case 'H':
+                    return (uint32_t) Method::Head;
+                case 'P':
+                    if (method[1] == 'O')
+                        return (uint32_t) Method::Post;
+                    else
+                       return (uint32_t) Method::Put;
+                case 'C':
+                    return (uint32_t) Method::Connect;
+                case 'O':
+                    return (uint32_t) Method::Options;
+                case 'T':
+                    return (uint32_t) Method::Trace;
+                default:
+                    return (uint32_t) Method::Unknown;
+            }
+        }
+
         class query_string
         {
         public:

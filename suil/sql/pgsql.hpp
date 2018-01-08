@@ -1015,7 +1015,7 @@ namespace suil {
                      * next 500 ms */
                     int64_t t = mnow() + 500;
                     int pruned = 0;
-                    linfo(&db, "starting prune with %ld connections", db.conns.size());
+                    ltrace(&db, "starting prune with %ld connections", db.conns.size());
                     while (it != db.conns.end()) {
                         if ((*it).alive <= t) {
                             (*it).cleanup();
@@ -1031,7 +1031,7 @@ namespace suil {
                             yield();
                         }
                     }
-                    linfo(&db, "pruned %ld connections", pruned);
+                    ltrace(&db, "pruned %ld connections", pruned);
 
                     if (it != db.conns.end()) {
                         /*ensure that this will run after at least 3 second*/
@@ -1052,7 +1052,7 @@ namespace suil {
                     conns.push_back(h);
 
                     if (!cleaning && keep_alive > 0) {
-                        sinfo("scheduling cleaning...");
+                        strace("scheduling cleaning...");
                         /* schedule cleanup routine */
                         go(cleanup(*this));
                     }

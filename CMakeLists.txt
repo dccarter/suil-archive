@@ -14,6 +14,7 @@ set(SUIL_BUILD_TAG     devel CACHE STRING "Version tag string")
 set(SUIL_SOFTWARE_NAME suil  CACHE STRING "The name of the server")
 set(SUIL_DEBUG_TAG     1a30f8248a6b11e781846f6e6c696e65 CACHE STRING "The tag used by the debug application tag")
 set(SUIL_BASE_DIR     ".suil" CACHE STRING "The base directory of suil application")
+set(SUIL_ENABLE_TRACE 1 CACHE STRING "Enable debug traces in debug builds")
 
 set(SUIL_COPYRIGHT "Copyright (C) 2017, 2017-2017 Suilteam")
 set(SUIL_VERSION ${SUIL_MAJOR_VERSION}.${SUIL_MINOR_VERSION}.${SUIL_PATCH_VERSION})
@@ -32,7 +33,7 @@ set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-
 set(SUIL_DEFINES)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(SUIL_BUILD_DEBUG ON)
-    set(SUIL_DEFINES ${SUIL_DEFINES} -DSUIL_DEBUG)
+    set(SUIL_DEFINES "${SUIL_DEFINES} -DSUIL_DEBUG")
 endif()
 
 include(CheckSymbolExists)

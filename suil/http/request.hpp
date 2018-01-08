@@ -27,7 +27,6 @@ namespace suil {
             void operator|(form_file_it_t f);
             const zcstring operator[](const char*);
             const UploadedFile&operator()(const char*);
-
             template <typename O>
             void operator>>(O& o);
         private:
@@ -112,6 +111,10 @@ namespace suil {
 
             const route_attributes_t& route() const {
                 return *params.attrs;
+            }
+
+            const request_params_t& routeparams() const {
+                return params;
             }
 
             template <typename __T>

@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <suil/symbols.h>
+#include <suil/config.hpp>
 
 #ifndef SUIL_LOG_BUF_SIZE
 #define SUIL_LOG_BUF_SIZE (2048)
@@ -286,7 +287,7 @@ namespace suil {
 #define icritical(fmt, ...)       __LOG(this, CRITICAL, fmt, ##__VA_ARGS__)
 #define scritical(fmt, ...)      __LOG(&suil::__log, CRITICAL, fmt, ##__VA_ARGS__)
 
-#ifndef SUIL_ENABLE_TRACE
+#if SUIL_ENABLE_TRACE
 
 #define ltrace(l, fmt, ...)                                           \
     if (suil::__log.getLevel() <= suil::log::level::TRACE)                   \
