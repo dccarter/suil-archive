@@ -7,14 +7,12 @@ namespace suil {
     namespace http {
 
         void Cors::after(Request &req, http::Response &res, Context &) {
-            if (!req.header("Access-Control-Allow-Origin").empty() &&
-                !Ego.allow_origin.empty())
+            if (!Ego.allow_origin.empty())
             {
                 res.header("Access-Control-Allow-Origin", Ego.allow_origin);
             }
 
-            if (!req.header("Access-Control-Allow-Headers").empty() &&
-                !Ego.allow_headers.empty())
+            if (!Ego.allow_headers.empty())
             {
                 res.header("Access-Control-Allow-Headers", Ego.allow_headers);
             }
