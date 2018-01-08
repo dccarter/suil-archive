@@ -74,9 +74,11 @@ namespace suil {
     bool load(bool si = true);
     template <typename... __A>
     void init(__A... args) {
+        static bool initialized{false};
         auto opts = iod::D(args...);
         bool showinfo = opts.get(var(printinfo), true);
-        if (suil::load(showinfo)) {
+        suil::load(showinfo);
+        if (!initialized) {
 
             std::string wdir = opts.get(var(wdir), "");
 
@@ -88,6 +90,7 @@ namespace suil {
                 __internal::chwdir(wdir);
             }
         }
+        initialized = true;
     }
 
     namespace version {

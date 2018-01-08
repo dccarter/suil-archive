@@ -25,8 +25,8 @@ namespace suil {
     };
 
     bool load(bool si) {
-        static bool initialized{false};
-        if (initialized) return false;
+        static bool loaded{false};
+        if (loaded) return false;
         //signal(SIGPIPE, SIG_IGN);
         if (si) {
             // display version only if explicitly requested
@@ -37,9 +37,9 @@ namespace suil {
             console::println("---------------------------------------\n");
         }
         memory::init();
-        initialized = true;
+        loaded = true;
 
-        return initialized;
+        return loaded;
     }
 
     namespace __internal {
