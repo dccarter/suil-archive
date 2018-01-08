@@ -24,24 +24,25 @@ namespace suil {
         const char*     SWNAME = SUIL_SOFTWARE_NAME;
     };
 
-    namespace __internal {
-        bool init(bool si) {
-            static bool initialized{false};
-            if (initialized) return false;
-            //signal(SIGPIPE, SIG_IGN);
-            if (si) {
-                // display version only if explicitly requested
-                console::println("");
-                console::println("Powered by suil C++1y web framework");
-                console::printred("v" SUIL_VERSION_STRING "\n");
-                console::printblue("http://suil.suilteam.com\n");
-                console::println("---------------------------------------\n");
-            }
-            memory::init();
-            initialized = true;
-
-            return initialized;
+    bool load(bool si) {
+        static bool initialized{false};
+        if (initialized) return false;
+        //signal(SIGPIPE, SIG_IGN);
+        if (si) {
+            // display version only if explicitly requested
+            console::println("");
+            console::println("Powered by suil C++1y web framework");
+            console::printred("v" SUIL_VERSION_STRING "\n");
+            console::printblue("http://suil.suilteam.com\n");
+            console::println("---------------------------------------\n");
         }
+        memory::init();
+        initialized = true;
+
+        return initialized;
+    }
+
+    namespace __internal {
 
         void chwdir(const std::string& to) {
             if (!utils::fs::isdir(to.c_str())) {

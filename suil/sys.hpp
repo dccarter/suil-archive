@@ -67,16 +67,16 @@ namespace suil {
         using remove_unwired =
         decltype(remove_members_with_attribute(std::declval<T>(), sym(unwire)));
 
-        bool init(bool si =  true);
         void chwdir(const std::string& to);
         void daemonize(const std::string& wdir);
     }
 
+    bool load(bool si = true);
     template <typename... __A>
     void init(__A... args) {
         auto opts = iod::D(args...);
         bool showinfo = opts.get(var(printinfo), true);
-        if (__internal::init(showinfo)) {
+        if (suil::load(showinfo)) {
 
             std::string wdir = opts.get(var(wdir), "");
 
