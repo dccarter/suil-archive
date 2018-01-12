@@ -20,12 +20,12 @@
 
 namespace suil {
 
-    typedef suil::Blob<SUIL_PUBKEY_LEN>         PubkeyBlob;
-    typedef suil::Blob<32>                      PrivkeyBlob;
-    typedef suil::Blob<SHA256_DIGEST_LENGTH>    SHA256Blob;
+    typedef suil::Blob<SUIL_PUBKEY_LEN>         PubkeyBlob,  Pubkey;
+    typedef suil::Blob<32>                      PrivkeyBlob, Privkey;
+    typedef suil::Blob<SHA256_DIGEST_LENGTH>    SHA256Blob,  Hash;
     typedef suil::Blob<BASE58_ADDR_MAX_LEN>     Base58Blob;
-    typedef suil::Blob<64>                      ECDSASigBlob;
-    typedef suil::Blob<RIPEMD160_DIGEST_LENGTH> RIPEMD160Blob;
+    typedef suil::Blob<64>                      ECDSASigBlob,  EcdsaSignature;
+    typedef suil::Blob<RIPEMD160_DIGEST_LENGTH> RIPEMD160Blob, Address;
 
     namespace crypto {
         typedef suil::Blob<1 + RIPEMD160_DIGEST_LENGTH + SUIL_CHECKSUM_LEN> AddressBLOB;

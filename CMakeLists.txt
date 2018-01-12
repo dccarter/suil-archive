@@ -169,7 +169,7 @@ endif()
 
 if (SUIL_DEV_IDE)
 #    add_subdirectory(apps/suil-web)
-    add_subdirectory(apps/molly)
+    add_subdirectory(apps/muller)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

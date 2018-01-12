@@ -2133,6 +2133,8 @@ namespace suil {
 
     } __attribute__((aligned(1)));
 
+    using Uuid = Blob<sizeof(uuid_t)>;
+
     template <typename T>
     zcstring& zcstring::operator+=(const T &t) {
         zbuffer tmp{Ego._len+(sizeof(T)*2)};
