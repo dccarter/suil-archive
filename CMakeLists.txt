@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(suil C CXX)
+
 set(CMAKE_MODULE_PATH
         ${CMAKE_MODULE_PATH}
         "${CMAKE_SOURCE_DIR}/cmake/")
@@ -25,9 +26,9 @@ option(SUIL_BUILD_DEV_PACKAGE  "Produce a development package" OFF)
 option(SUIL_DEV_IDE            "Currently using an IDE" OFF)
 set(SUIL_FILE_SERVER_ROUTE     1511d5908a7811e790ed6f6e6c696e65)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result -Wno-format-security")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
 
 set(SUIL_DEFINES)
@@ -148,10 +149,10 @@ add_dependencies(scrap suil_s)
 target_link_libraries(scrap ${SUIL_LIBRARIES} mill_s suil_s)
 
 if (SUIL_BUILD_UNIT_TEST)
+    get_property(_SUIL_SOURCES GLOBAL PROPERTY prop_SUIL_SOURCES)
     file(GLOB_RECURSE SUIL_TEST_SOURCES tests/*.cpp test/*.c)
-    add_executable(sut ${SUIL_TEST_SOURCES})
-    add_dependencies(sut suil_s)
-    target_link_libraries(sut ${SUIL_LIBRARIES} mill_s suil_s)
+    add_executable(sut ${_SUIL_SOURCES} ${SUIL_TEST_SOURCES})
+    target_link_libraries(sut ${SUIL_LIBRARIES} mill_s)
     target_compile_definitions(sut PUBLIC -DSUIL_TESTING)
 endif()
 
@@ -169,7 +170,8 @@ endif()
 
 if (SUIL_DEV_IDE)
 #    add_subdirectory(apps/suil-web)
-    add_subdirectory(apps/molly)
+#    add_subdirectory(apps/molly)
+    add_subdirectory(apps/sodoin)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

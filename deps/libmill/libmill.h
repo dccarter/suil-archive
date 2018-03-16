@@ -751,6 +751,8 @@ MILL_EXPORT struct mill_file *mill_mfopen_(
     const char *pathname,
     int flags,
     mode_t mode);
+MILL_EXPORT struct mill_file *mill_mfcreate_(
+        int fd, int own);
 MILL_EXPORT size_t mill_mfwrite_(
     struct mill_file *f,
     const void *buf,
@@ -784,6 +786,7 @@ MILL_EXPORT struct mill_file *mill_mferr_(
 typedef struct mill_file *mill_mfile;
 #define mill_mfopen mill_mfopen_
 #define mill_mfmkstemp mill_mfmkstemp_
+#define mill_mfcreate  mill_mfcreate_
 #define mill_mfwrite mill_mfwrite_
 #define mill_mfflush mill_mfflush_
 #define mill_mfread mill_mfread_
@@ -798,6 +801,7 @@ typedef struct mill_file *mill_mfile;
 typedef struct mill_file *mfile;
 #define mfopen mill_mfopen_
 #define mfmktemp mill_mfmkstemp_
+#define mfcreate mill_mfcreate_
 #define mfwrite mill_mfwrite_
 #define mfflush mill_mfflush_
 #define mfread mill_mfread_

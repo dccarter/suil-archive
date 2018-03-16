@@ -315,7 +315,7 @@ namespace suil {
 
     template <size_t N=8192>
     struct stackboard: breadboard {
-        static_assert(((N<=8192) && (N&(N-1))==0), "Requested breadboard size greater than 8912");
+        static_assert(((N<=8192) && ((N&(N-1))==0)), "Requested breadboard size greater than 8912");
         stackboard()
             : breadboard(data, N)
         {}

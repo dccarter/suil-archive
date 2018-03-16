@@ -486,7 +486,7 @@ namespace suil {
                 static char buf[64];
                 if ((point-rec) > 1000) {
                     rec = point;
-                    DateTime()(buf, 64, DateTime::HTTP_FMT);
+                    Datetime()(buf, 64, Datetime::HTTP_FMT);
                 }
                 return buf;
             }

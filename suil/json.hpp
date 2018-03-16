@@ -306,6 +306,13 @@ namespace iod {
         json_decode(o, str);
     }
 
+    // Decode \o from a json string \zc_str.
+    template<typename ...T>
+    inline void json_decode(sio<T...> &o, const json_string& jstr) {
+        iod::stringview str(jstr.str.data(), jstr.str.size());
+        json_decode(o, str);
+    }
+
     namespace json_internals {
 
         template<typename S>

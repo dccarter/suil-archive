@@ -294,7 +294,7 @@ namespace suil {
                 head << method_name(method) << " " << resource;
                 encodeargs(head);
                 head << " HTTP/1.1" << CRLF;
-                hdrs("Date", DateTime()(DateTime::HTTP_FMT));
+                hdrs("Date", Datetime()(Datetime::HTTP_FMT));
                 encodehdrs(head);
                 head << CRLF;
 

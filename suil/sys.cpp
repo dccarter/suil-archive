@@ -110,17 +110,17 @@ namespace suil {
         }
     }
 
-    DateTime::DateTime(time_t t)
+    Datetime::Datetime(time_t t)
         : t_(t)
     {
         gmtime_r(&t_, &tm_);
     }
 
-    DateTime::DateTime()
-        : DateTime(time(nullptr))
+    Datetime::Datetime()
+        : Datetime(time(nullptr))
     {}
 
-    DateTime::DateTime(const char *fmt, const char *str)
+    Datetime::Datetime(const char *fmt, const char *str)
     {
         const char *tmp = HTTP_FMT;
         if (fmt) {
@@ -129,8 +129,8 @@ namespace suil {
         strptime(str, tmp, &tm_);
     }
 
-    DateTime::DateTime(const char *http_time)
-        : DateTime(HTTP_FMT, http_time)
+    Datetime::Datetime(const char *http_time)
+        : Datetime(HTTP_FMT, http_time)
     {}
 
     zbuffer::zbuffer(size_t init_size)
@@ -223,7 +223,7 @@ namespace suil {
     void zbuffer::append(time_t t, const char *fmt) {
         // reserve 64 bytes
         reserve(64);
-        const char *pfmt = fmt? fmt : DateTime::HTTP_FMT;
+        const char *pfmt = fmt? fmt : Datetime::HTTP_FMT;
         ssize_t sz = strftime((char*)(data_+offset_), 64, pfmt, localtime(&t));
         if (sz < 0) {
             strace("formatting time failed: %s", errno_s);
@@ -310,6 +310,15 @@ namespace suil {
         : fd(fd)
     {}
 
+    File::File(int fd, bool own)
+        : fd(mfcreate(fd, own))
+    {
+        if (Ego.fd == nullptr) {
+            throw SuilError::create("creating file for descriptor '", fd, "' failed: ",
+                                    errno_s);
+        }
+    }
+
     File::File(const char *pname, int flags, mode_t mode)
         : File(mfopen(pname, flags, mode))
     {
@@ -387,13 +396,41 @@ namespace suil {
             sdebug("creating file logger directory: %s", dir.c_str());
             utils::fs::mkdir(dir.c_str(), true, 0777);
         }
-        zcstring tmp{utils::catstr(dir, "/", prefix, "-", DateTime()("%Y%m%d_%H%M%S"), ".log")};
+        zcstring tmp{utils::catstr(dir, "/", prefix, "-", Datetime()("%Y%m%d_%H%M%S"), ".log")};
         dst = std::move(File(tmp.data(), O_WRONLY|O_APPEND|O_CREAT, 0666));
     }
 
     void FileLogger::log(const char *data, size_t sz, log::level) {
         dst.write(data, sz, 1500);
         dst.flush(1500);
+    }
+
+    Syslog::Syslog(const char *name) {
+        openlog("suil", LOG_PID|LOG_CONS, LOG_USER);
+    }
+
+    void Syslog::close() {
+        closelog();
+    }
+
+    void Syslog::log(const char *msg, size_t, log::level l) {
+        int prio{LOG_INFO};
+        switch(l) {
+            case log::level::DEBUG:
+            case log::level::TRACE:
+                prio = LOG_DEBUG; break;
+            case log::level::NOTICE:
+                prio = LOG_NOTICE; break;
+            case log::level::ERROR:
+                prio = LOG_ERR; break;
+            case log::level::WARNING:
+                prio = LOG_WARNING; break;
+            case log::level::CRITICAL:
+                prio = LOG_CRIT; break;
+            default:
+                break;
+        }
+        syslog(prio, msg);
     }
 
     zcstring base64::encode(const uint8_t *data, size_t sz) {
@@ -666,7 +703,7 @@ namespace suil {
         uint8_t *buf((uint8_t *) memory::alloc(str.size()*3));
         const char *src = str.data(), *end = src + str.size();
         uint8_t *dst = buf;
-        register uint8_t c;
+        uint8_t c;
         while (src != end) {
             c = *src++;
             if (!isalnum(c) && strchr("-_.~", c) == nullptr) {

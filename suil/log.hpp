@@ -149,6 +149,9 @@ namespace suil {
                     tag = nullptr;
                 }
             }
+
+        protected:
+            LogSink  psink{nullptr};
         private:
             char *tag{nullptr};
         };
@@ -171,7 +174,10 @@ namespace suil {
             }
 
             inline void fwdlogs(const char *log, size_t sz, level l) {
-                if (sink != nullptr) {
+                if (psink = nullptr) {
+                    psink(log, sz, l);
+                }
+                else if (sink != nullptr) {
                     sink(log, sz, l);
                 }
             }

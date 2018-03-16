@@ -150,18 +150,18 @@ _description
 _app_id
 _type
 
-# ROUTE PROPERTIES
+ROUTE_PROPERTIES:
 _STATIC
 _AUTHORIZE
 _PARSE_FORM
 _PARSE_COOKIES
 _REPLY_TYPE
 
-# Cors
+Cors:
 _allow_origin
 _allow_headers
 
-# ABCI
+ABCI:
 _host
 _commit
 _option
@@ -170,3 +170,11 @@ _deliver
 _query
 #_key
 #_val
+
+KeyPair:
+  _pubkey
+  _privkey
+
+KeyValPair:
+@key
+@val

@@ -39,6 +39,7 @@
 
 struct mill_file {
     int fd;
+    uint8_t own;
     size_t ifirst;
     size_t ilen;
     size_t olen;
@@ -55,7 +56,7 @@ static void mill_filetune(int fd) {
     mill_assert(rc != -1);
 }
 
-static inline struct mill_file *mill_mfcreate_(int fd) {
+struct mill_file *mill_mfcreate_(int fd, int own) {
     if (fd == -1)
         return NULL;
     mill_filetune(fd);
@@ -72,6 +73,7 @@ static inline struct mill_file *mill_mfcreate_(int fd) {
     f->ifirst = 0;
     f->ilen = 0;
     f->olen = 0;
+    f->own  = (uint8_t) own;
     errno = 0;
     return f;
 }
@@ -79,13 +81,13 @@ static inline struct mill_file *mill_mfcreate_(int fd) {
 
 struct mill_file *mill_mfopen_(const char *pathname, int flags, mode_t mode) {
     /* Open the file. */
-    return mill_mfcreate_(open(pathname, flags, mode));
+    return mill_mfcreate_(open(pathname, flags, mode), 1);
 }
 
 struct mill_file *mill_mfmkstemp_(
         const char *pathname)
 {
-    return mill_mfcreate_(mkstemp((char *)pathname));
+    return mill_mfcreate_(mkstemp((char *)pathname), 1);
 }
 
 size_t mill_mfwrite_(struct mill_file *f, const void *buf, size_t len,
@@ -247,8 +249,10 @@ size_t mill_mfread_(struct mill_file *f, void *buf, size_t len,
 
 void mill_mfclose_(struct mill_file *f) {
     fdclean(f->fd);
-    int rc = close(f->fd);
-    mill_assert(rc == 0);
+    if (f->own) {
+        int rc = close(f->fd);
+        mill_assert(rc == 0);
+    }
     free(f);
     return;
 }
@@ -278,7 +282,7 @@ int mill_mfeof_(struct mill_file *f) {
 }
 
 struct mill_file *mill_mfin_(void) {
-    static struct mill_file f = {-1, 0, 0, 0, {0}, {0}};
+    static struct mill_file f = {-1, 0, 0, 0, 0, {0}, {0}};
     if(mill_slow(f.fd < 0)) {
         mill_filetune(STDIN_FILENO);
         f.fd = STDIN_FILENO;
@@ -287,7 +291,7 @@ struct mill_file *mill_mfin_(void) {
 }
 
 struct mill_file *mill_mfout_(void) {
-    static struct mill_file f = {-1, 0, 0, 0, {0}, {0}};
+    static struct mill_file f = {-1, 0, 0, 0, 0, {0}, {0}};
     if(mill_slow(f.fd < 0)) {
         mill_filetune(STDOUT_FILENO);
         f.fd = STDOUT_FILENO;
@@ -296,7 +300,7 @@ struct mill_file *mill_mfout_(void) {
 }
 
 struct mill_file *mill_mferr_(void) {
-    static struct mill_file f = {-1, 0, 0, 0, {0}, {0}};
+    static struct mill_file f = {-1, 0, 0, 0, 0, {0}, {0}};
     if(mill_slow(f.fd < 0)) {
         mill_filetune(STDERR_FILENO);
         f.fd = STDERR_FILENO;
