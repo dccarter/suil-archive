@@ -14,7 +14,6 @@
 #include <uuid/uuid.h>
 #include <unordered_map>
 #include <sys/param.h>
-#include <optional>
 
 #include <set>
 #include <regex>
