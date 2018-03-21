@@ -64,6 +64,7 @@ namespace suil {
 
             // Other common mime types
             mime(".json",  "application/json");
+            mime(".map",   "application/json");
             mime(".js",    "application/javascript");
             mime(".ttf",   "font/ttf");
             mime(".xhtml", "application/xhtml+xml");
@@ -107,7 +108,7 @@ namespace suil {
                 // if file supports cache headers employ cache headers
                 strview cc = req.header("If-Modified-Since");
                 if (!cc.empty()) {
-                    time_t if_mod = DateTime(cc.data());
+                    time_t if_mod = Datetime(cc.data());
                     if (if_mod >= cf.last_mod) {
                         // file was not modified
                         resp.end(Status::NOT_MODIFIED);
@@ -145,7 +146,7 @@ namespace suil {
                 // if file supports cache headers employ cache headers
                 strview cc = req.header("If-Modified-Since");
                 if (!cc.empty()) {
-                    time_t if_mod = DateTime(cc.data());
+                    time_t if_mod = Datetime(cc.data());
                     if (if_mod >= cf.last_mod) {
                         // file was not modified
                         resp.end(Status::NOT_MODIFIED);
@@ -260,7 +261,7 @@ namespace suil {
                 const Request &req, Response &resp, cached_file_t &cf, mime_type_t &mm)
         {
             // get http data format
-            zcstring dt(DateTime(cf.last_mod)(DateTime::HTTP_FMT));
+            zcstring dt(Datetime(cf.last_mod)(Datetime::HTTP_FMT));
             resp.header("Last-Modified", dt);
             // add cache control header
             if (mm.cache_expires > 0) {

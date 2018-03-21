@@ -16,7 +16,7 @@ namespace suil {
             return;
         }
 
-        SuilError::create("pulling buffer failed");
+        throw SuilError::create("pulling buffer failed");
     }
 
     void zbuffer::out(Wire &w) const {
@@ -26,7 +26,7 @@ namespace suil {
 
     void heapboard::out(Wire &w) const {
         if (&w == this) {
-            SuilError::create("infinite loop detected, serializing heapboad to self");
+            throw SuilError::create("infinite loop detected, serializing heapboad to self");
         }
         zcstring tmp{(const char *) Ego.data, Ego.size(), false};
         w << tmp;
@@ -46,6 +46,26 @@ namespace suil {
         if (w.move(tmp))
             return;
 
-        SuilError::create("pulling buffer failed");
+        throw SuilError::create("pulling buffer failed");
+    }
+
+    void Data::in(Wire &w) {
+        varint sz{0};
+        w >> sz;
+        uint64_t tmp{sz.read<uint64_t>()};
+        clear();
+        Ego._data = w.rd();
+        Ego._own  = 0;
+        Ego._size = (uint32_t) tmp;
+        // adjust serializer size
+        if (w.move(tmp))
+            return;
+
+        throw SuilError::create("pulling buffer failed");
+    }
+
+    void Data::out(Wire &w) const {
+        zcstring tmp{(const char *) Ego._data, Ego.size(), false};
+        w << tmp;
     }
 }

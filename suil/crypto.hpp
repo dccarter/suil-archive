@@ -20,17 +20,22 @@
 
 namespace suil {
 
-    typedef suil::Blob<SUIL_PUBKEY_LEN>         PubkeyBlob,  Pubkey;
-    typedef suil::Blob<32>                      PrivkeyBlob, Privkey;
-    typedef suil::Blob<SHA256_DIGEST_LENGTH>    SHA256Blob,  Hash;
+    typedef suil::Blob<SUIL_PUBKEY_LEN>         PubkeyBlob;
+    typedef suil::Blob<32>                      PrivkeyBlob;
+    typedef suil::Blob<SHA256_DIGEST_LENGTH>    SHA256Blob;
     typedef suil::Blob<BASE58_ADDR_MAX_LEN>     Base58Blob;
-    typedef suil::Blob<64>                      ECDSASigBlob,  EcdsaSignature;
-    typedef suil::Blob<RIPEMD160_DIGEST_LENGTH> RIPEMD160Blob, Address;
+    typedef suil::Blob<64>                      ECDSASigBlob;
+    typedef suil::Blob<RIPEMD160_DIGEST_LENGTH> RIPEMD160Blob;
+    typedef SHA256Blob Hash;
 
     namespace crypto {
         typedef suil::Blob<1 + RIPEMD160_DIGEST_LENGTH + SUIL_CHECKSUM_LEN> AddressBLOB;
         typedef suil::Blob<SUIL_BINARY_KEYLEN>   NetAddrBlob;
         typedef suil::Blob<SHA_DIGEST_LENGTH>    Address;
+        typedef decltype(iod::D(
+                prop(pubkey,         PubkeyBlob),
+                prop(privkey,        PrivkeyBlob)
+        )) KeyPair;
 
         struct address_bin;
         struct netaddr_bin;
@@ -80,6 +85,7 @@ namespace suil {
         };
 
         void doubleSHA256(sha256_bin &sha, const void *p, size_t len);
+        void ripemd160(RIPEMD160Blob &ripemd, const void *p, size_t len);
         inline suil::zcstring doubleSHA256(const void *p, size_t len) {
             sha256_bin sha;
             doubleSHA256(sha, p, len);

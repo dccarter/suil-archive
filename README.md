@@ -5,7 +5,7 @@ A lightweight mordern `C++` micro service development framework
 
 ##### Supported Features
 
-*  Tag based system logger with support for custom log sink
+*  Tag based system logger with support for custom log m_sink
 *  Memory pool supporting buffer sizes of up to 8912
 *  Integrates libmill's coroutines which is used as the base library for asynchronous calls
 *  Dynamic buffer supporting `printf(...)` like functions and stream operator overloads

@@ -261,7 +261,7 @@ namespace suil {
         // Append subject
         b << "Subject: " << subject << CRLF;
         b << "MIME-Version: 1.0" CRLF;
-        b << "Date: " << DateTime()(DateTime::HTTP_FMT) << CRLF;
+        b << "Date: " << Datetime()(Datetime::HTTP_FMT) << CRLF;
 
         if (attachments.empty()) {
             b << "Content-Type: " << body_type << "; charset=utf-8" CRLF;

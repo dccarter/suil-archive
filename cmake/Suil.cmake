@@ -108,7 +108,7 @@ function(SuilApp name)
     set(options DEBUG IODSYMS_PATHBIN)
     set(kvargs)
     set(kvvargs LIBRARY DEPENDS INSTALL VERSION SOURCES TEST DEFINES SYMBOLS
-                LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
+                EXTRA_SYMS LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
     cmake_parse_arguments(SUIL_APP "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
     # get the source files
@@ -153,7 +153,7 @@ function(SuilApp name)
     endif()
 
     if (EXISTS ${${name}_SYMBOLS})
-        message(STATUS "using symbols: ${${name}_SYMBOLS}")
+        message(STATUS "using symbols: ${${name}_SYMBOLS} ${SUIL_APP_EXTRA_SYMS}")
         set(IODSYMS_BIN iodsyms)
         if (SUIL_APP_IODSYMS_PATHBIN)
             set(IODSYMS_BIN ${SUIL_BASE_PATH}/bin/iodsyms)
@@ -162,7 +162,7 @@ function(SuilApp name)
         GET_FILENAME_COMPONENT(${name}_SYMBOLS_OUTPUT ${${name}_SYMBOLS} NAME)
         suil_iod_symbols(${name}
                 BINARY ${IODSYMS_BIN}
-                SYMBOLS ${${name}_SYMBOLS}
+                SYMBOLS ${${name}_SYMBOLS} ${SUIL_APP_EXTRA_SYMS}
                 OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${${name}_SYMBOLS_OUTPUT}.h)
     endif()
 
@@ -194,7 +194,10 @@ function(SuilApp name)
     endif()
     message(STATUS "target '${name}' includes: ${${name}_INCLUDES}")
     target_include_directories(${name} PUBLIC ${${name}_INCLUDES})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    if (SUIL_APP_TEST )
+        include_directories(${CMAKE_CURRENT_SOURCE_DIR}/test)
+    endif()
 
     if (SUIL_APP_INSTALL)
         message(STATUS "target install is enabled")

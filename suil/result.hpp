@@ -1,38 +1,42 @@
 //
-// Created by dc on 1/11/18.
+// Created by dc on 11/02/18.
 //
 
 #ifndef SUIL_RESULT_HPP
 #define SUIL_RESULT_HPP
 
-#include "sys.hpp"
+#include <suil/sys.hpp>
 
 namespace suil {
 
     struct Result: zbuffer {
-        enum : int { OK };
+        enum : int {
+            OK    = 0,
+            ERROR = -1
+        };
 
         Result(int code)
-        : zbuffer(0),
-          Code(code)
+            : zbuffer(0),
+              Code(code)
         {}
 
         Result()
-        : Result(Result::OK)
+            : Result(Result::OK)
         {}
 
         Result(const Result&) = delete;
+
         Result&operator=(const Result&) = delete;
 
         Result(Result&& res)
-        : zbuffer((zbuffer&&)res),
-          Code(res.Code)
+            : zbuffer((zbuffer&&)res),
+              Code(res.Code)
         {}
 
         Result&operator=(Result&& other) {
-            Ego.Code = other.Code;
             zbuffer::operator=(std::move(other));
-            return Ego;
+            Code = other.Code;
+            return *this;
         }
 
         inline bool Ok() const {
@@ -52,12 +56,13 @@ namespace suil {
             return Ego;
         }
 
-        Result& operator()() {
+        Result&operator()() {
             Ego << "\n\t";
             return Ego;
         }
 
         int Code{Result::OK};
     };
+    
 }
 #endif //SUIL_RESULT_HPP

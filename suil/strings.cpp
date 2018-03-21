@@ -36,7 +36,9 @@ namespace suil {
     {}
 
     zcstring::zcstring(char c, size_t n)
-        : _str((char *) memory::alloc(n+1))
+        : _str((char *) memory::alloc(n+1)),
+          _own(1),
+          _len((uint32_t) n)
     {
         memset(_str, c, n);
         _str[n] = '\0';
@@ -116,6 +118,17 @@ namespace suil {
 
     bool zcstring::empty() const {
         return _str == nullptr || _len == 0;
+    }
+
+    size_t zcstring::find(const char ch) const {
+        size_t index{0};
+        if (Ego._len > 0) {
+            while (Ego._str[index] != ch)
+                if (Ego._str[index++] == '\0') {
+                    return 0;
+                }
+        }
+        return index;
     }
 
     bool zcstring::operator==(const zcstring &s) const {

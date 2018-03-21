@@ -7,8 +7,8 @@
 ##
 function(suil_iod_symbols name)
     set(options "")
-    set(kvargs  BINARY SYMBOLS OUTPUT)
-    set(kvvargs DEPENDS)
+    set(kvargs  BINARY OUTPUT)
+    set(kvvargs DEPENDS SYMBOLS)
 
     cmake_parse_arguments(IOD_SYMBOLS "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
@@ -30,13 +30,22 @@ function(suil_iod_symbols name)
         set(${name}_OUTPUT ${IOD_SYMBOLS_OUTPUT})
     endif()
 
+    list(GET ${name}_SYMBOLS 0 ${name}_MAIN_SYM)
+    list(REMOVE_AT ${name}_SYMBOLS 0)
+    set(${name}_FLAT_SYMS ${${name}_MAIN_SYM})
+    foreach(__${name}_SYM ${${name}_SYMBOLS})
+        set(${name}_FLAT_SYMS "${${name}_FLAT_SYMS} ${__${name}_SYM}")
+    endforeach()
+
+    message(STATUS "${name} symbols. main: ${${name}_MAIN_SYM} flat: ${${name}_FLAT_SYMS}")
+
     # add symbol generation target
     add_custom_target(${name}-gensyms
-            COMMAND ${iodsyms} ${${name}_SYMBOLS} ${${name}_OUTPUT}
+            COMMAND ${iodsyms} ${${name}_MAIN_SYM} ${${name}_SYMBOLS} ${${name}_OUTPUT}
             WORKING_DIRECTORY  ${CMAKE_BINARY_DIR}
-            DEPENDS            ${${name}_SYMBOLS}
+            DEPENDS            ${${name}_MAIN_SYM}
             COMMENT            "Generating IOD symbols used by ${name}")
-    message(STATUS "${iodsyms} ${${name}_SYMBOLS} ${${name}_OUTPUT}")
+    message(STATUS "${iodsyms} ${${name}_FLAT_SYMS} ${${name}_OUTPUT}")
 
     if (IOD_SYMBOLS_DEPENDS)
         add_dependencies(${name}-gensyms ${IOD_SYMBOLS_DEPENDS})

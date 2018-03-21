@@ -15,6 +15,9 @@
 #include <unordered_map>
 #include <sys/param.h>
 
+#include <set>
+#include <regex>
+
 #include <boost/utility/string_view.hpp>
 #include <iod/json.hh>
 #include <iod/parse_command_line.hh>
@@ -23,7 +26,6 @@
 #include <suil/mem.hpp>
 #include <suil/log.hpp>
 #include <netinet/in.h>
-#include <set>
 
 #define errno_s strerror(errno)
 
@@ -114,11 +116,11 @@ namespace suil {
     )) Version;
     extern const Version& ver_json;
 
-    struct DateTime {
-        DateTime(time_t);
-        DateTime();
-        DateTime(const char *http_time);
-        DateTime(const char *fmt, const char *str);
+    struct Datetime {
+        Datetime(time_t);
+        Datetime();
+        Datetime(const char *http_time);
+        Datetime(const char *fmt, const char *str);
         const char* str(char *out, size_t sz, const char *fmt) {
             if (!out || !sz || !fmt) {
                 return nullptr;
@@ -210,6 +212,8 @@ namespace suil {
             msg(ss, args...);
         }
     };
+
+    struct Wire;
 
     struct Data {
     private:
@@ -323,6 +327,9 @@ namespace suil {
             Ego.clear();
         }
 
+        void in(Wire& w);
+        void out(Wire& w) const;
+
     } __attribute__((aligned(1)));
 
     template <typename Type>
@@ -423,7 +430,6 @@ namespace suil {
         }
     }
 
-    struct Wire;
     struct current {
     };
 
@@ -474,12 +480,14 @@ namespace suil {
         inline Wire& operator<<(const Wrapper<__T>& o) {
             // serialize wrapped type
             Ego << o();
+            return Ego;
         }
 
         template <typename __T>
         inline Wire& operator>>(Wrapper<__T>& o) {
             // deserialize wrapped type
             Ego >> o();
+            return Ego;
         }
 
         template <typename __T>
@@ -894,6 +902,16 @@ namespace suil {
 
         bool operator!=(const zcstring& s) const {
             return !(Ego == s);
+        }
+
+        size_t find(const char ch) const;
+
+        zcstring substr(size_t from, size_t nchars = 0) const {
+            ssize_t fits = (ssize_t) (Ego._len - from);
+            if (fits >= (ssize_t) nchars) {
+                return zcstring{&Ego._cstr[from], nchars, false}.dup();
+            }
+            return zcstring{};
         }
 
         inline int compare(const char* s) const {
@@ -1449,6 +1467,8 @@ namespace suil {
     struct File {
         File(mfile);
         File(const char *, int, mode_t);
+        explicit File(int fd, bool own = false);
+
         File(File&) = delete;
         File&operator=(File&) = delete;
 
@@ -1515,6 +1535,7 @@ namespace suil {
     };
 
     struct FileLogger {
+
         FileLogger(const std::string dir, const std::string prefix);
         FileLogger()
             : dst(nullptr)
@@ -1536,10 +1557,23 @@ namespace suil {
         File dst;
     };
 
+    struct Syslog {
+
+        Syslog(const char *name = "suil");
+
+        virtual void log(const char *, size_t, log::level);
+
+        void close();
+
+        inline ~Syslog() {
+            Ego.close();
+        }
+    };
+
     template <typename __T>
     using zmap = std::unordered_map<zcstring, __T, hasher, zcstrmap_case_eq>;
     template <typename _T>
-    using hmap_t = std::unordered_map<std::string, _T, hasher, strmap_eq>;
+    using hmap = std::unordered_map<std::string, _T, hasher, strmap_eq>;
 
     template <typename Cmp = zcstring_cmp>
     using Set = std::set<suil::zcstring, Cmp>;
@@ -1973,6 +2007,34 @@ namespace suil {
             return (uint64_t)(1<<(sizeof(num)-utils::ctz(num)));
         }
 
+        inline void closepipe(int p[2]) {
+            close(p[0]);
+            close(p[1]);
+        }
+
+
+        namespace regex {
+            inline bool match(std::regex& reg, const char *data, size_t len = 0) {
+                return std::regex_match(std::string(data, len), reg);
+            }
+
+            inline bool match(const char *rstr, const char *data, size_t len = 0) {
+                if (len == 0) len = strlen(data);
+                std::regex reg(rstr);
+                return match(reg, data, len);
+            }
+
+            inline bool match(const char *rstr, const zcstring& data) {
+                std::regex reg(rstr);
+                return match(reg, data(), data.size());
+            }
+
+            inline bool match(const char *rstr, const zbuffer& data) {
+                std::regex reg(rstr);
+                return match(reg, data.data(), data.size());
+            }
+        }
+
 #define exmsg() SuilError::getmsg(std::current_exception())
 
     }
@@ -2137,8 +2199,6 @@ namespace suil {
 
     } __attribute__((aligned(1)));
 
-    using Uuid = Blob<sizeof(uuid_t)>;
-
     template <typename T>
     zcstring& zcstring::operator+=(const T &t) {
         zbuffer tmp{Ego._len+(sizeof(T)*2)};
@@ -2152,13 +2212,13 @@ namespace suil {
 
     template <size_t N>
     inline zbuffer& zbuffer::operator<<(Blob<N> &bb) {
-        bb.encjv(Ego);
+        Ego << bb.encjv(Ego);
         return Ego;
     }
 
     template <size_t N>
     inline zbuffer& zbuffer::operator<<(const Blob<N> &bb) {
-        bb.encjv(Ego);
+        Ego << bb.encjv(Ego);
         return Ego;
     }
 
@@ -2199,6 +2259,44 @@ namespace suil {
             SuilError::create("pushing blob failed");
         }
     }
+
+    template <typename Key, typename Value>
+    struct KVPair {
+        typedef decltype(iod::D(
+                prop(key,     Key),
+                prop(val,     Value)
+        )) Type;
+    };
+
+    namespace utils {
+        /**
+         * Load key/value configuration from environment variables
+         * @tparam Config The type of configuration to load
+         * @param config The configuration object to load into
+         * @param prefix the prefix to use when loading confuration
+         */
+        template <typename Config>
+        static void envconfig(Config& config, const char *prefix = "") {
+            iod::foreach2(config)|
+            [&](auto& m) {
+                zcstring key;
+                if (prefix)
+                    key = utils::catstr(prefix, m.symbol().name());
+                else
+                    key = zcstring{m.symbol().name()}.dup();
+                // convert key to uppercase
+                key.toupper();
+                m.value() = utils::env(key(), m.value());
+            };
+        }
+    }
+}
+
+inline suil::zcstring operator "" _str(const char* str, size_t len) {
+    if (len) {
+        suil::zcstring{str, len, false}.dup();
+    }
+    return nullptr;
 }
 
 #endif //SUIL_SYS_HPP

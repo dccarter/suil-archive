@@ -113,15 +113,15 @@ namespace boost {
         struct out_stream_helper_trait {
 #if defined(BOOST_NO_STRINGSTREAM)
             typedef std::ostrstream                                 out_stream_t;
-            typedef void                                            buffer_t;
+            typedef void                                            zbuffer;
 #elif defined(BOOST_NO_STD_LOCALE)
             typedef std::ostringstream                              out_stream_t;
-            typedef basic_unlockedbuf<std::streambuf, char>         buffer_t;
+            typedef basic_unlockedbuf<std::streambuf, char>         zbuffer;
 #else
             typedef std::basic_ostringstream<CharT, Traits> 
                 out_stream_t;
             typedef basic_unlockedbuf<std::basic_streambuf<CharT, Traits>, CharT>  
-                buffer_t;
+                zbuffer;
 #endif
         };   
     }
@@ -134,8 +134,8 @@ namespace boost {
                 , std::size_t CharacterBufferSize
                 >
         class lexical_istream_limited_src: boost::noncopyable {
-            typedef BOOST_DEDUCED_TYPENAME out_stream_helper_trait<CharT, Traits>::buffer_t
-                buffer_t;
+            typedef BOOST_DEDUCED_TYPENAME out_stream_helper_trait<CharT, Traits>::zbuffer
+                zbuffer;
 
             typedef BOOST_DEDUCED_TYPENAME out_stream_helper_trait<CharT, Traits>::out_stream_t
                 out_stream_t;
@@ -232,7 +232,7 @@ namespace boost {
                 try {
 #endif
                 bool const result = !(out_stream << input).fail();
-                const buffer_t* const p = static_cast<buffer_t*>(
+                const zbuffer* const p = static_cast<zbuffer*>(
                     static_cast<std::basic_streambuf<CharT, Traits>*>(out_stream.rdbuf())
                 );
                 start = p->pbase();
@@ -573,16 +573,16 @@ namespace boost {
                     "support such conversions. Try updating it."
                 );
 #endif
-                typedef BOOST_DEDUCED_TYPENAME out_stream_helper_trait<CharT, Traits>::buffer_t
-                    buffer_t;
+                typedef BOOST_DEDUCED_TYPENAME out_stream_helper_trait<CharT, Traits>::zbuffer
+                    zbuffer;
 
 #if defined(BOOST_NO_STRINGSTREAM)
                 std::istrstream stream(start, finish - start);
 #else
 
-                buffer_t buf;
+                zbuffer buf;
                 // Usually `istream` and `basic_istream` do not modify 
-                // content of buffer; `buffer_t` assures that this is true
+                // content of buffer; `zbuffer` assures that this is true
                 buf.setbuf(const_cast<CharT*>(start), finish - start);
 #if defined(BOOST_NO_STD_LOCALE)
                 std::istream stream(&buf);

@@ -390,7 +390,7 @@ namespace suil {
             bool exists(zcstring&& key) {
                 Response resp = send("EXISTS", key);
                 if (resp) {
-                    return (int) resp == 0;
+                    return (int) resp != 0;
                 }
                 else {
                     throw SuilError::create("redis EXISTS '", key,
@@ -401,7 +401,7 @@ namespace suil {
             bool del(zcstring&& key) {
                 Response resp = send("DEL", key);
                 if (resp) {
-                    return (int) resp == 0;
+                    return (int) resp != 0;
                 }
                 else {
                     throw SuilError::create("redis DEL '", key,
@@ -478,10 +478,11 @@ namespace suil {
                 }
             }
 
-            std::vector<zcstring> lrange(zcstring&& key, int start = 0, int end = -1) {
+            template <typename __T>
+            std::vector<__T> lrange(zcstring&& key, int start = 0, int end = -1) {
                 Response resp = send("LRANGE", key, start, end);
                 if (resp) {
-                    std::vector<zcstring> tmp = resp;
+                    std::vector<__T> tmp = resp;
                     return  std::move(tmp);
                 }
                 else {
@@ -511,6 +512,74 @@ namespace suil {
                     throw SuilError::create("redis LINDEX  '", key,
                                              "' failed: ", resp.error());
                 }
+            }
+
+            template <typename __T>
+            __T hdel(const zcstring&& hash, const zcstring&& key) {
+                Response resp = send("HDEL", hash, key);
+                if (resp) {
+                    return (__T) resp != 0;
+                }
+                else {
+                    throw SuilError::create("redis HDEL  '", key,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            template <typename __T>
+            __T hexists(zcstring&& hash, zcstring&& key) {
+                Response resp = send("HEXISTS", hash, key);
+                if (resp) {
+                    return (int) resp != 0;
+                }
+                else {
+                    throw SuilError::create("redis HEXISTS  '", hash, " ", key,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            std::vector<zcstring> hkeys(zcstring&& hash) {
+                Response resp = send("HKEYS", hash);
+                if (resp) {
+                    std::vector<zcstring> keys = resp;
+                    return  std::move(keys);
+                }
+                else {
+                    throw SuilError::create("redis HKEYS  '", hash,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            template <typename __T>
+            std::vector<__T> hvals(zcstring&& hash) {
+                Response resp = send("HVALS", hash);
+                if (resp) {
+                    std::vector<__T> vals = resp;
+                    return  std::move(vals);
+                }
+                else {
+                    throw SuilError::create("redis HVALS  '", hash,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            template <typename __T>
+            __T hget(zcstring&& hash, zcstring&& key) {
+                Response resp = send("HGET", hash, key);
+                if (!resp) {
+                    throw SuilError::create("redis HGET '", hash, " ", key,
+                                            "' failed: ", resp.error());
+                }
+                return (__T) resp;
+            }
+
+            template <typename __T>
+            inline bool hset(zcstring&& hash, zcstring&& key, const __T val) {
+                return send("HSET", hash, key, val).status();
+            }
+
+            inline size_t hlen(zcstring&& hash) {
+                return (size_t) send("HLEN", hash);
             }
 
             bool info(server_info&);
