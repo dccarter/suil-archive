@@ -42,7 +42,7 @@ namespace suil::sql {
         return (*this)(breq);
     }
 
-    void PgSqlConnection::destroy(bool dctor = false ) {
+    void PgSqlConnection::destroy(bool dctor) {
         if (conn == nullptr || --refs > 0) {
             /* Connection still being used */
             return;
@@ -153,7 +153,7 @@ namespace suil::sql {
         return conn;
     }
 
-    static void PgSqlDb::cleanup(PgSqlDb& db) {
+    void PgSqlDb::cleanup(PgSqlDb& db) {
         /* cleanup all expired connections */
         bool status;
         int64_t expires = db.keep_alive + 5;

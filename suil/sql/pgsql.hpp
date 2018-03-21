@@ -854,7 +854,7 @@ namespace suil {
                 bool status = false;
                 try {
                     PGSQLStatement stmt = conn(~qstr);
-                    status = stmt(std::forward(args)...).status();
+                    status = stmt(args...).status();
                 }
                 catch (...) {
                     ierror("'%s' failed: '%s'", ~qstr, exmsg());
