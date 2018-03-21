@@ -920,6 +920,10 @@ namespace suil {
             return Ego.compare(s) <= 0;
         }
 
+        inline const char*operator~() const {
+            return  Ego.c_str();
+        }
+
         inline const char* operator()() const {
             return Ego.c_str();
         }
