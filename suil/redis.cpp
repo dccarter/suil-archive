@@ -6,54 +6,67 @@
 namespace suil {
     namespace redis {
 
+        transaction::transaction(base_client &client)
+            : client(client)
+        {}
 
-
-        Response& transaction::execute() {
+        Response& transaction::exec() {
             // send MULTI command
-            Commmand multi("MULTI");
-
-            cachedresp = client.send(multi);
-            if (!cachedresp.status()) {
-                // there is an error on the reply
-                ierror("error sending 'MULTI' command: %s", cachedresp.error());
+            if (!in_multi) {
+                iwarn("EXEC not support outside of MULTI transaction");
                 return cachedresp;
             }
 
-            client.reset();
-            client.batch(commands);
-            cachedresp.entries.clear();
-            zcstring ret = client.commit(cachedresp);
-            if (ret) {
-                // sending batch commands failed
-                ierror("sending batch commands failed: %s", ret());
-                return  cachedresp;
-            }
-
-            // validate that all commands passed
-            int id{0};
-            for (auto& rp: cachedresp.entries) {
-                if (!rp.special()) {
-                    if (!rp.status("QUEUED")) {
-                        // sending command failed
-                        ierror("sending command '%s' failed: %s",
-                               commands[id]()(), rp.error());
-                        cachedresp.entries.clear();
-                        return cachedresp;
-                    }
-                }
-                id++;
-            }
-
-            // send MULTI command
-            Commmand exec("EXEC");
-            cachedresp = client.send(exec);
+            // send EXEC command
+            cachedresp = client.send("EXEC");
             if (!cachedresp) {
                 // there is an error on the reply
-                ierror("error sending 'EXEC' command: %s", ret());
-                return cachedresp;
+                ierror("error sending 'EXEC' command: %s",cachedresp.error());
             }
 
+            in_multi = false;
             return cachedresp;
+        }
+
+        bool transaction::discard()
+        {
+            if (!in_multi) {
+                iwarn("DISCARD not supported outside MULTI");
+                return false;
+            }
+
+            // send EXEC command
+            cachedresp = client.send("DISCARD");
+            if (!cachedresp) {
+                // there is an error on the reply
+                ierror("error sending 'DISCARD' command: %s", cachedresp.error());
+            }
+
+            in_multi = false;
+            return cachedresp;
+        }
+
+        bool transaction::multi()
+        {
+            if (in_multi) {
+                iwarn("MULTI not supported within a MULTI block");
+                return false;
+            }
+
+            // send EXEC command
+            cachedresp = client.send("MULTI");
+            if (!cachedresp) {
+                // there is an error on the reply
+                ierror("error sending 'MULTI' command: %s", cachedresp.error());
+            }
+
+            in_multi = true;
+            return cachedresp;
+        }
+
+        transaction::~transaction() {
+            if (in_multi)
+                discard();
         }
 
         Response base_client::dosend(Commmand &cmd, size_t nrps) {
