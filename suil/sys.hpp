@@ -904,14 +904,23 @@ namespace suil {
             return !(Ego == s);
         }
 
-        size_t find(const char ch) const;
+        ssize_t find(const char ch) const;
+        ssize_t rfind(const char ch) const;
 
-        zcstring substr(size_t from, size_t nchars = 0) const {
+        zcstring substr(size_t from, size_t nchars = 0, bool zc = true) const {
             ssize_t fits = (ssize_t) (Ego._len - from);
-            if (fits >= (ssize_t) nchars) {
-                return zcstring{&Ego._cstr[from], nchars, false}.dup();
+            if ((nchars == 0) || (fits >= (ssize_t) nchars)) {
+                auto tmp = zcstring{&Ego._cstr[from], nchars, false};
+                return zc? std::move(tmp) : tmp.dup();
             }
             return zcstring{};
+        }
+
+        zcstring chunk(const char ch, bool reverse = false) const {
+            ssize_t from = reverse? find(ch) : rfind(ch);
+            if (from <= 0)
+                from = 0;
+            return zcstring{&Ego._cstr[from], (size_t)(Ego._len-from), false};
         }
 
         inline int compare(const char* s) const {
@@ -1710,6 +1719,8 @@ namespace suil {
                 struct stat st{};
                 return (stat(path, &st) == 0) && (S_ISDIR(st.st_mode));
             }
+
+            inline bool isdirempty(const char *dir);
 
             void mkdir(const char *path, bool recursive = false, mode_t mode = 0777);
 

@@ -582,6 +582,47 @@ namespace suil {
                 return (size_t) send("HLEN", hash);
             }
 
+            template <typename... __T>
+            int sadd(zcstring&& set, const __T... vals) {
+                Response resp = send("SADD", set, vals...);
+                if (resp) {
+                    return (int) resp;
+                }
+                else {
+                    throw SuilError::create("redis SADD  '", set,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            template <typename __T>
+            std::vector<__T> smembers(zcstring&& set) {
+                Response resp = send("SMEMBERS", set);
+                if (resp) {
+                    std::vector<__T> vals = resp;
+                    return  std::move(vals);
+                }
+                else {
+                    throw SuilError::create("redis SMEMBERS  '", set,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            template <typename __T>
+            __T spop(zcstring&& set) {
+                Response resp = send("spop", set);
+                if (!resp) {
+                    throw SuilError::create("redis spop '", set,
+                                            "' failed: ", resp.error());
+                }
+                return (__T) resp;
+            }
+
+
+            inline size_t scard(zcstring&& set) {
+                return (size_t) send("SCARD", set);
+            }
+
+
             bool info(server_info&);
 
         protected:

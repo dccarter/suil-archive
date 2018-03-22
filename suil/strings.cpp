@@ -120,12 +120,24 @@ namespace suil {
         return _str == nullptr || _len == 0;
     }
 
-    size_t zcstring::find(const char ch) const {
-        size_t index{0};
+    ssize_t zcstring::find(const char ch) const {
+        ssize_t index{-1};
         if (Ego._len > 0) {
             while (Ego._str[index] != ch)
                 if (Ego._str[index++] == '\0') {
-                    return 0;
+                    return -1;
+                }
+        }
+        return index;
+    }
+
+    ssize_t zcstring::rfind(const char ch) const {
+        ssize_t index{-1};
+        if (Ego._len > 0) {
+            index += Ego._len;
+            while (Ego._str[index] != ch)
+                if (index-- == 0) {
+                    return -1;
                 }
         }
         return index;
