@@ -759,29 +759,29 @@ namespace suil {
 
         struct transaction : LOGGER(dtag(REDIS)) {
             template <typename... Params>
-            transaction& operator()(const char *cmd, Params... params) {
-                Commmand tmp(cmd, params...);
-                commands.emplace_back(std::move(tmp));
-                return *this;
+            bool operator()(const char *cmd, Params... params) {
+                if (Ego.in_multi) {
+                    Response resp = client.send(cmd, params...);
+                    return resp.status();
+                }
+                iwarn("Executing command '%s' in invalid transaction", cmd);
+                return false;
             }
 
-            Response& execute();
+            Response& exec();
 
-            inline void clear() {
-                commands.clear();
-                cachedresp.entries.clear();
-                client.flush();
-            }
+            bool discard();
 
-            transaction(base_client& client)
-                : client(client)
-            {}
+            bool multi();
+
+            transaction(base_client& client);
+
+            virtual ~transaction();
 
         private:
-
-            std::vector<Commmand> commands;
             Response             cachedresp;
             base_client&         client;
+            bool                 in_multi{false};
         };
     }
 }
