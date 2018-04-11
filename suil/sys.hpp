@@ -2292,7 +2292,7 @@ namespace suil {
     }
 }
 
-inline suil::zcstring operator "" _str(const char* str, size_t len) {
+inline suil::zcstring operator "" _zc(const char* str, size_t len) {
     if (len) {
         suil::zcstring{str, len, false}.dup();
     }
