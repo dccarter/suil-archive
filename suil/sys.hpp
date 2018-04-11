@@ -116,6 +116,14 @@ namespace suil {
     )) Version;
     extern const Version& ver_json;
 
+    template <typename __T>
+    struct Ptr : public std::shared_ptr<__T> {
+        template <typename __T, typename...Args>
+        static inline Ptr<__T> mk(Args&&... args) {
+            return std::make_shared<__T>(std::forward<Args>(args)...);
+        }
+    };
+
     struct Datetime {
         Datetime(time_t);
         Datetime();
@@ -2046,7 +2054,7 @@ namespace suil {
             }
         }
 
-#define exmsg() SuilError::getmsg(std::current_exception())
+#define exmsg() suil::SuilError::getmsg(std::current_exception())
 
     }
 
@@ -2109,6 +2117,8 @@ namespace suil {
         inline zcstring hexstr() const {
             return utils::hexstr(Ego.begin(), N);
         }
+
+        inline zcstring str() const { return Ego.hexstr(); }
 
         inline void fromhex(const zcstring& hex) {
             utils::bytes(hex, Ego.begin(), MIN(hex.size()/2, N));

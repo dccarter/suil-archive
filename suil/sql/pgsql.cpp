@@ -73,24 +73,39 @@ namespace suil::sql {
     }
 
     bool PgSqlTransaction::begin() {
-        return Ego("BEGIN;");
+        if (Ego.valid) return Ego("BEGIN;");
+        return false;
     }
 
     bool PgSqlTransaction::commit() {
-        return Ego("COMMIT;");
+        if (Ego.valid) {
+            Ego.valid = true;
+            return Ego("COMMIT;");
+        }
+        return false;
     }
 
     bool PgSqlTransaction::rollback(const char *sp) {
         if (sp) {
-            return Ego("ROLLBACK TO $1;", sp);
+            if (!Ego.valid) return false;
+            return Ego("ROLLBACK TO SAVEPOINT $1;", sp);
+        } else {
+            if (Ego.valid) {
+                Ego.valid = false;
+                return Ego("ROLLBACK;");
+            }
         }
-        else {
-            return Ego("ROLLBACK");
-        }
+        return false;
     }
 
     bool PgSqlTransaction::savepoint(const char *name) {
-        return Ego("SAVEPOINT $1", name);
+        if (Ego.valid) return Ego("SAVEPOINT $1;", name);
+        return false;
+    }
+
+    bool PgSqlTransaction::release(const char *name) {
+        if (Ego.valid) return Ego("RELEASE SAVEPOINT $1", name);
+        return false;
     }
 
     PgSqlDb::~PgSqlDb() {
