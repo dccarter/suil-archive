@@ -129,9 +129,10 @@ function(SuilApp name)
 
     # get application version
     set(${name}_VERSION ${SUIL_APP_VERSION})
-    if (NOT ${name}_VERSION)
+    if (NOT SUIL_APP_VERSION)
         set(${name}_VERSION "0.0.0")
     endif()
+    message(STATUS "version configured to: ${${name}_VERSION}")
 
     if (SUIL_APP_LIBRARY)
         message(STATUS "configuring target ${name} as a ${SUIL_APP_LIBRARY} library")
