@@ -211,7 +211,7 @@ namespace suil {
                 mlen = mlen << 1;
             }
 
-            if (idx > (MEM_BLOCKS - 1))
+            if (idx >= MEM_BLOCKS)
                 scritical("memblock::index idx %lu too high, len %lu", idx, len);
 
             return (idx);
@@ -274,26 +274,29 @@ namespace suil {
         meminfo		*mem;
         uint8_t	*addr;
         size_t	mlen, idx;
+        uint16_t  sz{0};
 
         if (len == 0)
             len = 8;
 
-        if (len <= (MEM_BLOCK_SIZE_MAX-4)) {
+        if (len < MEM_BLOCK_SIZE_MAX) {
             idx = memblock::index(len);
             ptr = s_MEMORY.blocks[idx].p->get();
             s_MEMORY.blocks[idx].allocs++;
+            sz = (uint16_t)(8<<idx);
         } else {
             mlen = sizeof(size_t) + len + sizeof(meminfo);
             if ((ptr = ::calloc(1, mlen)) == NULL) {
                 scritical("memory::malloc(%zd): %d", len, errno);
             }
+            sz = (uint16_t) MIN(UINT16_MAX, len);
             s_MEMORY.alloc_miss++;
         }
         addr = (uint8_t *)ptr + sizeof(size_t);
 
         mem = MEMINFO(addr);
         mem->magic = MEM_MAGIC;
-        mem->len   = (uint16_t)(8<<idx);
+        mem->len   = sz;
 
         s_MEMORY.allocs++;
 
@@ -305,8 +308,14 @@ namespace suil {
         if (mem->magic != MEM_MAGIC)
             return 0;
         size_t sz = MEMSIZE(ptr);
-        if (memblock::index(len) == memblock::index(sz)) {
-            // memory block size
+        if (sz < MEM_BLOCK_SIZE_MAX) {
+            if (memblock::index(len) == memblock::index(sz)) {
+                // memory block size
+                return sz;
+            }
+        }
+        else if (sz <= UINT16_MAX) {
+            // We don't do re-allocations for sizes greater UINT16_MAX
             return sz;
         }
         return 0;
@@ -363,7 +372,7 @@ namespace suil {
         len = MEMSIZE(ptr);
         addr = (uint8_t *)ptr - sizeof(size_t);
 
-        if (len <= MEM_BLOCK_SIZE_MAX) {
+        if (len < MEM_BLOCK_SIZE_MAX) {
             idx = memblock::index(len);
             s_MEMORY.blocks[idx].p->put(addr);
             s_MEMORY.blocks[idx].frees++;

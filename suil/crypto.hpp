@@ -32,6 +32,7 @@ namespace suil {
         typedef suil::Blob<1 + RIPEMD160_DIGEST_LENGTH + SUIL_CHECKSUM_LEN> AddressBLOB;
         typedef suil::Blob<SUIL_BINARY_KEYLEN>   NetAddrBlob;
         typedef suil::Blob<SHA_DIGEST_LENGTH>    Address;
+
         typedef decltype(iod::D(
                 prop(pubkey,         PubkeyBlob),
                 prop(privkey,        PrivkeyBlob)
@@ -92,7 +93,9 @@ namespace suil {
             return suil::utils::hexstr(sha.data(), sha.size());
         }
 
-        bool genPrivKey(privkey_bin& priv);
+        bool gen_PrivKey(privkey_bin& priv);
+
+        bool gen_KeyPair(KeyPair& kp);
 
         namespace base58 {
             bool decode(const uint8_t in[], size_t sin, uint8_t out[], size_t& sout);

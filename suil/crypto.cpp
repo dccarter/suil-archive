@@ -144,7 +144,7 @@ namespace suil {
             RIPEMD160(&sha.bin(), sizeof(sha), &ripemd.bin());
         }
 
-        bool genPrivKey(privkey_bin& bin) {
+        bool gen_PrivKey(privkey_bin& bin) {
             EC_KEY *key = EC_KEY_new_by_curve_name(NID_secp256k1);
             const BIGNUM    *privkey;
 
@@ -282,6 +282,18 @@ namespace suil {
             if (Ego.pub(pub)) {
                 return pub.address(addr);
             }
+            return false;
+        }
+
+        bool gen_KeyPair(KeyPair& kp) {
+            privkey_bin& priv = (privkey_bin &) kp.privkey;
+            pubkey_bin&  pub  = (pubkey_bin &) kp.pubkey;
+
+            if (crypto::gen_PrivKey(priv)) {
+                // private key successfully generated, get its public key
+                return priv.pub(pub);
+            }
+
             return false;
         }
 

@@ -233,13 +233,13 @@ namespace suil {
     public:
 
         Data()
-                : Data(nullptr, 0)
+            : Data(nullptr, 0)
         {}
 
         Data(uint8_t *data, size_t size, bool own = true)
-                : _cdata(data),
-                  _size((uint32_t)(size)),
-                  _own(own?1:0)
+            : _cdata(data),
+              _size((uint32_t)(size)),
+              _own(own?1:0)
         {}
 
         Data(const Data& d)
@@ -248,7 +248,7 @@ namespace suil {
             if (d._size) {
                 Ego._data = (uint8_t *) memory::alloc(d._size);
                 Ego._size = d._size;
-                memcmp(Ego._data, d._data, d._size);
+                memcpy(Ego._data, d._data, d._size);
                 Ego._own  = 1;
             }
         }
@@ -258,7 +258,7 @@ namespace suil {
             if (d._size) {
                 Ego._data = (uint8_t *) memory::alloc(d._size);
                 Ego._size = d._size;
-                memcmp(Ego._data, d._data, d._size);
+                memcpy(Ego._data, d._data, d._size);
                 Ego._own  = 1;
             }
 
@@ -2212,13 +2212,13 @@ namespace suil {
 
     template <size_t N>
     inline zbuffer& zbuffer::operator<<(Blob<N> &bb) {
-        Ego << bb.encjv(Ego);
+        Ego << bb.hexstr();
         return Ego;
     }
 
     template <size_t N>
     inline zbuffer& zbuffer::operator<<(const Blob<N> &bb) {
-        Ego << bb.encjv(Ego);
+        Ego << bb.hexstr();
         return Ego;
     }
 
@@ -2294,7 +2294,7 @@ namespace suil {
 
 inline suil::zcstring operator "" _zc(const char* str, size_t len) {
     if (len) {
-        suil::zcstring{str, len, false}.dup();
+        return suil::zcstring{str, len, false}.dup();
     }
     return nullptr;
 }

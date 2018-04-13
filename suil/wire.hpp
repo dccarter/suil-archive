@@ -188,11 +188,11 @@ namespace suil {
 
     struct heapboard : breadboard {
         heapboard(size_t size)
-            : breadboard(data, size),
-              data((uint8_t *)memory::alloc(size)),
+            : data((uint8_t *)memory::alloc(size)),
+              breadboard(data, size),
               own{true}
         {
-            Ego.sink = data;
+            Ego.sink = Ego.data;
             Ego.M    = size;
         }
 
@@ -234,7 +234,7 @@ namespace suil {
             hb.M = hb.H = hb.T = 0;
         }
 
-        heapboard&operator=(heapboard&& hb) {
+        heapboard& operator=(heapboard&& hb) {
             Ego.sink = Ego.data = hb.data;
             Ego.own = hb.own;
             Ego.H = hb.H;
@@ -242,6 +242,7 @@ namespace suil {
             hb.own  = false;
             hb.data = hb.sink = nullptr;
             hb.M = hb.H = hb.T = 0;
+            return  Ego;
         }
 
         void copyfrom(const uint8_t* data, size_t sz) {
@@ -282,10 +283,10 @@ namespace suil {
         inline void clear() {
             if (Ego.own && Ego.data) {
                 memory::free(Ego.data);
-                Ego.sink = Ego.data = nullptr;
                 Ego.H = Ego.M = Ego.T;
                 Ego.own = false;
             }
+            Ego.sink = Ego.data = nullptr;
         }
 
         ~heapboard() {

@@ -18,6 +18,9 @@ namespace suil {
         {}
 
         inline suil::Hash computeHash() const {
+            if (Ego.values.size() == 0) {
+                return  suil::Hash(true);
+            }
             std::vector<suil::Hash> hashes = Ego.hashValues();
             return std::move(Ego.computeRootHash(hashes));
         }
