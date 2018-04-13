@@ -196,8 +196,8 @@ namespace suil {
             Ego.M    = size;
         }
 
-        heapboard(uint8_t *buf = nullptr, size_t size = 0)
-            : data(buf),
+        heapboard(const uint8_t *buf = nullptr, size_t size = 0)
+            : _cdata(buf),
               breadboard(data, size)
         {
             // push some data into it;
@@ -207,8 +207,8 @@ namespace suil {
             Ego.H    = 0;
         }
 
-        explicit heapboard(Data& data)
-            : heapboard(data.data(), data.size())
+        explicit heapboard(const Data& data)
+            : heapboard(data.cdata(), data.size())
         {}
 
         heapboard(const heapboard& hb)
@@ -310,7 +310,10 @@ namespace suil {
         }
 
     private:
-        uint8_t   *data{nullptr};
+        union {
+            uint8_t *data{nullptr};
+            const uint8_t* _cdata;
+        };
         bool      own{false};
     };
 

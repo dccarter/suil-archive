@@ -892,6 +892,19 @@ namespace suil {
         }
     }
 
+    bool utils::fs::isdirempty(const char *path) {
+        DIR *dir = opendir(path);
+        if (dir == nullptr)
+            return false;
+        struct dirent *d;
+        size_t n{0};
+        while ((d = readdir(dir))!= nullptr)
+            if (++n > 2) break;
+        closedir(dir);
+
+        return (n <= 2);
+    }
+
     static void _forall(const char *base, zcstring& path, std::function<bool(const zcstring&, bool)> h, bool recursive, bool pod) {
         zcstring cdir(utils::catstr(base, "/", path));
         DIR *d = opendir(cdir.data());

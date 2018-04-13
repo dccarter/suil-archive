@@ -116,6 +116,14 @@ namespace suil {
     )) Version;
     extern const Version& ver_json;
 
+    template <typename __T>
+    struct Ptr : public std::shared_ptr<__T> {
+        template <typename __T, typename...Args>
+        static inline Ptr<__T> mk(Args&&... args) {
+            return std::make_shared<__T>(std::forward<Args>(args)...);
+        }
+    };
+
     struct Datetime {
         Datetime(time_t);
         Datetime();
@@ -904,14 +912,23 @@ namespace suil {
             return !(Ego == s);
         }
 
-        size_t find(const char ch) const;
+        ssize_t find(const char ch) const;
+        ssize_t rfind(const char ch) const;
 
-        zcstring substr(size_t from, size_t nchars = 0) const {
+        zcstring substr(size_t from, size_t nchars = 0, bool zc = true) const {
             ssize_t fits = (ssize_t) (Ego._len - from);
-            if (fits >= (ssize_t) nchars) {
-                return zcstring{&Ego._cstr[from], nchars, false}.dup();
+            if ((nchars == 0) || (fits >= (ssize_t) nchars)) {
+                auto tmp = zcstring{&Ego._cstr[from], nchars, false};
+                return zc? std::move(tmp) : tmp.dup();
             }
             return zcstring{};
+        }
+
+        zcstring chunk(const char ch, bool reverse = false) const {
+            ssize_t from = reverse? find(ch) : rfind(ch);
+            if (from <= 0)
+                from = 0;
+            return zcstring{&Ego._cstr[from], (size_t)(Ego._len-from), false};
         }
 
         inline int compare(const char* s) const {
@@ -1715,6 +1732,8 @@ namespace suil {
                 return (stat(path, &st) == 0) && (S_ISDIR(st.st_mode));
             }
 
+            inline bool isdirempty(const char *dir);
+
             void mkdir(const char *path, bool recursive = false, mode_t mode = 0777);
 
             inline void mkdir(const char *base, const std::vector<const char*> paths, bool recursive = false, mode_t mode = 0777) {
@@ -2035,7 +2054,7 @@ namespace suil {
             }
         }
 
-#define exmsg() SuilError::getmsg(std::current_exception())
+#define exmsg() suil::SuilError::getmsg(std::current_exception())
 
     }
 
@@ -2098,6 +2117,8 @@ namespace suil {
         inline zcstring hexstr() const {
             return utils::hexstr(Ego.begin(), N);
         }
+
+        inline zcstring str() const { return Ego.hexstr(); }
 
         inline void fromhex(const zcstring& hex) {
             utils::bytes(hex, Ego.begin(), MIN(hex.size()/2, N));

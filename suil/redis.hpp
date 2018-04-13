@@ -330,7 +330,7 @@ namespace suil {
             }
 
             template <typename __T>
-            __T get(zcstring&& key) {
+            auto get(zcstring&& key) -> __T {
                 Response resp = send("GET", key);
                 if (!resp) {
                     throw SuilError::create("redis GET '", key,
@@ -479,7 +479,7 @@ namespace suil {
             }
 
             template <typename __T>
-            std::vector<__T> lrange(zcstring&& key, int start = 0, int end = -1) {
+            auto lrange(zcstring&& key, int start = 0, int end = -1) -> std::vector<__T> {
                 Response resp = send("LRANGE", key, start, end);
                 if (resp) {
                     std::vector<__T> tmp = resp;
@@ -503,7 +503,7 @@ namespace suil {
             }
 
             template <typename __T>
-            __T ltrim(zcstring&& key, int index) {
+            auto ltrim(zcstring&& key, int index) -> __T {
                 Response resp = send("LINDEX", key, index);
                 if (resp) {
                     return (__T) resp;
@@ -515,7 +515,7 @@ namespace suil {
             }
 
             template <typename __T>
-            __T hdel(const zcstring&& hash, const zcstring&& key) {
+            auto hdel(const zcstring&& hash, const zcstring&& key) -> __T {
                 Response resp = send("HDEL", hash, key);
                 if (resp) {
                     return (__T) resp != 0;
@@ -527,7 +527,7 @@ namespace suil {
             }
 
             template <typename __T>
-            __T hexists(zcstring&& hash, zcstring&& key) {
+            bool hexists(zcstring&& hash, zcstring&& key) {
                 Response resp = send("HEXISTS", hash, key);
                 if (resp) {
                     return (int) resp != 0;
@@ -551,7 +551,7 @@ namespace suil {
             }
 
             template <typename __T>
-            std::vector<__T> hvals(zcstring&& hash) {
+            auto hvals(zcstring&& hash) -> std::vector<__T> {
                 Response resp = send("HVALS", hash);
                 if (resp) {
                     std::vector<__T> vals = resp;
@@ -564,7 +564,7 @@ namespace suil {
             }
 
             template <typename __T>
-            __T hget(zcstring&& hash, zcstring&& key) {
+            auto hget(zcstring&& hash, zcstring&& key) -> __T {
                 Response resp = send("HGET", hash, key);
                 if (!resp) {
                     throw SuilError::create("redis HGET '", hash, " ", key,
@@ -581,6 +581,47 @@ namespace suil {
             inline size_t hlen(zcstring&& hash) {
                 return (size_t) send("HLEN", hash);
             }
+
+            template <typename... __T>
+            int sadd(zcstring&& set, const __T... vals) {
+                Response resp = send("SADD", set, vals...);
+                if (resp) {
+                    return (int) resp;
+                }
+                else {
+                    throw SuilError::create("redis SADD  '", set,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            template <typename __T>
+            auto smembers(zcstring&& set) -> std::vector<__T>{
+                Response resp = send("SMEMBERS", set);
+                if (resp) {
+                    std::vector<__T> vals = resp;
+                    return  std::move(vals);
+                }
+                else {
+                    throw SuilError::create("redis SMEMBERS  '", set,
+                                            "' failed: ", resp.error());
+                }
+            }
+
+            template <typename __T>
+            auto spop(zcstring&& set) -> __T {
+                Response resp = send("spop", set);
+                if (!resp) {
+                    throw SuilError::create("redis spop '", set,
+                                            "' failed: ", resp.error());
+                }
+                return (__T) resp;
+            }
+
+
+            inline size_t scard(zcstring&& set) {
+                return (size_t) send("SCARD", set);
+            }
+
 
             bool info(server_info&);
 

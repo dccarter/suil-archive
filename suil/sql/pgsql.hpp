@@ -25,17 +25,20 @@ namespace suil {
         };
 
         enum pg_types_t {
-            CHAROID = 18,
-            INT8OID = 20,
-            INT2OID = 21,
-            INT4OID = 23,
-            TEXTOID = 25,
+            BYTEAOID = 17,
+            CHAROID  = 18,
+            INT8OID  = 20,
+            INT2OID  = 21,
+            INT4OID  = 23,
+            TEXTOID  = 25,
             FLOAT4OID = 700,
             FLOAT8OID = 701,
             INT2ARRAYOID   = 1005,
             INT4ARRAYOID   = 1007,
             TEXTARRAYOID   = 1009,
-            FLOAT4ARRAYOID = 1021
+            FLOAT4ARRAYOID = 1021,
+            JSONBOID = 3802
+
         };
 
         namespace __internal {
@@ -62,13 +65,19 @@ namespace suil {
             { return TEXTOID; }
             inline Oid type_to_pgsql_oid_type(const strview&)
             { return TEXTOID; }
-
+            inline Oid type_to_pgsql_oid_type(const iod::json_string&)
+            { return JSONBOID; }
+            template <size_t N>
+            inline Oid type_to_pgsql_oid_type(const Blob<N>&)
+            { return BYTEAOID; }
             inline Oid type_to_pgsql_oid_type(const unsigned char&)
             { return CHAROID; }
             inline Oid type_to_pgsql_oid_type(const unsigned  short int&)
             { return INT2OID; }
             inline Oid type_to_pgsql_oid_type(const unsigned int&)
             { return INT4OID; }
+            inline Oid type_to_pgsql_oid_type(const unsigned long&)
+            { return INT8OID; }
             inline Oid type_to_pgsql_oid_type(const unsigned long long&)
             { return INT8OID; }
 
@@ -106,6 +115,8 @@ namespace suil {
                         return "double precision";
                     case TEXTOID:
                         return "text";
+                    case JSONBOID:
+                        return "jsonb";
                     case INT4ARRAYOID:
                         return "integer[]";
                     case FLOAT4ARRAYOID:
@@ -439,6 +450,22 @@ namespace suil {
                 return results.read(o, 0);
             }
 
+            template <typename __T>
+            bool operator>>(std::vector<__T>& l) {
+                if (results.empty()) return false;
+
+                do {
+                    __T o;
+                    if (Ego >> o) {
+                        // push result to list of found results
+                        l.push_back(std::move(o));
+                    }
+
+                } while (results.next());
+
+                return !l.empty();
+            }
+
             template <typename __F>
             void operator|(__F f) {
                 if (results.empty()) return;
@@ -558,7 +585,7 @@ namespace suil {
             void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, zcstring& s) {
                 val = s.data();
                 oid  =  TEXTOID;
-                len  = s.size();
+                len  = (int) s.size();
                 bin  = 1;
                 return nullptr;
             }
@@ -577,6 +604,32 @@ namespace suil {
 
             void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const strview& v) {
                 return bind(val, oid, len, bin, norder, *const_cast<strview*>(&v));
+            }
+
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, iod::json_string& v) {
+                val = v.str.data();
+                oid  = JSONBOID;
+                len  = (int) v.str.size();
+                bin  = 1;
+                return nullptr;
+            }
+
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const iod::json_string& v) {
+                return bind(val, oid, len, bin, norder, *const_cast<iod::json_string*>(&v));
+            }
+
+            template <size_t N>
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, Blob<N>& v) {
+                val = (const char *)v.cbegin();
+                oid  = BYTEAOID;
+                len  = (int) v.size();
+                bin  = 1;
+                return nullptr;
+            }
+
+            template <size_t N>
+            void* bind(const char*& val, Oid& oid, int& len, int& bin, unsigned long long& norder, const Blob<N>& v) {
+                return bind(val, oid, len, bin, norder, *const_cast<Blob<N>*>(&v));
             }
 
             template <typename __V>
@@ -655,6 +708,23 @@ namespace suil {
                     return false;
                 }
 
+                inline bool read(iod::json_string& v, int col) {
+                    return Ego.read(v.str, col);
+                }
+
+                template <size_t N>
+                bool read(Blob<N>& v, int col) {
+                    if (!empty()) {
+                        char *data = PQgetvalue(*it, row, col);
+                        if (data != nullptr) {
+                            int len = PQgetlength(*it, row, col);
+                            memcpy(&v[0], data, MIN((size_t)len, N));
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
                 bool read(zcstring& v, int col) {
                     if (!empty()) {
                         char *data = PQgetvalue(*it, row, col);
@@ -724,6 +794,8 @@ namespace suil {
                   free_conn(free_conn),
                   dbname(dname)
             {}
+
+            PgSqlConnection(){}
 
             PgSqlConnection(const PgSqlConnection&) = delete;
             PgSqlConnection&operator=(const PgSqlConnection&) = delete;
@@ -822,7 +894,7 @@ namespace suil {
             void destroy(bool dctor = false );
 
             friend struct PgSqlDb;
-            PGconn      *conn;
+            PGconn      *conn{nullptr};
             stmt_map_t  stmt_cache;
             bool        async{false};
             int64_t     timeout{-1};
@@ -845,9 +917,11 @@ namespace suil {
 
             bool savepoint(const char* name);
 
+            bool release(const char* name);
+
             bool rollback(const char* sp = nullptr);
 
-            ~PgSqlTransaction();
+            inline virtual ~PgSqlTransaction() { commit(); }
 
             template <typename... Args>
             bool operator()(const zcstring&& qstr, Args... args) {
@@ -864,6 +938,7 @@ namespace suil {
             }
 
         private:
+            bool  valid{true};
             PgSqlConnection& conn;
         };
 
