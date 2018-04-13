@@ -118,7 +118,7 @@ namespace suil {
 
     template <typename __T>
     struct Ptr : public std::shared_ptr<__T> {
-        template <typename __T, typename...Args>
+        template <typename...Args>
         static inline Ptr<__T> mk(Args&&... args) {
             return std::make_shared<__T>(std::forward<Args>(args)...);
         }
