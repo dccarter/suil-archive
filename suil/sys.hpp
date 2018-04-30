@@ -74,12 +74,15 @@ namespace suil {
     }
 
     bool load(bool si = true);
+
     template <typename... __A>
     void init(__A... args) {
         static bool initialized{false};
         auto opts = iod::D(args...);
         bool showinfo = opts.get(var(printinfo), true);
+
         suil::load(showinfo);
+
         if (!initialized) {
 
             std::string wdir = opts.get(var(wdir), "");

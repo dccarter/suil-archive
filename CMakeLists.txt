@@ -26,16 +26,18 @@ option(SUIL_BUILD_DEV_PACKAGE  "Produce a development package" OFF)
 option(SUIL_DEV_IDE            "Currently using an IDE" OFF)
 set(SUIL_FILE_SERVER_ROUTE     1511d5908a7811e790ed6f6e6c696e65)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result -Wno-format-security")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
-
 set(SUIL_DEFINES)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(SUIL_BUILD_DEBUG ON)
     set(SUIL_DEFINES "${SUIL_DEFINES} -DSUIL_DEBUG")
 endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result -Wno-format-security")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
+set(CMAKE_CXX_FLAGS_DEBUG   "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 include(CheckSymbolExists)
 include(CheckFunctionExists)

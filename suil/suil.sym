@@ -52,6 +52,7 @@ _frees
 _alloc_miss
 _pools
 _entries
+_use_pool
 
 # Server statistics
 _tx_bytes

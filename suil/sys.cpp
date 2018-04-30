@@ -36,7 +36,7 @@ namespace suil {
             console::printblue("http://suil.suilteam.com\n");
             console::println("---------------------------------------\n");
         }
-        memory::init();
+
         loaded = true;
 
         return loaded;
@@ -239,7 +239,7 @@ namespace suil {
             throw std::runtime_error(
                     "zbuffer::grow(): error: " + std::string(errno_s));
         // change the size of the memory
-        size_ = (uint32_t) memory::fits(data_, (size_+add+1));
+        size_ = (uint32_t) size_+add+1;
     }
 
     void zbuffer::reset(size_t size, bool keep) {

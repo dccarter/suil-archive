@@ -108,7 +108,7 @@ namespace suil {
                 ("GET"_method)
                 .attrs(opt(AUTHORIZE, Roles{"System"}))
                 ([this] () {
-                    return memory::get_usage();
+                    return "TODO: Implement memory usage";
                 });
 
                 eproute((*this), "/sys/about")

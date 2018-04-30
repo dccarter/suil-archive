@@ -17,9 +17,6 @@ TEST_CASE("Suil Version Test", "[version]") {
 
 int main(int argc, const char *argv[])
 {
-    suil::memory::init();
     int result = Catch::Session().run(argc, argv);
-    suil::memory::cleanup();
-
     return (result < 0xff ? result: 0xff);
 }
