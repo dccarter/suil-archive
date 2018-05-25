@@ -42,3 +42,16 @@ A lightweight mordern `C++` micro service development framework
       *  Cached connections
 *  JWT creation and decoding
    *  Simple authentication middleware issuing web tokens (Not tested)
+
+##### Require Build/Development Dependencies on Ubuntu
+When building or developing an application that uses this project on ubuntu, the
+following libraries should be installed.
+
+* SQLite
+  `sudo apt-get install sqlite3 libsqlite3-dev`
+* PostgresSQL
+  `sudo apt-get install libpq-dev postgresql postgresql-server-dev-all`
+* UUID
+  `sudo apt-get install uuid-dev`
+* OpenSSL
+  `sudo apt-get install openssl libssl-dev`
