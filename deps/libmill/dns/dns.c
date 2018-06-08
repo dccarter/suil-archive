@@ -32,7 +32,7 @@
 #undef _BSD_SOURCE
 #else
 #undef _BSD_SOURCE
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #endif
 
 #undef _DARWIN_C_SOURCE
@@ -52,7 +52,6 @@
 #include <stdlib.h>		/* malloc(3) realloc(3) free(3) rand(3) random(3) arc4random(3) */
 #include <stdio.h>		/* FILE fopen(3) fclose(3) getc(3) rewind(3) */
 #include <string.h>		/* memcpy(3) strlen(3) memmove(3) memchr(3) memcmp(3) strchr(3) strsep(3) strcspn(3) */
-#include <strings.h>		/* strcasecmp(3) strncasecmp(3) */
 #include <ctype.h>		/* isspace(3) isdigit(3) */
 #include <time.h>		/* time_t time(2) difftime(3) */
 #include <signal.h>		/* SIGPIPE sigemptyset(3) sigaddset(3) sigpending(2) sigprocmask(2) pthread_sigmask(3) sigtimedwait(2) */
@@ -67,8 +66,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
-#include <sys/types.h>		/* FD_SETSIZE socklen_t */
-#include <sys/select.h>		/* FD_ZERO FD_SET fd_set select(2) */
+
 #include <sys/socket.h>		/* AF_INET AF_INET6 AF_UNIX struct sockaddr struct sockaddr_in struct sockaddr_in6 socket(2) */
 #if defined(AF_UNIX)
 #include <sys/un.h>		/* struct sockaddr_un */
@@ -1778,8 +1776,6 @@ invalid:
 	return P->end;
 } /* dns_d_skip() */
 
-
-#include <stdio.h>
 
 size_t dns_d_expand(void *dst, size_t lim, unsigned short src, struct dns_packet *P, int *error) {
 	size_t dstp	= 0;

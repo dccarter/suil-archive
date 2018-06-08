@@ -11,9 +11,9 @@ set(LIB_SUIL_SOURCES
 set_property(GLOBAL PROPERTY prop_SUIL_SOURCES ${LIB_SUIL_SOURCES})
 
 add_library(suil_s STATIC ${LIB_SUIL_SOURCES})
-target_link_libraries(suil_s ${SUIL_LIBRARIES} mill_s)
+target_link_libraries(suil_s ${SUIL_LIBRARIES} mill_s snappy)
 add_library(suil SHARED ${LIB_SUIL_SOURCES})
-target_link_libraries(suil ${SUIL_LIBRARIES} mill_s)
+target_link_libraries(suil ${SUIL_LIBRARIES} mill_s snappy)
 #set_target_properties(suil_s PROPERTIES OUTPUT_NAME suil)
 
 suil_iod_symbols(suil

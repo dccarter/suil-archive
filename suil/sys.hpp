@@ -232,15 +232,8 @@ namespace suil {
             uint8_t       *_data;
             const uint8_t *_cdata;
         };
-        struct {
-#ifdef BIG_ENDIAN
-            uint32_t _own:  8;
-            uint32_t _size: 26;
-#else
-            uint32_t _size: 26;
-            uint32_t _own:  8;
-#endif
-        };
+        uint8_t  _own;
+        uint32_t _size;
     public:
 
         Data()
@@ -322,7 +315,9 @@ namespace suil {
         }
 
         inline bool operator!=(const Data& other) {
-
+            return (Ego._size != other._size) ||
+                   (Ego._size == 0) ||
+                   (memcmp(Ego._data, other._data, Ego._size) != 0);
         }
 
         void clear() {
@@ -456,7 +451,8 @@ namespace suil {
 
         template <typename __T, typename std::enable_if<std::is_arithmetic<__T>::value>::type* = nullptr>
         inline Wire& operator<<(const __T val) {
-            uint64_t tmp = htole64((uint64_t) val);
+            uint64_t tmp{0}; memcpy(&tmp, &val, sizeof(__T));
+            tmp = htole64((uint64_t) tmp);
             forward((uint8_t *)&tmp, sizeof(val));
             return Ego;
         };
@@ -465,7 +461,7 @@ namespace suil {
         inline Wire& operator>>(__T& val) {
             uint64_t tmp{0};
             reverse((uint8_t *)&tmp, sizeof(val));
-            val = (__T) le64toh(tmp);
+            tmp = le64toh(tmp); memcpy(&val, &tmp, sizeof(__T));
             return Ego;
         };
 
@@ -2034,6 +2030,39 @@ namespace suil {
             close(p[1]);
         }
 
+        size_t compress(const uint8_t input[], size_t isz, uint8_t output[], size_t osz);
+
+        Data compress(const uint8_t input[], size_t isz);
+
+        inline Data compress(const zbuffer& in) {
+            return compress((uint8_t *)in.data(), in.size());
+        }
+
+        inline Data compress(const zcstring& in) {
+            return compress((uint8_t *)in.data(), in.size());
+        }
+
+        inline Data compress(const Data& in) {
+            return compress(in.cdata(), in.size());
+        }
+
+        bool uncompress(const uint8_t input[], size_t isz, uint8_t output[], size_t osz);
+
+        Data uncompress(const uint8_t input[], size_t isz);
+
+        inline Data uncompress(const zbuffer& in) {
+            return uncompress((uint8_t *)in.data(), in.size());
+        }
+
+        inline Data uncompress(const zcstring& in) {
+            return uncompress((uint8_t *)in.data(), in.size());
+        }
+
+        inline Data uncompress(const Data& in) {
+            return uncompress(in.cdata(), in.size());
+        }
+
+
 
         namespace regex {
             inline bool match(std::regex& reg, const char *data, size_t len = 0) {
@@ -2259,6 +2288,17 @@ namespace suil {
         template <typename __T>
         void write(__T v) {
             *((uint64_t *) Ego.begin()) = htobe64((uint64_t) v);
+        }
+
+        template <typename __T>
+        inline varint& operator=(__T v) {
+            Ego.write(v);
+            return Ego;
+        }
+
+        template <typename __T>
+        inline operator __T() {
+            return Ego.read<__T>();
         }
 
         uint8_t *raw();

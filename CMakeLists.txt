@@ -79,6 +79,7 @@ add_definitions(${SUIL_DEFINES})
 # add dependencies projects
 add_subdirectory(deps/libmill)
 add_subdirectory(deps/iod)
+add_subdirectory(deps/snappy)
 include_directories(deps)
 
 if (SUIL_BUILD_DEV_PACKAGE)
@@ -148,13 +149,13 @@ add_subdirectory(suil)
 
 add_executable(scrap main.cpp)
 add_dependencies(scrap suil_s)
-target_link_libraries(scrap ${SUIL_LIBRARIES} mill_s suil_s)
+target_link_libraries(scrap ${SUIL_LIBRARIES} mill_s suil_s snappy)
 
 if (SUIL_BUILD_UNIT_TEST)
     get_property(_SUIL_SOURCES GLOBAL PROPERTY prop_SUIL_SOURCES)
     file(GLOB_RECURSE SUIL_TEST_SOURCES tests/*.cpp test/*.c)
     add_executable(sut ${_SUIL_SOURCES} ${SUIL_TEST_SOURCES})
-    target_link_libraries(sut ${SUIL_LIBRARIES} mill_s)
+    target_link_libraries(sut ${SUIL_LIBRARIES} mill_s snappy)
     target_compile_definitions(sut PUBLIC -DSUIL_TESTING)
 endif()
 

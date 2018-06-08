@@ -121,12 +121,13 @@ namespace suil {
         {}
 
         virtual size_t forward(const uint8_t e[], size_t es) {
-            size_t m{MIN((M-T), es)};
-            if (m) {
-                memcpy(&sink[T], e, m);
-                T += m;
+            if ((M-T) < es) {
+                throw SuilError::create("breadboard buffer out of memory, requested: ", es,
+                            " available: ", (M-T));
             }
-            return m;
+            memcpy(&sink[T], e, es);
+            T += es;
+            return es;
         }
 
         virtual size_t reverse(uint8_t e[], size_t es) {
@@ -178,6 +179,8 @@ namespace suil {
             T += (str.size()>>1);
             return true;
         }
+
+        void out(Wire& w) const;
 
     protected:
         uint8_t     *sink;
@@ -294,7 +297,6 @@ namespace suil {
         }
 
         void in(Wire& w);
-        void out(Wire& w) const;
 
         Data release() {
             if (Ego.size()) {

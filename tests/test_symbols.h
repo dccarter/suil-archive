@@ -7,6 +7,11 @@
 
 #include <iod/symbol.hh>
 
+#define tvar(v) test::s::_##v
+#define tsym(v) tvar(v)
+#define topt(o, v) tvar(o) = v
+#define ton(ev) test::s::_on_##ev
+
 namespace test {
 
 #ifndef TEST_IOD_SYMBOL_a
