@@ -73,6 +73,8 @@ dkms.conf
 # Generated files
 .bin/
 suil/symbols.h
+suil/docker/types.h
+*_symbols.h
 cmake/SuilConfigVersion.cmake
 
 # Build directories

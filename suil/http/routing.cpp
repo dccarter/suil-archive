@@ -315,7 +315,8 @@ namespace suil {
                 static const char *ROOT_URL = "/";
                 url = (char *) ROOT_URL;
             }
-            else if (api_base.empty() || strncasecmp(req.url, api_base.c_str(), api_base.size()) == 0)
+
+            if (api_base.empty() || strncasecmp(req.url, api_base.c_str(), api_base.size()) == 0)
             {
                 /* the Request is an api` rule */
                 size_t index = api_base.empty()? 0: api_base.size();

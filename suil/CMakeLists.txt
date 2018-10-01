@@ -37,6 +37,13 @@ install(FILES suil.sql suil.pgsql.sql
 install(FILES suil.sqlite
         DESTINATION share/suil/sqlite/)
 
+# always build the tools
+add_subdirectory(tools)
+
 if (SUIL_BUILD_ABCI)
     add_subdirectory(abci)
+endif()
+
+if (SUIL_BUILD_DOCKER)
+    add_subdirectory(docker)
 endif()

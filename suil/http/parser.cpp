@@ -2261,7 +2261,7 @@ namespace suil {
 
         int parser::on_message_begin(http_parser *s) {
             parser *p = static_cast<parser*>(s);
-            p->clear();
+            p->clear(true);
             return 0;
         }
 
@@ -2386,7 +2386,7 @@ namespace suil {
             return nparsed == len;
         }
 
-        void parser::clear() {
+        void parser::clear(bool internal) {
             if (url) {
                 memory::free(url);
                 url = nullptr;

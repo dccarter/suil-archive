@@ -19,7 +19,7 @@ namespace suil {
         }
 
         void Cors::before(Request &req, Response &res, Context &) {
-            if ((req.method == (int)Method::Options)) {
+            if (req.method == (int) Method::Options) {
                 /* Requesting options */
                 auto req_method = req.header("Access-Control-Request-Method");
                 if (!req_method.empty()) {

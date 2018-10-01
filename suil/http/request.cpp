@@ -568,7 +568,7 @@ namespace suil {
             return false;
         }
 
-        void Request::clear() {
+        void Request::clear(bool internal) {
             parser::clear();
             files.clear();
             cookies.clear();
@@ -576,7 +576,11 @@ namespace suil {
                 delete offload;
                 offload = NULL;
             }
-            stage.reset(0);
+
+            if (!internal) {
+                stage.reset(0);
+            }
+
             has_body = 0;
             body_read = 0;
             body_error = 0;

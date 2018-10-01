@@ -86,7 +86,40 @@ namespace suil {
 
             // this will dup over the base
             www_dir = zcstring{base}.dup();
+
+            // add some basic redirects
+            alias("/", "index.html");
         }
+
+        void FileServer::alias(const suil::zcstring from, const suil::zcstring to)
+        {
+            if (strrchr(to.data(), '.') == nullptr)
+            {
+                // only supporting redirect to files with extensions
+                throw std::runtime_error("redirecting to unsupported file format");
+            }
+
+            auto it = redirects.find(from);
+            if (it != redirects.end()) {
+                // replace redirect
+                it->second = to.dup();
+            }
+            else {
+                // add route to redirects
+                redirects.emplace(from.dup(), to.dup());
+            }
+        }
+
+        zcstring FileServer::aliased(const suil::zcstring &path)
+        {
+            auto it = redirects.find(path);
+            if (it != redirects.end())
+            {
+                // found, return redirected path
+                return it->second.peek();
+            }
+            return zcstring{nullptr};
+        };
 
         void FileServer::get(const Request &req, Response &resp, zcstring &path, zcstring &ext) {
             auto mime = mime_types_.find(ext);

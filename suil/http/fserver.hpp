@@ -40,8 +40,13 @@ namespace suil {
                     zcstring path(req.url);
                     const char *ext = strrchr(path.data(), '.');
                     if (!ext) {
-                        // file not found
-                        throw error::not_found();
+                        // find path in the redirect lists
+                        path = Ego.aliased(path);
+                        if (!path) {
+                            // path does not exist
+                            throw error::not_found();
+                        }
+                        ext = strrchr(path.data(), '.');
                     }
 
                     // get path from extension
@@ -108,6 +113,8 @@ namespace suil {
                 }
             }
 
+            void alias(const zcstring from, const zcstring to);
+
             config_t config;
 
         private:
@@ -116,6 +123,8 @@ namespace suil {
             void get(const Request& req, Response& resp, zcstring& path, zcstring& ext);
 
             void head(const Request& req, Response& resp, zcstring& path, zcstring& ext);
+
+            zcstring aliased(const zcstring &path);
 
             struct mime_type_t {
                 mime_type_t(const char *mm)
@@ -214,6 +223,7 @@ namespace suil {
             mime_types_t    mime_types_;
             cached_files_t  cached_files_;
             zcstring        www_dir;
+            zmap<zcstring>  redirects;
         };
     }
 }

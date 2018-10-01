@@ -20,6 +20,7 @@
 #define sym(v) var(v)
 #define opt(o, v) var(o) = v
 #define on(ev) s::_on_##ev
+#define eni(e) (int) (e)
 #define sizeofcstr(ch)   (sizeof(ch)-1)
 
 namespace suil {
@@ -240,7 +241,7 @@ namespace suil {
                     /* invalid log level */
                     lvl = level::ERROR;
                 } else {
-                    lvl = (level) ((uint8_t) level::CRITICAL - l);
+                    lvl = (level) ((uint8_t) l);
                 }
                 __log.lvl = lvl;
             }

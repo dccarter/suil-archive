@@ -1,0 +1,109 @@
+{
+  "ns": "suil::docker",
+  "includes": [
+    "<vector>",
+    "<suil/json.hpp>"
+  ],
+  "guard": "_SUIL_DOCKER_TYPES_",
+  "extraSymbols": [
+    "loginAuth",
+    "tokenAuth"
+  ],
+  "types": [
+    {
+      "name": "LoginReq",
+      "fields": [
+        {
+          "name": "username",
+          "type": "zcstring"
+        },
+        {
+          "name": "password",
+          "type": "zcstring"
+        },
+        {
+          "name": "email",
+          "type": "zcstring"
+        },
+        {
+          "name": "serveraddress",
+          "type": "zcstring"
+        }
+      ]
+    },
+    {
+      "name": "AuthToken",
+      "fields": [
+        {
+          "name":"identitytoken",
+          "type":"zcstring"
+        }
+      ]
+    },
+    {
+      "name": "RequestError",
+      "fields": [
+        {
+          "name":"message",
+          "type":"zcstring"
+        }
+      ]
+    },
+    {
+      "name": "ListFilter",
+      "fields": [
+        {"name":"ancestor",   "type":"zcstring"},
+        {"name":"before",     "type":"zcstring"},
+        {"name":"expose",     "type":"zcstring"},
+        {"name":"exited",     "type":"int"},
+        {"name":"health",     "type":"std::vector<zcstring>"},
+        {"name":"id",         "type":"zcstring"},
+        {"name":"isolation",  "type":"std::vector<zcstring>"},
+        {"name":"label",      "type":"zcstring"},
+        {"name":"name",       "type":"zcstring"},
+        {"name":"network",    "type":"zcstring"},
+        {"name":"publish",    "type":"zcstring"},
+        {"name":"status",     "type":"std::vector<zcstring>"},
+        {"name":"volume",     "type":"zcstring"}
+      ]
+    },
+    {
+      "name": "ListReq",
+      "fields": [
+        {"name": "all",           "type":"bool"},
+        {"name": "limit",         "type":"int"},
+        {"name": "size",          "type":"bool"},
+        {"name": "filters",       "type":"ListFilter"}
+      ]
+    },
+    {
+      "name": "Port",
+      "fields": [
+        {"name": "IP",            "type":"zcstring"},
+        {"name": "PrivatePort",   "type":"uint16_t"},
+        {"name": "PublicPort",    "type":"uint16_t"},
+        {"name": "Type",          "type":"zcstring"}
+      ]
+    },
+    {
+      "name": "ListResp",
+      "fields": [
+        {"name":"Id",          "type":"zcstring"},
+        {"name": "Names",      "type":"std::vector<zcstring>"},
+        {"name": "Image",      "type":"zcstring"},
+        {"name": "ImageId",    "type":"zcstring"},
+        {"name": "Command",    "type":"zcstring"},
+        {"name": "Created",    "type":"int64_t"},
+        {"name": "Ports",      "type":"std::vector<Port>"},
+        {"name": "SizeRw",     "type":"int64_t"},
+        {"name": "SizeRootFs", "type":"int64_t"},
+        {"name": "Labels",     "type":"json::Object"},
+        {"name": "State",      "type":"zcstring"},
+        {"name": "Status",     "type":"zcstring"},
+        {"name": "HostConfig", "type":"json::Object"},
+        {"name": "NetworkSettings", "type":"json::Object"},
+        {"name": "Mounts",          "type":"json::Object"}
+      ]
+    }
+  ]
+}

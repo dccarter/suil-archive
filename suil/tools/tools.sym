@@ -1,0 +1,14 @@
+@SuilgenSchema:
+  _ns
+  _includes
+  _types
+  _guard
+  _extraSymbols
+
+@SuilgenSchemaType:
+   @name
+   _fields
+
+@SuilgenSchemaField:
+   @name
+   _type

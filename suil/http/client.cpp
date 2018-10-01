@@ -392,7 +392,7 @@ namespace suil {
                 if (resp.status() != Status::OK) {
                     /* connecting to server failed */
                     throw SuilError::create("sending CONNECT to '", host(), "' failed: ",
-                            http::Statusext(resp.status()));
+                                            http::status_text(resp.status()));
                 }
 
                 /* cleanup Request and return it fresh */

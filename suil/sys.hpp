@@ -14,7 +14,7 @@
 #include <uuid/uuid.h>
 #include <unordered_map>
 #include <sys/param.h>
-
+#include <memory>
 #include <set>
 #include <regex>
 
@@ -28,6 +28,15 @@
 #include <netinet/in.h>
 
 #define errno_s strerror(errno)
+
+#define sptr(type)                          \
+public:                                     \
+    using Ptr = std::shared_ptr< type >;    \
+    template <typename... Args>             \
+    inline static Ptr mkshared(Args... args) {          \
+        return std::make_shared< type >(    \
+            std::forward<Args>(args)...);   \
+    }
 
 namespace suil {
 
@@ -80,8 +89,9 @@ namespace suil {
         static bool initialized{false};
         auto opts = iod::D(args...);
         bool showinfo = opts.get(var(printinfo), true);
-
         suil::load(showinfo);
+        // setup logging
+        log::setup(args...);
 
         if (!initialized) {
 
@@ -1528,7 +1538,7 @@ namespace suil {
             return *this;
         }
 
-        File& operator<<(zcstring& str) {
+        File& operator<<(const zcstring& str) {
             size_t nwr = write(str.data(), str.size(), -1);
             if (nwr != str.size()) {
                 throw std::runtime_error("writing failed to file failed");
@@ -1536,10 +1546,21 @@ namespace suil {
             return *this;
         }
 
-        File& operator<<(zbuffer& b) {
+        File& operator<<(const zbuffer& b) {
             size_t nwr = write(b.data(), b.size(), -1);
             if (nwr != b.size()) {
                 throw std::runtime_error("writing failed to file failed");
+            }
+            return *this;
+        }
+
+        File& operator<<(const char* str) {
+            if (str) {
+                size_t len = strlen(str);
+                size_t nwr = write(str, len, -1);
+                if (nwr != len) {
+                    throw std::runtime_error("writing failed to file failed");
+                }
             }
             return *this;
         }
@@ -1588,6 +1609,8 @@ namespace suil {
 
     template <typename __T>
     using zmap = std::unordered_map<zcstring, __T, hasher, zcstrmap_case_eq>;
+    template <typename __T>
+    using zstrmap = std::unordered_map<zcstring, __T, hasher, zcstrmap_eq>;
     template <typename _T>
     using hmap = std::unordered_map<std::string, _T, hasher, strmap_eq>;
 

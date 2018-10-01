@@ -107,7 +107,7 @@ namespace suil {
                 }
             }
 
-            virtual void clear();
+            virtual void clear(bool internal = false);
 
             const route_attributes_t& route() const {
                 return *params.attrs;
@@ -120,6 +120,13 @@ namespace suil {
             template <typename __T>
             __T query(const char *name) const {
                 return qps.get<__T>(name);
+            }
+
+            template <typename __T>
+            __T toJson() const {
+                __T tmp;
+                iod::json_decode(tmp, Ego.body);
+                return std::move(tmp);
             }
 
         private:

@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
     if (!f)
     {
       std::cerr << "Cannot open file " << argv[1] << " for reading." << std::endl;
+      return -1;
     }
 
     std::string line;
@@ -77,7 +78,9 @@ int main(int argc, char* argv[])
 
   for (int i = 1; i < argc - 1; i++) {
     std::cout << "parsing file " << argv[i] << std::endl;
-    parse_file(argv[i]);
+    if (parse_file(argv[i]) < 0) {
+        return EXIT_FAILURE;
+    }
   }
 
   std::ofstream os(argv[argc - 1]);

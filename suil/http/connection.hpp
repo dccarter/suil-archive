@@ -352,7 +352,7 @@ namespace suil {
 
                 zbuffer hbuf(2047);
 
-                const char *status = Statusext(res.status);
+                const char *status = status_text(res.status);
                 hbuf.append(status);
                 hbuf.append("\r\n", 2);
                 if (!err) {

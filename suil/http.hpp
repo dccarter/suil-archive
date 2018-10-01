@@ -261,7 +261,7 @@ namespace suil {
         };
 
         static inline const char *
-        Statusext(Status status)
+        status_text(Status status)
         {
             const char		*r;
 
@@ -600,7 +600,7 @@ namespace suil {
         )) Error;
 
         inline Error mk_error(Status status, zcstring&& text) {
-            return Error{zcstring{&Statusext(status)[13]}, std::move(text)};
+            return Error{zcstring{&status_text(status)[13]}, std::move(text)};
         }
     }
 

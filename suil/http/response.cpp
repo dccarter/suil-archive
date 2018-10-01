@@ -35,7 +35,8 @@ namespace suil {
         }
 
         void Response::end(Status status) {
-            this->status = status;
+            if (Ego.status == Status::OK)
+                this->status = status;
             completed = true;
         }
 
@@ -45,8 +46,7 @@ namespace suil {
             else
                 this->body = std::move(body);
 
-            this->status = status;
-            completed = true;
+            Ego.end(status);
         }
 
         void Response::end(ProtocolHandler p) {

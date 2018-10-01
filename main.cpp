@@ -12,41 +12,25 @@
 using  namespace suil;
 using  namespace suil::http;
 
-coroutine void do_start(Application& app) {
-    app.start();
-}
-
-void memory_test()
-{
-    auto start = mnow();
-    for (int j = 0; j < 20; j++) {
-        size_t sz = 1LU << j;
-        snotice("\ttesting size %lu", sz);
-        auto js = mnow();
-        for (int i = 0; i < 1000000; i++) {
-            auto ptr = memory::alloc(sz+sizeof(uint32_t));
-            memory::free(ptr);
-        }
-        auto jel = mnow() - js;
-        snotice("\telapsed: %lu ms", jel);
-    }
-    auto elapsed = mnow() - start;
-    snotice("elapsed: %lu ms", elapsed);
-}
 
 int main(int argc, const char *argv[])
 {
-    suil::init(opt(use_pool, argc == 3));
+    suil::init();
     suil::log::setup(opt(verbose, 3));
-    Endpoint<> ep("/api", opt(port, 1024));
+    Endpoint<> ep("/api",
+            opt(port, 1024),
+            opt(name, "192.168.100.103"));
+    FileServer fs(ep,
+            opt(root, "/home/dc/projects/sci/www"));
+    fs.alias("/banner", "images/banner.mp4");
+
     // simple route
-    ep("/hello")
+    ep("/hello/<string>")
     ("GET"_method)
-    ([]() {
-        return "Hello World";
+    ([](std::string name) {
+        // simple example returns the name
+        return utils::catstr("Hello ", name);
     });
 
     ep.start();
-    //snotice("Starting test %s", (argc >= 3? "Pool": "Non Pool"));
-    //memory_test();
 }

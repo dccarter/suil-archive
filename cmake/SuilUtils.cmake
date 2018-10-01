@@ -54,6 +54,55 @@ function(suil_iod_symbols name)
     add_dependencies(${name} ${name}-gensyms)
 endfunction()
 
+function(suil_gen_types name)
+    set(options "")
+    set(kvargs  BINARY OUTPUT)
+    set(kvvargs DEPENDS SCHEMAS)
+
+    cmake_parse_arguments(TYPES_SCHEMA "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
+
+    # locate binary to use
+    set(suilgen suilgen)
+    if (TYPES_SCHEMA_BINARY)
+        set(suilgen ${TYPES_SCHEMA_BINARY})
+    endif()
+
+    # locate symbols file
+    set(${name}_SCHEMAS ${CMAKE_SOURCE_DIR}/${name}.schema)
+    if (TYPES_SCHEMA_SCHEMAS)
+        set(${name}_SCHEMAS ${TYPES_SCHEMA_SCHEMAS})
+    endif()
+
+    # set output path
+    set(${name}_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/${name}.types.hpp)
+    if (TYPES_SCHEMA_OUTPUT)
+        set(${name}_OUTPUT ${TYPES_SCHEMA_OUTPUT})
+    endif()
+
+    list(GET ${name}_SCHEMAS 0 ${name}_MAIN_SCHEMA)
+    list(REMOVE_AT ${name}_SCHEMAS 0)
+    set(${name}_FLAT_SCHEMAS ${${name}_MAIN_SCHEMA})
+    foreach(__${name}_SCHEMA ${${name}_SCHEMAS})
+        set(${name}_FLAT_SCHEMAS "${${name}_FLAT_SCHEMAS} ${__${name}_SCHEMA}")
+    endforeach()
+
+    message(STATUS "${name} schemas. main: ${${name}_MAIN_SCHEMA} flat: ${${name}_FLAT_SCHEMAS}")
+
+    # add symbol generation target
+    add_custom_target(${name}-gentps
+            COMMAND ${suilgen} "gen" "-i" ${${name}_MAIN_SCHEMA} "-o" ${${name}_OUTPUT}
+            WORKING_DIRECTORY  ${CMAKE_BINARY_DIR}
+            DEPENDS            ${${name}_MAIN_SCHEMA}
+            COMMENT            "Generating types used by ${name}")
+    message(STATUS "${suilgen} ${${name}_FLAT_SCHEMAS} ${${name}_OUTPUT}")
+
+    if (TYPES_SCHEMA_DEPENDS)
+        add_dependencies(${name}-gentps ${TYPES_SCHEMA_DEPENDS})
+    endif()
+
+    add_dependencies(${name} ${name}-gentps)
+endfunction()
+
 ##
 # @brief Check to ensure that a system library exists in the system
 # @param {name:string:required} the name of the library

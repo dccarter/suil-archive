@@ -290,8 +290,8 @@ namespace suil {
 
                 template <typename __V, typename... __E>
                 inline void args(const char *name, __V val, __E... e) {
-                    hdrs(name, val);
-                    hdrs(e...);
+                    args(name, val);
+                    args(e...);
                 }
 
                 Request& operator<<(Form&& f);
@@ -442,6 +442,10 @@ namespace suil {
                 void connect(handle_t& h, zmap<zcstring> hdrs = {});
 
                 Response head(handle_t& h, const char* resource, zmap<zcstring> hdr = {});
+
+                Session()
+                    : Session(zcstring("http").dup(), zcstring("127.0.0.1").dup())
+                {}
 
             private:
                 template <typename... __O>
