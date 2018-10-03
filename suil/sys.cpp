@@ -892,6 +892,21 @@ namespace suil {
         }
     }
 
+    zcstring utils::fs::currdir() {
+        char buf[PATH_MAX];
+        if (getcwd(buf, PATH_MAX) == nullptr)
+            throw SuilError::create("getcwd failed: ", errno_s);
+        return zcstring{buf}.dup();
+    }
+
+    zcstring utils::fs::getname(const char *path) {
+        zcstring tmp{zcstring(path).dup()};
+        char *name = basename(tmp.data());
+        if (!name)
+            throw SuilError::create("basename failed: ", errno_s);
+        return zcstring{name}.dup();
+    }
+
     bool utils::fs::isdirempty(const char *path) {
         DIR *dir = opendir(path);
         if (dir == nullptr)

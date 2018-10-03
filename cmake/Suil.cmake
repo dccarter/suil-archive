@@ -2,10 +2,6 @@
 # Suil project helper functions
 ##
 
-# the base path where suil development library was installed
-# if not installed in system
-set(SUIL_BASE_PATH "" CACHE STRING "Base path on which suil was installed")
-
 # Enable building debug project
 option(SUIL_PROJECT_DEBUG "Enable building of debug projects" ON)
 
@@ -40,15 +36,15 @@ function(SuilProject name)
                 "A project instance has already been created: ${SUIL_APP_PROJECT_NAME}")
     else ()
         set(options "")
-        set(kvargs  VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
-        set(kvvargs STATIC_LINK LINK_DIRS)
+        set(kvargs  VERSION_MAJOR VERSION_MINOR VERSION_PATCH TYPE_SCHEMA IOD_BIN GENTPS_BIN)
+        set(kvvargs STATIC_LINK LINK_DIRS SYMBOLS)
         cmake_parse_arguments(SUIL_PROJECT "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
         # initialize project
         project(${name} C CXX)
 
         message(STATUS "using suil link directory: ${SUIL_BASE_PATH}/lib")
-        link_directories(${SUIL_BASE_PATH}/lib)
+        link_directories(${CMAKE_BINARY_DIR} ${SUIL_BASE_PATH}/lib)
 
         # find required packages
         find_package(PostgreSQL REQUIRED)
@@ -78,6 +74,34 @@ function(SuilProject name)
         # Some basic project definitions
         set(SUIL_PROJECT_NAME ${name} PARENT_SCOPE)
         set(SUIL_PROJECT_CREATED ON PARENT_SCOPE)
+        # add symbols target for current project
+        if (SUIL_PROJECT_SYMBOLS)
+            message(STATUS "defining project symbols target ${SUIL_PROJECT_SYMBOLS}")
+            set(iod_BINARY ${SUIL_BASE_PATH}/bin/iodsyms)
+            if (SUIL_PROJECT_IOD_BIN)
+                set(iod_BINARY ${SUIL_PROJECT_IOD_BIN})
+            endif()
+            suil_iod_symbols(${name}
+                    PROJECT ON
+                    BINARY  ${SUIL_PROJECT_IOD_BIN}
+                    SYMBOLS ${SUIL_PROJECT_SYMBOLS}
+                    OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${name}_symbols.h)
+            set(SUIL_PROJECT_GENSYMS ON PARENT_SCOPE)
+        endif()
+        # add symbols target for current project
+        if (SUIL_PROJECT_TYPES)
+            message(STATUS "defining project types target ${SUIL_PROJECT_TYPES}")
+            set(gentps_BINARY ${SUIL_BASE_PATH}/bin/suiltps)
+            if (SUIL_PROJECT_GENTPS_BIN)
+                set(gentps_BINARY ${SUIL_PROJECT_GENTPS_BIN})
+            endif()
+            suil_gen_types(${name}
+                    PROJECT ON
+                    BINARY  ${gentps_BINARY}
+                    SCHEMA  ${SUIL_PROJECT_TYPE_SCHEMA}
+                    OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${name}.types.h)
+            set(SUIL_PROJECT_GENTYPES ON PARENT_SCOPE)
+        endif()
     endif()
 endfunction()
 
@@ -146,6 +170,18 @@ function(SuilApp name)
         target_compile_definitions(${name} PUBLIC "-DAPP_NAME=\"${name}\"")
         target_compile_definitions(${name} PUBLIC "-DLIB_VERSION=\"${${name}_VERSION}\"")
     endif()
+
+    # depends on project types
+    if (SUIL_PROJECT_GENSYMS)
+        message(STATUS "adding project level symbols generator dependency")
+        add_dependencies(${name} ${SUIL_PROJECT_NAME}-gensyms)
+    endif()
+
+    if (SUIL_PROJECT_GENTYPES)
+        message(STATUS "adding project level types generator dependency")
+        add_dependencies(${name} ${SUIL_PROJECT_NAME}-gentps)
+    endif()
+
 
     # generate symbols
     set(${name}_SYMBOLS ${SUIL_APP_SYMBOLS})
@@ -217,9 +253,9 @@ function(SuilApp name)
 
         message(STATUS "target '${name} install target")
         install(TARGETS ${name}
-                ARCHIVE DESTINATION targets/lib
-                LIBRARY DESTINATION targets/lib
-                RUNTIME DESTINATION targets/bin)
+                ARCHIVE DESTINATION lib
+                LIBRARY DESTINATION lib
+                RUNTIME DESTINATION bin)
 
 
         set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})

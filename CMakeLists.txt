@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(suil C CXX)
 
-set(CMAKE_MODULE_PATH
-        ${CMAKE_MODULE_PATH}
-        "${CMAKE_SOURCE_DIR}/cmake/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 include(SuilUtils)
 
@@ -17,14 +15,16 @@ set(SUIL_DEBUG_TAG     1a30f8248a6b11e781846f6e6c696e65 CACHE STRING "The tag us
 set(SUIL_BASE_DIR     ".suil" CACHE STRING "The base directory of suil application")
 set(SUIL_ENABLE_TRACE 1 CACHE STRING "Enable debug traces in debug builds")
 
-set(SUIL_COPYRIGHT "Copyright (C) 2017, 2017-2017 Suilteam")
-set(SUIL_VERSION ${SUIL_MAJOR_VERSION}.${SUIL_MINOR_VERSION}.${SUIL_PATCH_VERSION})
+set(SUIL_COPYRIGHT "Copyright (C) 2018, 2017-2018 Suilteam")
+set(SUIL_VERSION    ${SUIL_MAJOR_VERSION}.${SUIL_MINOR_VERSION}.${SUIL_PATCH_VERSION})
 
 option(SUIL_BUILD_UNIT_TEST    "Enable unit testing" ON)
-option(SUIL_BUILD_EXAMPLES     "Enable building examples" OFF)
+option(SUIL_BUILD_EXAMPLES     "Enable building examples" ON)
 option(SUIL_BUILD_DEV_PACKAGE  "Produce a development package" OFF)
 option(SUIL_DEV_IDE            "Currently using an IDE" OFF)
 option(SUIL_BUILD_DOCKER       "Include docker API build" ON)
+
+# route used specifically by the file server
 set(SUIL_FILE_SERVER_ROUTE     1511d5908a7811e790ed6f6e6c696e65)
 
 set(SUIL_DEFINES)
@@ -66,11 +66,10 @@ set(SUIL_LIBRARIES
 set(SUIL_STATIC_LIBRARIES
         ssl crypto uuid sqlite3 pq)
 
-if (SUIL_BUILD_ABCI)
-    find_package(Protobuf REQUIRED)
-    set(SUIL_LIBRARIES ${SUIL_LIBRARIES} ${PROTOBUF_LIBRARIES})
-    set(SUIL_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} protobuf.a)
-endif()
+set(SUIL_ARCHIVE_LIBS
+        ${CMAKE_BINARY_DIR}/libmill_s.a
+        ${CMAKE_BINARY_DIR}/libsnappy.a
+        ${CMAKE_BINARY_DIR}/libsuil_s.a)
 
 message(STATUS "Suil dependecies ${SUIL_LIBRARIES}")
 message(STATUS "Suil static dependecies ${SUIL_STATIC_LIBRARIES}")
@@ -85,19 +84,14 @@ include_directories(deps)
 
 if (SUIL_BUILD_DEV_PACKAGE)
     configure_file(buildapp.sh ${CMAKE_BINARY_DIR}/buildapp COPYONLY)
-    configure_file(suilteam.ddns.net.crt ${CMAKE_BINARY_DIR}/suilteam.ddns.net.crt COPYONLY)
+
     install(DIRECTORY deps/libmill
             DESTINATION include
             FILES_MATCHING PATTERN "*.h")
 
-    # Packaging
-    if (SUIL_BUILD_ABCI)
-        set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s sabci_s)
-        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill suil sabci)
-    else()
-        set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} mill_s suil_s)
-        set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} mill suil)
-    endif()
+    # library packaging
+    set(SUIL_PACKAGE_STATIC_LIBRARIES ${SUIL_STATIC_LIBRARIES} suil)
+    set(SUIL_PACKAGE_LIBRARIES ${SUIL_LIBRARIES} suil)
 
     set(SUIL_PACKAGE_INCLUDES  ${PostgreSQL_INCLUDE_DIRS})
     set(SUIL_PACKAGE_DEFINES   ${SUIL_DEFINES})
@@ -146,11 +140,10 @@ endif()
 include_directories(${PostgreSQL_INCLUDE_DIRS})
 include_directories(SYSTEM ${PROJECT_SOURCE_DIR})
 
+# add the main project
 add_subdirectory(suil)
-
-add_executable(scrap main.cpp)
-add_dependencies(scrap suil_s)
-target_link_libraries(scrap ${SUIL_LIBRARIES} mill_s suil_s snappy)
+# add tools build
+add_subdirectory(tools)
 
 if (SUIL_BUILD_UNIT_TEST)
     get_property(_SUIL_SOURCES GLOBAL PROPERTY prop_SUIL_SOURCES)

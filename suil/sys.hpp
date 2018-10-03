@@ -423,7 +423,11 @@ namespace suil {
         }
 
         /**
-         * Duplicate \param n_chars the given string into a newly allocated zbuffer.
+         * Duplicate \param n_chars the given string int
+         *
+         *
+         *
+         * o a newly allocated zbuffer.
          * @param src the string (or character zbuffer) to duplicate
          * @param n_chars the number of characters to copy
          * @return a zbuffer with \param n_chars copied from \param src if the copy
@@ -1754,7 +1758,11 @@ namespace suil {
                 return (stat(path, &st) == 0) && (S_ISDIR(st.st_mode));
             }
 
-            inline bool isdirempty(const char *dir);
+            zcstring currdir();
+
+            bool isdirempty(const char *dir);
+
+            zcstring getname(const char *path);
 
             void mkdir(const char *path, bool recursive = false, mode_t mode = 0777);
 

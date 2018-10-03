@@ -7,7 +7,7 @@
 ##
 function(suil_iod_symbols name)
     set(options "")
-    set(kvargs  BINARY OUTPUT)
+    set(kvargs  BINARY OUTPUT PROJECT)
     set(kvvargs DEPENDS SYMBOLS)
 
     cmake_parse_arguments(IOD_SYMBOLS "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
@@ -39,11 +39,13 @@ function(suil_iod_symbols name)
 
     message(STATUS "${name} symbols. main: ${${name}_MAIN_SYM} flat: ${${name}_FLAT_SYMS}")
 
-    # add symbol generation target
-    add_custom_target(${name}-gensyms
+    add_custom_command(OUTPUT ${${name}_OUTPUT}
             COMMAND ${iodsyms} ${${name}_MAIN_SYM} ${${name}_SYMBOLS} ${${name}_OUTPUT}
             WORKING_DIRECTORY  ${CMAKE_BINARY_DIR}
-            DEPENDS            ${${name}_MAIN_SYM}
+            DEPENDS            ${${name}_MAIN_SYM} ${${name}_SYMBOLS})
+    # add symbol generation target
+    add_custom_target(${name}-gensyms
+            DEPENDS            ${${name}_OUTPUT}
             COMMENT            "Generating IOD symbols used by ${name}")
     message(STATUS "${iodsyms} ${${name}_FLAT_SYMS} ${${name}_OUTPUT}")
 
@@ -51,18 +53,20 @@ function(suil_iod_symbols name)
         add_dependencies(${name}-gensyms ${IOD_SYMBOLS_DEPENDS})
     endif()
 
-    add_dependencies(${name} ${name}-gensyms)
+    if (NOT IOD_SYMBOLS_PROJECT)
+        add_dependencies(${name} ${name}-gensyms)
+    endif()
 endfunction()
 
 function(suil_gen_types name)
     set(options "")
-    set(kvargs  BINARY OUTPUT)
+    set(kvargs  BINARY OUTPUT PROJECT)
     set(kvvargs DEPENDS SCHEMAS)
 
     cmake_parse_arguments(TYPES_SCHEMA "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
     # locate binary to use
-    set(suilgen suilgen)
+    set(suilgen suiltps)
     if (TYPES_SCHEMA_BINARY)
         set(suilgen ${TYPES_SCHEMA_BINARY})
     endif()
@@ -88,19 +92,23 @@ function(suil_gen_types name)
 
     message(STATUS "${name} schemas. main: ${${name}_MAIN_SCHEMA} flat: ${${name}_FLAT_SCHEMAS}")
 
-    # add symbol generation target
-    add_custom_target(${name}-gentps
+    add_custom_command(OUTPUT ${${name}_OUTPUT}
             COMMAND ${suilgen} "gen" "-i" ${${name}_MAIN_SCHEMA} "-o" ${${name}_OUTPUT}
             WORKING_DIRECTORY  ${CMAKE_BINARY_DIR}
-            DEPENDS            ${${name}_MAIN_SCHEMA}
-            COMMENT            "Generating types used by ${name}")
+            DEPENDS            ${${name}_MAIN_SCHEMA})
+    # add symbol generation target
+    add_custom_target(${name}-gentps
+            DEPENDS ${${name}_OUTPUT}
+            COMMENT "Generating types used by ${name}")
     message(STATUS "${suilgen} ${${name}_FLAT_SCHEMAS} ${${name}_OUTPUT}")
 
     if (TYPES_SCHEMA_DEPENDS)
         add_dependencies(${name}-gentps ${TYPES_SCHEMA_DEPENDS})
     endif()
 
-    add_dependencies(${name} ${name}-gentps)
+    if (NOT TYPES_SCHEMA_PROJECT)
+        add_dependencies(${name} ${name}-gentps)
+    endif()
 endfunction()
 
 ##

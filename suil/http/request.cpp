@@ -148,10 +148,9 @@ namespace suil {
         bool Request::parse_multipart_form(const zcstring& boundary) {
             zbuffer rb((uint32_t) content_length+2);
             if (read_body(rb.data(), content_length) <= 0) {
-                idebug("reading body failed");
+                trace("error: reading body failed");
                 return false;
             }
-            idebug("%s", rb.data());
 
             enum {
                 state_begin, state_is_boundary,
@@ -164,7 +163,7 @@ namespace suil {
             char *p = rb.data(), *end = p + content_length;
             char *name = nullptr, *filename = nullptr, *data = nullptr, *dend = nullptr;
             bool cap{false};
-            idebug("start parse multipart form %d", mnow());
+            trace("start parse multipart form %d", mnow());
             while (cap || (p != end)) {
                 switch (next_state) {
                     case state_begin:
@@ -188,7 +187,7 @@ namespace suil {
                         trace("multipart/form-data state_boundary");
                         if (strncmp(p, boundary.data(), boundary.size()) != 0) {
                             /* invalid boundary */
-                            idebug("multipart/form-data invalid boundary");
+                            trace("error: multipart/form-data invalid boundary");
                             next_state = state_error;
                         }
                         else {
@@ -211,7 +210,7 @@ namespace suil {
                                     next_state = state_end;
                             }
                             else {
-                                idebug("multipart/form-data invalid state %d %d", el, eb);
+                                trace("error: multipart/form-data invalid state %d %d", el, eb);
                                 next_state = state_error;
                             }
                         }
@@ -260,7 +259,7 @@ namespace suil {
                             trace("multipart/form-data content disposition: %s", val);
                             if (strncasecmp(val, "form-data", 9)) {
                                 /* unsupported disposition */
-                                idebug("multipart/form-data not content disposition: %s",
+                                trace("error: multipart/form-data not content disposition: %s",
                                       val);
                                 continue;
                             }
@@ -273,10 +272,10 @@ namespace suil {
                                 name, filename);
                                 next_state = state_header;
                             } else {
-                                idebug("multipart/form-data invalid disposition: %s", val);
+                                trace("error: multipart/form-data invalid disposition: %s", val);
                             }
                         } else {
-                            idebug("multipart/form-data missing disposition");
+                            trace("error: multipart/form-data missing disposition");
                         }
                         break;
 
@@ -294,7 +293,7 @@ namespace suil {
                                   field, value);
                         }
                         else {
-                            idebug("multipart/form-data parsing header failed");
+                            trace("error: multipart/form-data parsing header failed");
                             next_state = state_error;
                         }
                         break;
@@ -309,7 +308,7 @@ namespace suil {
 
                     case state_end:
                         state = state_end;
-                        idebug("multipart/form-data state machine done %d fields, %d files %d",
+                        trace("multipart/form-data state machine done %d fields, %d files %d",
                                 form.size(), files.size(), mnow());
                         if (form.size() || files.size()) {
                             // cache the buffer for later references
@@ -320,7 +319,7 @@ namespace suil {
 
                     case state_error:
                     default:
-                        idebug("multipart/form-data error in state machine");
+                        trace("error: multipart/form-data error in state machine");
                         return false;
                 }
             }

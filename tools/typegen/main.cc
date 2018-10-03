@@ -2,8 +2,8 @@
 // Created by dc on 28/09/18.
 //
 
-#include "suil/cmdl.hpp"
-#include "suil/json.hpp"
+#include <suil/cmdl.hpp>
+#include <suil/json.hpp>
 #include "typegen.hpp"
 
 
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 {
     suil::init(opt(printinfo, false));
 
-    cmdl::Parser parser("suilgen", "0.0.1");
+    cmdl::Parser parser(APP_NAME, APP_VERSION);
     cmd_generate(parser);
     try {
         parser.parse(argc, argv);

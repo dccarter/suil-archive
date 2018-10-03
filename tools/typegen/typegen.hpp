@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <suil/sys.hpp>
-#include <suil/tools/tools_symbols.h>
+#include <tools_symbols.h>
 
 namespace suil::tools {
 

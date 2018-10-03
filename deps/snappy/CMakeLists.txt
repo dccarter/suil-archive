@@ -97,6 +97,12 @@ target_include_directories(snappy
 include_directories(${PROJECT_BINARY_DIR})
 target_compile_definitions(snappy PRIVATE -DHAVE_CONFIG_H)
 
+set_target_properties(snappy
+        PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
 install(TARGETS snappy
   EXPORT SnappyTargets
   RUNTIME DESTINATION bin

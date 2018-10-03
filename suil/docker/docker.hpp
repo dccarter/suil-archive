@@ -35,8 +35,8 @@ namespace suil::docker {
             return Ego.ps(all, limit, size, useFilter, filter);
         }
 
-        template <typename... Args>
-        bool connect(Args... args) {
+        template <typename... Options>
+        bool connect(Options... options) {
             auto opts = iod::D(options...);
             if (opts.has(var(loginAuth))) {
                 // login using login credentials
@@ -47,7 +47,7 @@ namespace suil::docker {
             else if (opts.has(var(tokenAuth))) {
                 // login using token authentication
                 AuthToken token;
-                params = opts.get(var(loginAuth), token);
+                token = opts.get(var(loginAuth), token);
                 return connect(token);
             }
             else {
