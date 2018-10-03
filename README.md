@@ -1,16 +1,14 @@
-# suil 
-[![build status](http://suilteam.ddns.net:10080/software/suil/badges/master/build.svg)](http://rango:10080/software/suil/commits/master)
-
+# suil
 A lightweight mordern `C++` micro service development framework
 
 ##### Supported Features
 
 *  Tag based system logger with support for custom log m_sink
 *  Memory pool supporting buffer sizes of up to 8912
-*  Integrates libmill's coroutines which is used as the base library for asynchronous calls
+*  Integrates [libmill's](https://github.com/sustrik/libmill) coroutines which is used as the base library for asynchronous calls
 *  Dynamic buffer supporting `printf(...)` like functions and stream operator overloads
 *  *Zero Copy* strings which can be help speed up operations on strings
-*  Integrates IOD framework which is a great tool when it comes to meta programming
+*  Integrates [IOD](https://github.com/matt-42/iod) framework which is a great tool when it comes to meta programming
 *  Sockets (minimal SSL support) API using coroutines
 *  HTTP/1.1 server
    *  Support for static and dynamic route handling
@@ -43,7 +41,7 @@ A lightweight mordern `C++` micro service development framework
 *  JWT creation and decoding
    *  Simple authentication middleware issuing web tokens (Not tested)
 
-##### Require Build/Development Dependencies on Ubuntu
+##### Build Requirements or Development Dependencies on Ubuntu
 When building or developing an application that uses this project on ubuntu, the
 following libraries should be installed.
 
