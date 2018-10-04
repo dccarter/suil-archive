@@ -49,6 +49,9 @@ build:prod:
   only:
     - master
 
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.example.com
+
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
     - cd ./build$CI_COMMIT_TAG
@@ -158,6 +161,10 @@ build:release:prod:
     - alpine
   only:
     - tags
+
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.example.com
+
   script:
     # Build release binaries
     - mkdir -p ./build$CI_COMMIT_TAG
