@@ -142,8 +142,11 @@ include_directories(SYSTEM ${PROJECT_SOURCE_DIR})
 
 # add the main project
 add_subdirectory(suil)
-# add tools build
-add_subdirectory(tools)
+
+if (SUIL_BUILD_DEV_PACKAGE)
+    # only build tools when building a development package
+    add_subdirectory(tools)
+endif(SUIL_BUILD_DEV_PACKAGE)
 
 if (SUIL_BUILD_UNIT_TEST)
     get_property(_SUIL_SOURCES GLOBAL PROPERTY prop_SUIL_SOURCES)

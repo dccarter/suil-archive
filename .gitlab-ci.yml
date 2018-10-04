@@ -48,7 +48,7 @@ build:prod:
     - alpine
   only:
     - master
-    
+
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
     - cd ./build$CI_COMMIT_TAG
