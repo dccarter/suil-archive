@@ -48,9 +48,6 @@ build:prod:
     - alpine
   only:
     - master
-  # Install all the required dependencies before proceeding to build
-  before_script:
-    - docker login -u "$SUIL_REGISTRY_USER" -p "$SUIL_REGISTRY_PASSWD" "$CI_REGISTRY"
     
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
@@ -64,6 +61,7 @@ build:prod:
        -DSUIL_BUILD_EXAMPLES=OFF
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_BUILD_TYPE=Release
+       -DSUIL_BUILD_UNIT_TEST=OFF
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean install
     - cp -r ../Dockerfile.alpine ./Dockerfile
@@ -80,7 +78,7 @@ build:prod:
       - ./build$CI_COMMIT_TAG/sut
     expire_in: 30 mins
     
-build:release:devel:alpine:
+build:release:dev:alpine:
   stage: build
   tags:
     - alpine
@@ -144,6 +142,7 @@ build:release:dev:
        -DSUIL_BUILD_DEV_PACKAGE=ON
        -DSUIL_BUILD_EXAMPLES=OFF
        -DSUIL_BUILD_DOCKER=OFF
+       -DSUIL_BUILD_UNIT_TEST=OFF
        -DCMAKE_BUILD_TYPE=Debug
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean install package
@@ -171,6 +170,7 @@ build:release:prod:
        -DSUIL_BUILD_TAG=$SUIL_VERSION_TAG
        -DSUIL_BUILD_NUMBER=$CI_JOB_ID
        -DSUIL_BUILD_DEV_PACKAGE=OFF
+       -DSUIL_BUILD_UNIT_TEST=OFF
        -DSUIL_BUILD_EXAMPLES=OFF
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_BUILD_TYPE=Release
