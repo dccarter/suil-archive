@@ -2341,7 +2341,7 @@ namespace suil {
             auto url = sv.substr(0, pos);
             p->url = utils::strndup(url.data(), url.size());
             if (pos != sv.size()) {
-                strview tmp((sv.data()+pos-1), sv.length()-pos-1);
+                strview tmp((sv.data()+pos), sv.length()-pos);
                 p->qps = query_string(tmp);
             }
 

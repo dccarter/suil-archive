@@ -35,8 +35,7 @@ namespace suil {
         }
 
         void Response::end(Status status) {
-            if (Ego.status == Status::OK)
-                this->status = status;
+            Ego(status);
             completed = true;
         }
 

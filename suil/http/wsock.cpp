@@ -25,7 +25,9 @@ namespace suil {
             apis.emplace(id, *this);
         }
 
-        Status WebSock::handshake(const Request &req, Response &res, WebSockApi &api, size_t size) {
+        Status WebSock::handshake(
+                const Request &req, Response &res, WebSockApi &api, size_t size, onWebSockCreated created)
+        {
             SHA_CTX         sctx;
             strview  key, version;
 
@@ -57,12 +59,15 @@ namespace suil {
             res.header("Sec-WebSocket-Accept", std::move(base64));
 
             // end the Response by the handler
-            res.end([&api,&size](Request &rq, Response &rs) {
+            res.end([&api,size, created](Request &rq, Response &rs) {
                 // clear the Request to free resources
                 rq.clear();
 
                 // Create a web socket
                 WebSock ws(rq.adator(), api, size);
+                // notify API that websocket has been created
+                if (created)
+                    created(ws);
 
                 ws.handle();
 
@@ -178,8 +183,8 @@ namespace suil {
 
         void WebSock::handle() {
             // first let the user know of the Connection
-            if (api.on_connect) {
-                if (api.on_connect(*this)) {
+            if (api.onConnect) {
+                if (!api.onConnect(*this)) {
                     // Connection rejected
                     trace("%s - websocket Connection rejected", sock.id());
                     return;
@@ -213,16 +218,16 @@ namespace suil {
 
                         case WsOp::TEXT:
                         case WsOp::BINARY:
-                            if (api.on_message) {
+                            if (api.onMessage) {
                                 // one way of appending null at end of string
                                 (char *)b;
-                                api.on_message(*this, b, (WsOp) h.opcode);
+                                api.onMessage(*this, b, (WsOp) h.opcode);
                             }
                             break;
                         case WsOp::CLOSE:
                             end_session = true;
-                            if (api.on_close) {
-                                api.on_close(*this);
+                            if (api.onClose) {
+                                api.onClose(*this);
                             }
                             break;
                         case WsOp::PING:
@@ -244,8 +249,8 @@ namespace suil {
                   sock.id(), api.nsocks);
 
             // definitely disconnecting
-            if (api.on_disconnect) {
-                api.on_disconnect();
+            if (api.onDisconnect) {
+                api.onDisconnect();
             }
         }
 
@@ -326,14 +331,8 @@ namespace suil {
         void WebSock::broadcast(const void *data, size_t sz, WsOp op) {
             trace("WebSock::broadcast data %p, sz %lu, op 0x%02X", data, sz, op);
 
-            if (end_session) {
-                trace("%s - sending while Session is closing is not allow",
-                      ipstr(sock.addr()));
-                return;
-            }
-
             // only broadcast when there are other web socket clients
-            if (api.nsocks > 1) {
+            if (api.nsocks > 0) {
                 trace("broadcasting %lu web sockets", api.nsocks);
                 uint8_t *copy = (uint8_t *) memory::alloc(
                                      sizeof(WsockBcastMsg) + sz +16);

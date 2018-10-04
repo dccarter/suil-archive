@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Room</title>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style type="text/css">
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1 0 auto;
+        }
+    </style>
+</head>
+<body class="container">
+
+<div id="app">
+    <div id="join" class="container card-panel">
+        <div class="title"><h6>Join Chat Room</h6></div>
+        <div class="card-content row">
+            <form class="col m12" onsubmit="return false;">
+                <div class = "input-field col s6">
+                    <i class = "material-icons prefix">computer</i>
+                    <input id="join_server" type="text" class="active validate" required/>
+                    <label for = "join_server">Server</label>
+                </div>
+                <div class = "input-field col s6">
+                    <i class = "material-icons prefix">account_circle</i>
+                    <input id="join_user" type="text" class="active validate" required/>
+                    <label for = "join_user">Username</label>
+                </div>
+                <div class="input-field col s6 right">
+                    <button id="join_submit" class="btn waves-effect waves-light right" type="button">Join
+                        <i class="material-icons right">chat</i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="chat" class="container">
+        <div class="row">
+            <div class="title col m12"><h3>Welcome</h3></div>
+            <div id="history" class="col m12">
+            </div>
+            <div class="divider"></div>
+            <form class="col m12" onsubmit="return false;">
+                <div class = "input-field col s9">
+                    <input id="chat_message" type="text" class="active validate" required/>
+                    <label for = "join_server">Chat</label>
+                </div>
+                <div class="input-field col s3">
+                    <button id="chat_send" class="btn waves-effect waves-light" type="button">Send
+                        <i class="material-icons right">message</i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<!-- Compiled and minified JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        var webSock;
+        // initially the chat view is hidden
+        $('#chat').hide();
+        // configure the join button
+        $('#join_submit').click(function() {
+            // get the username
+            let server   = $('#join_server');
+            let username = $('#join_user');
+            if (username.val().length > 0 && server.val().length > 0) {
+                // create the web socket (change to your IP
+                webSock = new WebSocket("ws://" + server.val() + ":1080/api/chat/" + username.val());
+                webSock.onopen = function () {
+                    // handle server open event
+                    console.log("connected successfully to server");
+                    $('#join').hide();
+                    $('#chat').show();
+                };
+
+                webSock.onmessage = function(evt) {
+                    // message received from server
+                    var history = $('#history')
+                    if (evt.data[0] == '{') {
+                        let msg = JSON.parse(evt.data);
+                        history.append("<div class='col s12'><div class='col s2'><small>" + msg.username +
+                            "</small></div><div class='col s10>'<p>" + msg.data + "</p></div></div><div class='divider'></div>");
+                    }
+                    else {
+                        console.log(evt.data)
+                        // just receiving an event
+                        history.append("<p><i>"+ evt.data + "</i></p>");
+                    }
+                }
+
+                webSock.onerror = function (evt) {
+                    // handle error message
+                    console.log("connecting to server failed:", evt);
+                }
+            }
+        });
+
+        // Chat send button
+        $('#chat_send').click(function () {
+            // send message
+            let message = $('#chat_message');
+            if (message.val().length) {
+                // only send when message is not empty
+                webSock.send(message.val());
+                message.val('');
+            }
+        })
+    });
+</script>
+</body>
+</html>

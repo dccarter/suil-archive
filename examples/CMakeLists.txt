@@ -3,3 +3,4 @@ project(examples C CXX)
 
 # add all example projects
 add_subdirectory(basic)
+add_subdirectory(websock)

@@ -7,7 +7,7 @@ using namespace suil;
 int main(int argc, char *argv[])
 {
     suil::init(opt(printinfo, false));
-    log::setup(opt(verbose, 0));
+    log::setup(opt(verbose, 3));
     // create a new HTTP endpoint listening on port 80
     http::TcpEndpoint<http::SystemAttrs> ep("/api",
             opt(name, "0.0.0.0"),
@@ -56,14 +56,13 @@ int main(int argc, char *argv[])
         return http::Status::OK;
     });
 
-    // routes accept url parameters, e.g http://0.0.0.0:1080/api/add/3/1
+    // route parameters, e.g http://0.0.0.0:1080/api/add/3/1
     ep("/add/<int>/<int>")
     ("GET"_method)
     ([](const http::Request& req, http::Response& resp, int a, int b) {
         // demonstrates use of parameters and returning status codes
         sdebug("adding numbers a=%d, b=%d", a, b);
         resp.appendf("a + b = %d\n", a+b);
-        resp.end(http::Status::OK);
     });
 
     ep("/post_json")
@@ -79,15 +78,17 @@ int main(int argc, char *argv[])
             auto data = req.toJson<JsonType>();
             resp << "Hello " << data.name << ", we have registered your email '"
                  << data.email << "' :-)";
-            resp.end(http::Status::OK);
         }
         catch(...) {
             // invalid json data
             resp << "Invalid JSON data: " << exmsg();
-            resp.end(http::Status::BAD_REQUEST);
+            resp(http::Status::BAD_REQUEST);
         }
     });
 
+    // parsing an HTTP form requires the middle-ware
+    // http::SystemAttrs which handles form parsing and
+    // the route need to be marked with the PARSE_FORM attribute
     ep("/post_form")
     ("POST"_method)
     .attrs(opt(PARSE_FORM, true)) // required for http to parse request as a form
@@ -105,14 +106,33 @@ int main(int argc, char *argv[])
             form >> data;
             resp << "Hello " << data.name << ", we have registered your email '"
                  << data.email << "' :-)";
-            resp.end(http::Status::OK);
         }
         catch(...) {
             // invalid json data
             resp << "Invalid form data: " << exmsg();
-            resp.end(http::Status::BAD_REQUEST);
+            resp(http::Status::BAD_REQUEST);
         }
     });
+
+    // routes also support URL parameters
+    // try http://{ip}:1080/api/params?name='MyName'&email='myemail@gmail.com'
+    ep("/params")
+    ("GET"_method)
+    ([](const http::Request& req, http::Response& resp) {
+        // parameters can be accessed via the request object
+        auto name  = req.query<zcstring>("name");
+        auto email =  req.query<zcstring>("email");
+        if (name.empty() || email.empty()) {
+            // email and name required
+            resp << "Invalid Query: name and email required :-(\n";
+            resp(http::Status::BAD_REQUEST);
+        }
+        else {
+            // valid
+            resp << "Welcome " << name << ", your email '" << email << "' is recognized :-)\n";
+        }
+    });
+
 
     // start the server
     return ep.start();

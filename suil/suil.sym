@@ -9,9 +9,10 @@ _wdir
 _W
 _entry
 _module
-_on_connect
-_on_message
-_on_close
+_onConnect
+_onMessage
+_onClose
+_onDisconnect
 _logsink
 _logformat
 _key

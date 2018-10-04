@@ -409,7 +409,7 @@ namespace suil {
             const route_attributes_t& attrs = req.route();
             if (!attrs.REPLY_TYPE.empty()) {
                 /* override response encoding */
-                res.set_content_type(attrs.REPLY_TYPE());
+                res.setContentType(attrs.REPLY_TYPE());
             }
         }
     }

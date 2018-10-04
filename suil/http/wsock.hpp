@@ -31,13 +31,13 @@ namespace suil {
 
             typedef std::function<void(WebSock&, const zbuffer&, WsOp)> msg_handler_t;
 
-            connect_handler_t       on_connect{nullptr};
+            connect_handler_t       onConnect{nullptr};
 
-            disconnect_handler_t    on_disconnect{nullptr};
+            disconnect_handler_t    onDisconnect{nullptr};
 
-            msg_handler_t           on_message{nullptr};
+            msg_handler_t           onMessage{nullptr};
 
-            close_handler_t         on_close{nullptr};
+            close_handler_t         onClose{nullptr};
 
             int64_t                 timeout{-1};
 
@@ -54,8 +54,6 @@ namespace suil {
             size_t           nsocks{0};
             uint8_t          id;
         };
-
-        inline void ws_handshake(const Request&, Response&, WebSockApi& api);
 
         struct WsockBcastMsg {
             uint8_t         api_id;
@@ -75,6 +73,8 @@ namespace suil {
             uint8_t         api_id;
             uint8_t         conn;
         } __attribute((packed));
+
+        using onWebSockCreated = std::function<void(WebSock& ws)>;
 
         define_log_tag(WEB_SOCKET);
         struct WebSock : LOGGER(dtag(WEB_SOCKET)) {
@@ -117,15 +117,14 @@ namespace suil {
                 }
             }
 
-            template <typename __T> __T&data() {
-                return (__T&) *((__T*)data);
+            template <typename Data>
+            inline Data* data() {
+                return (Data *) data_;
             }
 
-        protected:
-            friend inline void
-            ws_handshake(const Request&, Response&, WebSockApi& api);
-            static Status handshake(const Request&, Response&, WebSockApi&, size_t);
+            static Status handshake(const Request&, Response&, WebSockApi&, size_t, onWebSockCreated created);
 
+        protected:
             WebSock(SocketAdaptor& adaptor, WebSockApi& api, size_t size = 0)
                 : sock(adaptor),
                   api(api)
@@ -182,8 +181,8 @@ namespace suil {
         };
 
         template <typename __T = __Void>
-        inline void ws_handshake(const Request& req, Response& res, WebSockApi& api) {
-            Status  s = WebSock::handshake(req, res, api, sizeof(__T));
+        inline void ws_handshake(const Request& req, Response& res, WebSockApi& api, onWebSockCreated created = nullptr) {
+            Status  s = WebSock::handshake(req, res, api, sizeof(__T), std::move(created));
             res.end(s);
         }
 

@@ -105,7 +105,7 @@ namespace suil {
                 : body(0),
                   status(Status::OK)
             {
-                set_content_type("application/json");
+                setContentType("application/json");
                 body << iod::json_encode(data).c_str();
             }
 
@@ -117,8 +117,15 @@ namespace suil {
 
             void end(Status status, zbuffer& body);
 
-            void set_content_type(const char *type) {
+            void setContentType(const char *type) {
                 header("Content-Type", type);
+            }
+
+            Response& operator()(http::Status status) {
+                // set the response status
+                if (Ego.status == Status::OK)
+                    this->status = status;
+                return Ego;
             }
 
             void clear();
