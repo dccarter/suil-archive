@@ -1,5 +1,5 @@
 # Build Pipeline for Suil Project
-image: suilteam/mecury:latest
+image: suilteam/mecury:alpine
 
 variables:
   SUIL_BUILD_VERSION: $SUIL_MAJOR_VERSION.$SUIL_MINOR_VERSION.$SUIL_PATCH_VERSION-$SUIL_VERSION_TAG
@@ -112,6 +112,7 @@ build:release:dev:alpine:
     - docker push suilteam/suil-dev:$SUIL_BUILD_VERSION
 
 build:release:dev:
+  image: suilteam/mecury:ubuntu
   stage: build
   tags:
     - x86_64

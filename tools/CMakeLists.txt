@@ -6,10 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 include(Suil)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-set(tools_VERSION 0.0.0 CACHE STRING "Current application version")
+set(tools_VERSION SUIL_PACKAGE_VERSION CACHE STRING "Current application version")
 
 set(tools_DEFINES
-        "-DTOOL_VERSION=\"${tools_VERSION}\"")
+        "-DTOOL_VERSION=${tools_VERSION}")
 
 SuilProject(tools
         IOD_BIN     ${CMAKE_BINARY_DIR}/deps/iod/iodsyms
