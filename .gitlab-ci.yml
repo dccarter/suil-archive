@@ -27,9 +27,9 @@ build:dev:
        -DSUIL_BUILD_EXAMPLES=OFF
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
-    - make clean iodsyms suil
-    - make -j2 install
+    - make clean install
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
+    - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
     - docker build --pull -t suilteam/suil-dev:latest .
     - docker push suilteam/suil-dev:latest
     - cd ..
@@ -65,9 +65,9 @@ build:prod:
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_BUILD_TYPE=Release
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
-    - make clean iodsyms suil
-    - make -j2 install
+    - make clean install
     - cp -r ../Dockerfile.alpine ./Dockerfile
+    - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
     - docker build --pull -t "$CI_REGISTRY_IMAGE:unstable" .
     - docker push "$CI_REGISTRY_IMAGE:unstable"
     - cd ..
@@ -104,9 +104,9 @@ build:release:devel:alpine:
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_BUILD_TYPE=Release
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
-    - make clean iodsyms suil
-    - make -j2 install
+    - make clean install
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
+    - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
     - docker build --pull -t suilteam/suil-dev:$SUIL_BUILD_VERSION .
     - docker push suilteam/suil-dev:$SUIL_BUILD_VERSION
 
@@ -133,8 +133,7 @@ build:release:dev:
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_BUILD_TYPE=Release
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
-    - make clean iodsyms suil
-    - make -j2 install package
+    - make clean install package
     # Build debug binaries
     - cmake ..
        -DSUIL_MAJOR_VERSION=$SUIL_MAJOR_VERSION
@@ -147,8 +146,7 @@ build:release:dev:
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_BUILD_TYPE=Debug
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
-    - make clean iodsyms suil
-    - make -j2 install package
+    - make clean install package
     - cd ..
 
   artifacts:
@@ -177,9 +175,9 @@ build:release:prod:
        -DSUIL_BUILD_DOCKER=OFF
        -DCMAKE_BUILD_TYPE=Release
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
-    - make clean iodsyms suil
-    - make install
+    - make clean install
     - cp -r ../Dockerfile.alpine ./Dockerfile
+    - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
     - docker build --pull -t "$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION" .
     - docker push "$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION"
     - cd ..
