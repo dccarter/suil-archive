@@ -27,9 +27,9 @@ if (OpenSSL_FOUND)
     target_link_libraries(mill_s ${OPENSSL_LIBRARIES})
 endif()
 
-set(mill_INSTALL_TARGETS mill_s)
+set(mill_INSTALL_TARGETS mill)
 if (SUIL_BUILD_DEV_PACKAGE)
-    list(APPEND mill_INSTALL_TARGETS mill)
+    list(APPEND mill_INSTALL_TARGETS mill_s)
 endif()
 # Installation and packaging with cpack
 install(TARGETS ${mill_INSTALL_TARGETS}
