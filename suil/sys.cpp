@@ -15,10 +15,10 @@
 namespace suil {
 
     namespace version {
-        const uint16_t  MAJOR  = SUIL_MAJOR_VERSION;
-        const uint16_t  MINOR  = SUIL_MINOR_VERSION;
+        const uint8_t  MAJOR  = SUIL_MAJOR_VERSION;
+        const uint8_t  MINOR  = SUIL_MINOR_VERSION;
         const uint16_t  PATCH  = SUIL_PATCH_VERSION;
-        const uint16_t  BUILD  = SUIL_BUILD_NUMBER;
+        const uint32_t  BUILD  = SUIL_BUILD_NUMBER;
         const char*     TAG    = SUIL_BUILD_TAG;
         const char*     STRING = SUIL_VERSION_STRING;
         const char*     SWNAME = SUIL_SOFTWARE_NAME;

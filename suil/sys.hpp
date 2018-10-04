@@ -109,10 +109,10 @@ namespace suil {
     }
 
     namespace version {
-        extern const uint16_t  MAJOR;
-        extern const uint16_t  MINOR;
+        extern const uint8_t  MAJOR;
+        extern const uint8_t  MINOR;
         extern const uint16_t  PATCH;
-        extern const uint16_t  BUILD;
+        extern const uint32_t  BUILD;
         extern const char*     TAG;
         extern const char*     STRING;
         extern const char*     SWNAME;
