@@ -29,13 +29,13 @@ suil_iod_symbols(suil
         OUTPUT  ${CMAKE_SOURCE_DIR}/suil/symbols.h
         DEPENDS iodsyms)
 
-if (LIB_SUIL_DOCKER_SOURCES)
+if (SUIL_BUILD_DOCKER)
     # generate docker types
     suil_gen_types(suil
             BINARY  ${CMAKE_BINARY_DIR}/tools/suilgen
             SCHEMAS ${CMAKE_CURRENT_SOURCE_DIR}/docker/types.json
             OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/docker/types.hpp)
-endif(LIB_SUIL_DOCKER_SOURCES)
+endif(SUIL_BUILD_DOCKER)
 
 # change output directory of suil
 set_target_properties(suil
