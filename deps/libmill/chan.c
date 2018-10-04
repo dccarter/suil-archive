@@ -47,6 +47,8 @@ struct mill_chan_ *mill_getchan(struct mill_ep *ep) {
     default:
         assert(0);
     }
+    // UNREACHABLE
+    return NULL;
 }
 
 struct mill_chan_ *mill_chmake_(size_t sz, size_t bufsz, const char *created) {
@@ -281,8 +283,8 @@ static void mill_dequeue(struct mill_chan_ *ch, void *val) {
 
 int mill_choose_wait_(void) {
     struct mill_choosedata *cd = &mill_running->choosedata;
-    struct mill_slist_item *it;
-    struct mill_clause *cl;
+    struct mill_slist_item *it = NULL;
+    struct mill_clause *cl = NULL;
 
     /* If there are clauses that are immediately available
        randomly choose one of them. */
