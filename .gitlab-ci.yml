@@ -50,7 +50,7 @@ build:prod:
     - master
 
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.example.com
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
 
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
@@ -163,7 +163,7 @@ build:release:prod:
     - tags
 
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.example.com
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
 
   script:
     # Build release binaries
