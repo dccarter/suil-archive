@@ -4,6 +4,9 @@ image: suilteam/mecury:alpine
 variables:
   SUIL_BUILD_VERSION: $SUIL_MAJOR_VERSION.$SUIL_MINOR_VERSION.$SUIL_PATCH_VERSION-$SUIL_VERSION_TAG
 
+docker_hub_login: &docker_hub_login
+  - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
+
 # Build alpine development image based of docker
 build:dev:
   stage: build
@@ -13,7 +16,7 @@ build:dev:
     - master
   # Install all the required dependencies before proceeding to build
   before_script:
-    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
+    <<: *docker_hub_login
     
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
@@ -50,7 +53,7 @@ build:prod:
     - master
 
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    <<: *docker_hub_login
 
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
@@ -69,8 +72,8 @@ build:prod:
     - make clean install
     - cp -r ../Dockerfile.alpine ./Dockerfile
     - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
-    - docker build --pull -t "$CI_REGISTRY_IMAGE:unstable" .
-    - docker push "$CI_REGISTRY_IMAGE:unstable"
+    - docker build --pull -t suilteam/suil-prod:unstable.
+    - docker push suilteam/suil-prod:unstable
     - cd ..
 
   cache:
@@ -88,8 +91,8 @@ build:release:dev:alpine:
   only:
     - tags
   # Install all the required dependencies before proceeding to build
-  before_script: 
-    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD    
+  before_script:
+    <<: *docker_hub_login    
   script:
     - mkdir -p ./build$CI_COMMIT_TAG
     - cd ./build$CI_COMMIT_TAG
@@ -143,7 +146,7 @@ build:release:dev:
        -DSUIL_PATCH_VERSION=$SUIL_PATCH_VERSION
        -DSUIL_BUILD_TAG=$SUIL_VERSION_TAG
        -DSUIL_BUILD_NUMBER=$CI_BUILD_ID
-       -DSUIL_BUILD_DEV_PACKAGE=ON
+       -DSUIL_BUILD_DEV_PACKAGE=OFF
        -DSUIL_BUILD_EXAMPLES=OFF
        -DSUIL_BUILD_DOCKER=OFF
        -DSUIL_BUILD_UNIT_TEST=OFF
@@ -164,7 +167,7 @@ build:release:prod:
     - tags
 
   before_script:
-    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    <<: *docker_hub_login
 
   script:
     # Build release binaries
@@ -186,8 +189,8 @@ build:release:prod:
     - make clean install
     - cp -r ../Dockerfile.alpine ./Dockerfile
     - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
-    - docker build --pull -t "$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION" .
-    - docker push "$CI_REGISTRY_IMAGE:$SUIL_BUILD_VERSION"
+    - docker build --pull -t suilteam/suil-prod:$SUIL_BUILD_VERSION .
+    - docker push suilteam/suil-prod:$SUIL_BUILD_VERSION
     - cd ..
       
 test:devel:
@@ -197,7 +200,7 @@ test:devel:
   only:
     - master
   before_script:
-    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
+    <<: *docker_hub_login
   script:
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:latest /usr/local/bin/sut
 
@@ -208,6 +211,6 @@ test:production:
   only:
     - tags
   before_script:
-    - docker login -u $SUILTEAM_DOCKERHUB_USER -p $SUILTEAM_DOCKERHUB_PASSWD
+    <<: *docker_hub_login
   script:
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:$SUIL_BUILD_VERSION /usr/local/bin/sut
