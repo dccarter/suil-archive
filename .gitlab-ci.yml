@@ -71,7 +71,7 @@ build:prod:
     - make clean install
     - cp -r ../Dockerfile.alpine ./Dockerfile
     - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
-    - docker build --pull -t suilteam/suil-prod:unstable.
+    - docker build --pull -t suilteam/suil-prod:unstable .
     - docker push suilteam/suil-prod:unstable
     - cd ..
 
