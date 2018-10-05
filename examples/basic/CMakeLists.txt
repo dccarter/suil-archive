@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 
-set(SUIL_BASE_PATH "/home/dc/projects/dev/suil/build/artifacts" CACHE STRING "Path to an install of suil package")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SUIL_BASE_PATH}/share/cmake/Modules")
+if (SUIL_BASE_PATH)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${SUIL_BASE_PATH}/share/cmake/Modules")
+endif (SUIL_BASE_PATH)
 
 set(CMAKE_CXX_STANDARD 17)
 include(Suil)
@@ -23,9 +24,3 @@ SuilApp(basic
         DEFINES   ${basic_DEFINES}
         INSTALL   ON
         INSTALL_DIRS res)
-
-file(GLOB basic_TEST_SOURCES tests/*.cpp)
-SuilTest(basic
-        SOURCES ${basic_TEST_SOURCES} tests/main.cc
-        VERSION ${basic_VERSION}
-        DEFINES ${basic_DEFINES})

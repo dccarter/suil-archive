@@ -248,7 +248,7 @@ function(SuilApp name)
         if (SUIL_APP_INSTALL_FILES)
             message(STATUS "target '${name} install files: ${SUIL_APP_INSTALL_FILES}")
             install(FILES ${SUIL_APP_INSTALL_FILES}
-                    DESTINATION ${${name}_ARTIFACTS_DIR})
+                    DESTINATION share/${${name}_ARTIFACTS_DIR})
         endif()
 
         message(STATUS "target '${name} install target")
@@ -262,7 +262,7 @@ function(SuilApp name)
         if (${name}_INSTALL_DIRS)
             message(STATUS "target '${name} install directories: ${${name}_INSTALL_DIRS}")
             install(DIRECTORY ${${name}_INSTALL_DIRS}
-                    DESTINATION ${${name}_ARTIFACTS_DIR})
+                    DESTINATION share/${${name}_ARTIFACTS_DIR})
         endif()
     else()
         message(STATUS "target install is disabled")
