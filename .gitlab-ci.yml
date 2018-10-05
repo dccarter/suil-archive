@@ -198,6 +198,7 @@ test:devel:
     - master
   before_script: *docker_hub_login
   script:
+    - docker pull suilteam/suil-dev:latest
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:latest /usr/local/bin/sut
 
 test:production:
@@ -208,4 +209,5 @@ test:production:
     - tags
   before_script: *docker_hub_login
   script:
+    - docker pull suilteam/suil-dev:$SUIL_BUILD_VERSION
     - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:$SUIL_BUILD_VERSION /usr/local/bin/sut
