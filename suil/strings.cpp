@@ -161,6 +161,8 @@ namespace suil {
         // WARN!!! Copying data might not be efficiet but
         // necessary for decoding objects that are going outta
         // memory.
+        if (it.eat_null())
+            return;
         it.eat('"');
         out = std::move(zcstring(it.start(), it.size(), false).dup());
         it.eat('"');

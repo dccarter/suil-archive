@@ -143,6 +143,8 @@ namespace suil {
             // Return the enclosed string if this is a string, "" otherwise.
             const std::string &string_value() const;
 
+            const char * cstr() const { return Ego.string_value().c_str(); }
+
             // Return the enclosed std::vector if this is an array, or an empty vector otherwise.
             const array &array_items() const;
 
@@ -265,28 +267,6 @@ namespace suil {
 
             virtual ~JsonValue() {}
         };
-
-        template <typename O>
-        inline std::string encode(O& o) {
-            return iod::json_encode(o);
-        }
-
-        template <typename S, typename O>
-        static bool decode(const S& s, O& o) {
-            try {
-                iod::json_decode(o, s);
-                return true;
-            }
-            catch (...) {
-                sdebug("decoding json string failed: %s", exmsg());
-                return false;
-            }
-        }
-
-        template <typename S, typename O>
-        inline void decode(const S& s, O& o) {
-            iod::json_decode(o, s);
-        }
     } // namespace json
 
 } // namespace suil
@@ -295,6 +275,12 @@ namespace iod {
     // Decode \o from a json string \b.
     template<typename ...T>
     inline void json_decode(sio<T...> &o, const suil::zbuffer& b) {
+        iod::stringview str(b.data(), b.size());
+        json_decode(o, str);
+    }
+
+    template<typename O>
+    inline void json_decode(std::vector<O>&o, const suil::zbuffer& b) {
         iod::stringview str(b.data(), b.size());
         json_decode(o, str);
     }
@@ -334,5 +320,62 @@ namespace iod {
                 ss << "{}";
             }
         }
+    }
+}
+
+namespace suil::json {
+
+    template<typename O>
+    inline std::string encode(const suil::zstrmap<O>& m) {
+        if (m.empty()) {
+            return "{}";
+        }
+
+        iod::encode_stream ss;
+        bool first{false};
+        for (auto& e: m) {
+            if (first) ss << ", ";
+            ss << '"' << e.first << "\": ";
+            iod::json_internals::json_encode_(e.second, ss);
+            first = false;
+        }
+
+        return ss.move_str();
+    }
+
+    template <typename O>
+    inline std::string encode(const O& o) {
+        return iod::json_encode(o);
+    }
+
+    template <typename S, typename O>
+    static bool trydecode(const S& s, O& o) {
+        try {
+            iod::json_decode(o, s);
+            return true;
+        }
+        catch (...) {
+            sdebug("decoding json string failed: %s", exmsg());
+            return false;
+        }
+    }
+
+    template <typename S, typename O>
+    inline void decode(const S& s, O& o) {
+        iod::json_decode(o, s);
+    }
+
+    template <typename S, typename O>
+    inline void decode(const S& s, std::vector<O>& o) {
+        iod::json_decode(o, s);
+    }
+
+    template <typename S>
+    inline void decode(const S& s, json::Object& obj) {
+        suil::strview str(s.data(), s.size());
+        std::string err;
+        Object::parse(obj, str, err);
+        if (!err.empty())
+            throw SuilError::create(err);
     }
 }

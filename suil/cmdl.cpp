@@ -273,7 +273,7 @@ namespace suil {
             Cmd ver("version", "Show the application version", false);
             ver([&](Cmd& cmd){
                 zbuffer b{63};
-                b << appname << " v-" << appversion << '\n';
+                b << appname << " v" << appversion << '\n';
                 if (!Ego.descript.empty()) {
                     b << Ego.descript << '\n';
                 }
@@ -376,7 +376,7 @@ namespace suil {
                     // make up description
                     out << appname;
                     if (appversion) {
-                        out << " v-" << appversion;
+                        out << " v" << appversion;
                     }
                     out << '\n';
                 }

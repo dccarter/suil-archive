@@ -19,12 +19,49 @@
 #include <iod/stringview.hh>
 
 namespace iod {
+    template <typename Obj>
+    struct Nullable {
+        using value_type = Obj;
+        Nullable(value_type&& obj)
+                : obj(std::move(obj)),
+                  isNull(false)
+        {}
+        Nullable(nullptr_t)
+                : isNull(true)
+        {}
+
+        Nullable()
+        {}
+
+        operator bool() {
+            return !isNull;
+        }
+
+        inline bool empty() {
+            return isNull;
+        }
+
+        value_type& operator*() { return obj; }
+        const value_type& operator*() const { return obj; }
+        value_type obj{};
+        bool isNull{true};
+    };
+
+    template <typename T>
+    struct Object : std::map<std::string, T> {
+    };
 
     using namespace s;
 
     // Decode \o from a json string \str.
     template<typename ...T>
     inline void json_decode(sio<T...> &o, const stringview &str);
+
+    // Decode \o from a json string \str.
+    template<typename T, typename S>
+    inline void json_decode(Nullable<T> &o, const S &str) {
+        return json_decode(*o, str);
+    }
 
     // Encode \o into a json string.
     template<typename ...T>
@@ -34,9 +71,19 @@ namespace iod {
     template<typename T>
     inline std::string json_encode(const std::vector<T> &v);
 
+    template<typename T>
+    inline std::string json_encode(const Nullable<T> &o) {
+        return json_encode(*o);
+    }
+
     // Encode \o into a stream.
     template<typename S, typename ...Tail>
     inline void json_encode(const sio<Tail...> &o, S &stream);
+
+    template<typename S, typename T>
+    inline void json_encode(const Nullable<T> &o, S &stream) {
+        return json_encode(*o, stream);
+    }
 
 
     struct json_string {
@@ -204,9 +251,19 @@ namespace iod {
             t.encjv(ss);
         }
 
+        template<typename T, typename S>
+        inline void json_encode_(const Nullable<T> &t, S &ss) {
+            json_encode_(*t, ss);
+        }
+
         template<typename S>
         inline void json_encode_(const char *t, S &ss) {
             ss << '"' << t << '"';
+        }
+
+        template<typename S>
+        inline void json_encode_(const bool& b, S &ss) {
+            ss << (b? "true": "false");
         }
 
         template<typename S>
@@ -250,9 +307,22 @@ namespace iod {
             ss << ']';
         }
 
+        template<typename T, typename S>
+        inline void json_encode_(const Object<T>& mp, S& ss) {
+            ss << '{';
+            bool fst{true};
+            for (const auto&e: mp) {
+                if (!fst) ss << ", ";
+                ss << '"' << e.first << "\":";
+                json_encode_(e.second, ss);
+                fst = false;
+            }
+            ss << '}';
+        }
+
         template <typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
-        inline bool json_ignore(const T&) {
-            return false;
+        inline bool json_ignore(const T& t) {
+            return t == 0;
         }
 
         template <typename T,
@@ -328,6 +398,16 @@ namespace iod {
             inline char peak() { return str[pos]; }
 
             inline char eof() { return pos == str.size(); }
+
+            inline bool eat_null() {
+                static const char *null = "null";
+                if (str[pos] != 'n') return false;
+                if (str[pos+1] != 'u') return false;
+                if (str[pos+2] != 'l') return false;
+                if (str[pos+3] != 'l') return false;
+                pos+=4;
+                return true;
+            }
 
             inline char eat_one() { return pos++; }
 
@@ -423,6 +503,19 @@ namespace iod {
                     p.pos = this->pos;
                     p >> c;
                     pos += 1;
+                }
+
+                inline bool eat_null() {
+                    int tmp{p.pos};
+                    p.pos = this->pos;
+                    if (p.eat_null()) {
+                        this->pos += 4;
+                        return true;
+                    }
+                    else {
+                        p.pos = tmp;
+                        return false;
+                    }
                 }
 
                 void consume(size_t n) {
@@ -662,6 +755,22 @@ namespace iod {
 
             inline json_parser &fill(unsigned int &val) { return fill_int<unsigned int, 10>(val); }
 
+            inline json_parser &fill(bool &t) {
+                if ((str.size()>(pos+4)) && (strncmp(&str[pos], "true", 4) ==0)) {
+                    pos += 4;
+                    t = true;
+                }
+                else if ((str.size()>(pos+5)) && (strncmp(&str[pos], "false", 5) ==0)) {
+                    pos += 5;
+                    t =  false;
+                }
+                else {
+                    size_t max = str.size()<pos+10? str.size() : pos+10;
+                    auto err = "cannot deserialize '" + str.substr(pos, max).to_std_string() + "' into boolean type";
+                    throw std::runtime_error(err);
+                }
+            }
+
             template<typename T>
             inline json_parser &fill(T &t) {
                 static_assert(!std::is_same<T, const char *>::value,
@@ -839,7 +948,8 @@ namespace iod {
                 foreach(scheme) | [&](auto &m) {
                     if (!m.attributes().has(_json_skip) and !attr_found and attr_name == A[i].name) {
                         try {
-                            iod_from_json_(&m.value(), m.symbol().member_access(o), p);
+                            if (!p.eat_null())
+                                iod_from_json_(&m.value(), m.symbol().member_access(o), p);
                         }
                         catch (const std::exception &e) {
                             std::stringstream ss;
@@ -902,6 +1012,33 @@ namespace iod {
             p >> ']';
         }
 
+        // Parse an map.
+        template<typename S, typename T>
+        inline void iod_from_json_(S *, Object<T>&obj, json_parser &p) {
+            p >> '{' >> p.spaces;
+            if (p.peak() == '}') {
+                p >> '}';
+                return;
+            }
+
+            obj.clear();
+            while (p.peak() != '}') {
+                stringview attr_name;
+                p >> p.spaces >> '"' >> fill(attr_name) >> '"' >> p.spaces >> ':' >> p.spaces;
+                T t;
+                p >> p.spaces;
+                iod_from_json_((typename S::value_type *) 0, t, p);
+                obj.emplace(attr_name.to_std_string(), std::move(t));
+                p >> p.spaces;
+                if (p.peak() == '}')
+                    break;
+                else
+                    p >> ',';
+            }
+
+            p >> '}';
+        }
+
         template<typename O, typename... T>
         inline void iod_from_json_(sio<T...> *s, O &o, json_parser &p) {
             p >> p.spaces >> '{';
@@ -923,6 +1060,13 @@ namespace iod {
             p >> s;
         }
 
+        template<typename S, typename T>
+        inline void iod_from_json_(S *, Nullable<T> &t, json_parser &p) {
+            p >> p.spaces >> '{';
+            iod_attr_from_json((T *)0, *t, p);
+            p >> p.spaces >> '}';
+            t.isNull = false;
+        }
     }
 
     using jdecit = json_internals::json_parser::jdecit;
@@ -1036,6 +1180,11 @@ namespace iod {
         return ss.move_str();
     }
     using encode_stream = json_internals::my_ostringstream<json_internals::stringstream>;
+
+    template <typename T>
+    inline void zero(Nullable<T>& t) {
+        t.isNull = true;
+    }
 }
 
 #endif

@@ -247,6 +247,10 @@ namespace suil {
 
                 const strview contenttype() const;
 
+                zcstring getbody() {
+                    return zcstring{Ego.body};
+                }
+
             private:
 
                 friend struct Session;
@@ -260,7 +264,8 @@ namespace suil {
                 ResponseWriter reader{nullptr};
             };
 
-            struct Request {
+            struct Request : LOGGER(dtag(HTTP_CLIENT)) {
+
                 Request(const Request&) = delete;
                 Request& operator=(const Request&) = delete;
                 inline void hdr(zcstring&& name, zcstring&& val) {
@@ -295,7 +300,7 @@ namespace suil {
                 }
 
                 Request& operator<<(Form&& f);
-
+                Request& operator<<(File&& f);
 
                 template <typename __Json>
                 inline Request& operator<<(__Json jobj) {
@@ -304,10 +309,7 @@ namespace suil {
                     return *this;
                 }
 
-                zbuffer& buffer(const char* content_type = "text/plain") {
-                    hdrs("Content-Type", content_type);
-                    return body;
-                }
+                zbuffer& buffer(const char* content_type = "text/plain");
 
                 inline void keepalive(bool on) {
                     if (on)
@@ -345,6 +347,7 @@ namespace suil {
                     form.clear();
                     body.clear();
                     headers.clear();
+                    bodyFd.close();
                 }
 
                 void encodeargs(zbuffer& dst) const;
@@ -368,6 +371,7 @@ namespace suil {
                 zcstring               resource{};
                 Form                   form{};
                 zbuffer               body{1024};
+                File                  bodyFd{nullptr};
             };
 
             using request_builder_t = std::function<bool(Request&)>;

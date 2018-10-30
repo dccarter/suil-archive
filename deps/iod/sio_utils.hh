@@ -307,7 +307,32 @@ namespace iod
   {
     return deep_merge_sios_in_tuple_rec<0>(t);
   }
-  
+
+  inline void zero(bool& t) {
+    t = false;
+  }
+
+  template <typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
+  inline void zero(T& t) {
+    t = 0;
+  }
+
+  template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value>::type* = nullptr>
+  inline void zero(T&) {
+  }
+
+  template <typename T>
+  inline  void zero(std::vector<T>& t) {
+    t.clear();
+  }
+
+  template  <typename... T>
+  inline void zero(sio<T...>& o) {
+    iod::foreach2(o) | [&](auto& m) {
+        // some recursion if possible
+        iod::zero(m.symbol().member_access(o));
+    };
+  }
 } // end of namespace iod.
 
 #include <iod/symbol.hh>

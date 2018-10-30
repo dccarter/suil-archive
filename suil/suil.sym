@@ -180,3 +180,8 @@ KeyPair:
 KeyValPair:
 @key
 @val
+
+
+Process:
+  _onStdError
+  _onStdOutput

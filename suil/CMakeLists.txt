@@ -6,15 +6,11 @@ file(GLOB_RECURSE LIB_SUIL_HTTP_SOURCES http/*.cpp http/*.c)
 file(GLOB_RECURSE LIB_SUIL_SQL_SOURCES  sql/*.cpp  sql/*.c)
 # only include docker sources when enables
 set(LIB_SUIL_DOCKER_SOURCES)
-if (SUIL_BUILD_DOCKER)
-    file(GLOB_RECURSE LIB_SUIL_DOCKER_SOURCES  docker/*.cpp  docker/*.c)
-endif()
 
 set(LIB_SUIL_SOURCES
         ${LIB_SUIL_BASE_SOURCES}
         ${LIB_SUIL_HTTP_SOURCES}
-        ${LIB_SUIL_SQL_SOURCES}
-        ${LIB_SUIL_DOCKER_SOURCES})
+        ${LIB_SUIL_SQL_SOURCES})
 
 set_property(GLOBAL PROPERTY prop_SUIL_SOURCES ${LIB_SUIL_SOURCES})
 
@@ -28,14 +24,6 @@ suil_iod_symbols(suil
         SYMBOLS ${CMAKE_SOURCE_DIR}/suil/suil.sym
         OUTPUT  ${CMAKE_SOURCE_DIR}/suil/symbols.h
         DEPENDS iodsyms)
-
-if (SUIL_BUILD_DOCKER)
-    # generate docker types
-    suil_gen_types(suil
-            BINARY  ${CMAKE_BINARY_DIR}/tools/suilgen
-            SCHEMAS ${CMAKE_CURRENT_SOURCE_DIR}/docker/types.json
-            OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/docker/types.hpp)
-endif(SUIL_BUILD_DOCKER)
 
 # change output directory of suil
 set_target_properties(suil

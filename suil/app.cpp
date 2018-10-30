@@ -80,7 +80,7 @@ namespace suil {
 
     void Application::wait_notify(Application& app) {
         ldebug(&app, "wait exit notification coroutine started");
-        int ev = fdwait(__notifyfd[0], FDW_IN, -1);
+        int ev = fdwait(__notifyfd[0], FDW_IN|FDW_ERR, -1);
         if (ev == FDW_IN) {
             ltrace(&app, "read notify_fd[0] %d", ev);
             /* signal ready to read */

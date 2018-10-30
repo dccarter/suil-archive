@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
     {
         auto msg = exmsg();
         fprintf(stderr, "error: %s\n", msg);
+        exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -114,7 +115,19 @@ namespace suil::tools  {
             for (auto& field: tp.fields)
             {
                 if (!isFirst) out << ",\n";
-                out << "        prop(" << field.name << ", " << field.type << ")";
+                out << "        prop(" << field.name;
+                if (!field.attribs.empty()) {
+                    // append attributes
+                    bool attrFirst{true};
+                    out << "(";
+                    for (auto& attr : field.attribs) {
+                        if (!attrFirst) out << ", ";
+                        out << "var(" << attr << ")";
+                        attrFirst = false;
+                    }
+                    out << ")";
+                }
+                out << ", " << field.type << ")";
                 isFirst = false;
             }
             out << "\n"

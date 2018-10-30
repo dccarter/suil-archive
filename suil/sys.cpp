@@ -24,6 +24,40 @@ namespace suil {
         const char*     SWNAME = SUIL_SOFTWARE_NAME;
     };
 
+    extern void Process_sa_handler(int, siginfo_t *, void *);
+
+    void Process_sa_init()
+    {
+        struct sigaction sa{0};
+        sa.sa_sigaction = &Process_sa_handler;
+        sa.sa_flags = SA_SIGINFO | SA_NOCLDWAIT | SA_NOCLDSTOP;
+        if (sigaction(SIGCHLD, &sa, nullptr) == -1) {
+            // error subscribing to child process exit
+            serror("sigaction failed: %s", errno_s);
+        }
+        memset(&sa, '\0', sizeof(sa));
+        sa.sa_sigaction = &Process_sa_handler;
+        sa.sa_flags = SA_SIGINFO | SA_NOCLDWAIT | SA_NOCLDSTOP;
+        if (sigaction(SIGTERM, &sa, nullptr) == -1) {
+            // error subscribing to child process exit
+            serror("sigaction failed: %s", errno_s);
+        }
+        memset(&sa, '\0', sizeof(sa));
+        sa.sa_sigaction = &Process_sa_handler;
+        sa.sa_flags = SA_SIGINFO | SA_NOCLDWAIT | SA_NOCLDSTOP;
+        if (sigaction(SIGINT, &sa, nullptr) == -1) {
+            // error subscribing to child process exit
+            serror("sigaction failed: %s", errno_s);
+        }
+        memset(&sa, '\0', sizeof(sa));
+        sa.sa_sigaction = &Process_sa_handler;
+        sa.sa_flags = SA_SIGINFO | SA_NOCLDWAIT | SA_NOCLDSTOP;
+        if (sigaction(SIGQUIT, &sa, nullptr) == -1) {
+            // error subscribing to child process exit
+            serror("sigaction failed: %s", errno_s);
+        }
+    }
+
     bool load(bool si) {
         static bool loaded{false};
         if (loaded) return false;
@@ -36,7 +70,7 @@ namespace suil {
             console::printblue("http://suil.suilteam.com\n");
             console::println("---------------------------------------\n");
         }
-
+        Process_sa_init();
         loaded = true;
 
         return loaded;
@@ -1009,6 +1043,12 @@ namespace suil {
     }
 
     zcstring utils::fs::readall(const char *path, bool async) {
+        zbuffer b(512);
+        fs::readall(b, path, async);
+        return zcstring(b);
+    }
+
+    void utils::fs::readall(zbuffer& out, const char *path, bool async) {
         /* read file contents into a buffer */
         if (!exists(path)) {
             throw SuilError::create("file '", path, "' does not exist");
@@ -1020,10 +1060,10 @@ namespace suil {
             throw SuilError::create("stat('", path, "') failed: ", errno_s);
         }
 
-        if (st.st_size > 8188) {
+        if (st.st_size > 1048576) {
             /* size too large to be read by this API */
             throw SuilError::create("file '", path, "' to large (",
-                                     st.st_size, " bytes) to be read by fs::read_all");
+                                    st.st_size, " bytes) to be read by fs::read_all");
         }
 
         int fd = open(path, O_RDONLY);
@@ -1032,8 +1072,8 @@ namespace suil {
             throw SuilError::create("opening file '", path, "' failed: ", errno_s);
         }
 
-        zbuffer b((uint32_t) st.st_size);
-        char *data = b.data();
+        out.reserve((uint32_t) st.st_size);
+        char *data = out.data();
         ssize_t nread = 0, rc = 0;
         do {
             rc = ::read(fd, &data[nread], (size_t)(st.st_size - nread));
@@ -1044,9 +1084,7 @@ namespace suil {
 
             nread += rc;
         } while (nread < st.st_size);
-        b.seek(nread);
-
-        return zcstring(b);
+        out.seek(nread);
     }
 
     void utils::fs::append(const char *path, const void *data, size_t sz, bool async) {

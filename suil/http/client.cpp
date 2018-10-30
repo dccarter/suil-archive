@@ -114,14 +114,15 @@ namespace suil {
                 }
 
                 /* received and parse body */
-                size_t len  = 0, left = content_length;
+                size_t len  = 0, left = content_length == ULLONG_MAX? 8000 : (content_length+20);
                 // read body in chunks
-                tmp.reserve(MIN(content_length, 8900));
+                tmp.reserve(left);
 
                 do {
-                    len = MIN(tmp.capacity(), left);
                     tmp.reset(len, true);
-                    if (!sock.receive(&tmp[0], len, timeout)) {
+                    len = tmp.capacity();
+                    // read whatever is available
+                    if (!sock.read(&tmp[0], len, timeout)) {
                         throw SuilError::create("receive failed: ", errno_s);
                     }
 
@@ -131,9 +132,8 @@ namespace suil {
                         throw SuilError::create("parsing  body failed: ",
                                      http_errno_name((enum http_errno )http_errno));
                     }
-                    left -= len;
                     // no need to reset buffer
-                } while (!body_complete && left > 0);
+                } while (!body_complete);
             }
 
             int Response::handle_body_part(const char *at, size_t length) {
@@ -211,8 +211,8 @@ namespace suil {
                     method = o.method;
                     resource = std::move(o.resource);
                     form = std::move(o.form);
-                    body = std::move(o.body);
-
+                    body   = std::move(o.body);
+                    bodyFd = std::move(o.bodyFd);
                     o.sock_ptr = nullptr;
                     o.method = Method::Unknown;
                     o.cleanup();
@@ -228,7 +228,8 @@ namespace suil {
                   method(o.method),
                   resource(std::move(o.resource)),
                   form(std::move(o.form)),
-                  body(std::move(o.body))
+                  body(std::move(o.body)),
+                  bodyFd(std::move(o.bodyFd))
             {
                 o.sock_ptr = nullptr;
                 o.method = Method::Unknown;
@@ -247,6 +248,27 @@ namespace suil {
                 headers.emplace(key.dup(), std::move(val));
 
                 return *this;
+            }
+
+            Request& Request::operator<<(suil::File&& f) {
+                if (!body.empty()) {
+                    // warn about overloading body
+                    iwarn("request body already set, overloading with file");
+                    body.clear();
+                }
+                bodyFd = std::move(f);
+                return Ego;
+            }
+
+            zbuffer& Request::buffer(const char *content_type) {
+                if (bodyFd.valid()) {
+                    // warn about overloading body
+                    iwarn("request body already set as a file, overriding with buffer");
+                    bodyFd.close();
+                }
+
+                hdrs("Content-Type", content_type);
+                return body;
             }
 
             void Request::encodeargs(zbuffer &dst) const {
@@ -309,7 +331,18 @@ namespace suil {
                     return;
                 }
 
-                if (!body.empty()) {
+                if (Ego.bodyFd.valid()) {
+                    // send body as a file
+                    /* send file */
+                    int fd = Ego.bodyFd.raw();
+                    size_t size = Ego.bodyFd.tell();
+                    nwr = sock.sendfile(fd, 0, fd, timeout);
+                    if (nwr != size) {
+                        throw SuilError::create("sending file: '", fd,
+                                                "' failed: ", errno_s);
+                    }
+                }
+                else if (!body.empty()) {
                     /* send body */
                     nwr = sock.send(body.data(), body.size(), timeout);
                     if (nwr != body.size()) {
@@ -321,7 +354,7 @@ namespace suil {
                 if (!form.uploads.empty()) {
                     /* send upload files one after the other */
                     for (auto &up: form.uploads) {
-                        int fd = up.open();
+                        int ffd = up.open();
                         nwr = sock.send(up.head(), up.head.size(), timeout);
                         if (nwr != up.head.size()) {
                             /* sending upload head failed, no need to send body */
@@ -329,7 +362,7 @@ namespace suil {
                         }
 
                         /* send file */
-                        nwr = sock.sendfile(fd, 0, up.file->size, timeout);
+                        nwr = sock.sendfile(ffd, 0, up.file->size, timeout);
                         if (nwr != up.file->size) {
                             throw SuilError::create("uploading file: '", up.file->path(),
                                                      "' failed: ", errno_s);

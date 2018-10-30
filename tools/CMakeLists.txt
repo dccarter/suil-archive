@@ -13,7 +13,7 @@ set(tools_DEFINES
 
 SuilProject(tools
         IOD_BIN     ${CMAKE_BINARY_DIR}/deps/iod/iodsyms
-        GENTPS_BIN  ${CMAKE_BINARY_DIR}/suil/tools/suiltps
+        GENTPS_BIN  ${CMAKE_BINARY_DIR}/tools/suiltps
         SYMBOLS     ${CMAKE_CURRENT_SOURCE_DIR}/tools.sym)
 
 set(suiltps_SOURCES
@@ -35,4 +35,25 @@ SuilApp(suilapp
         VERSION    ${tools_VERSION}
         DEFINES    ${tools_DEFINES} "-DBASE_PATH=\"${SUIL_BASE_PATH}\""
         INSTALL    ON
-        DEPENDS   suil)
+        DEPENDS    suil)
+
+set(sdocker_SOURCES
+        sdocker/docker.cpp
+        sdocker/containers.cpp
+        sdocker/images.cpp
+        sdocker/networks.cpp
+        sdocker/volumes.cpp
+        sdocker/exec.cpp)
+
+SuilStatic(sdocker
+        SOURCES    ${sdocker_SOURCES}
+        VERSION    ${tools_VERSION}
+        DEFINES    ${tools_DEFINES}
+        INSTALL    ON
+        TPSCHEMA   ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json
+        DEPENDS    suiltps)
+set(sdocker_HEADERS
+        ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/docker.hpp)
+install(FILES ${sdocker_HEADERS}
+        DESTINATION include/sdocker)

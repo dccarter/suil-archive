@@ -74,30 +74,40 @@ function(SuilProject name)
         # Some basic project definitions
         set(SUIL_PROJECT_NAME ${name} PARENT_SCOPE)
         set(SUIL_PROJECT_CREATED ON PARENT_SCOPE)
+
         # add symbols target for current project
+        if (SUIL_PROJECT_IOD_BIN)
+            set(SUIL_iod_BINARY ${SUIL_PROJECT_IOD_BIN} PARENT_SCOPE)
+        elseif(SUIL_BASE_PATH)
+            set(SUIL_iod_BINARY ${SUIL_BASE_PATH}/bin/iodsyms PARENT_SCOPE)
+        else()
+            set(SUIL_iod_BINARY iodsyms PARENT_SCOPE)
+        endif()
+
         if (SUIL_PROJECT_SYMBOLS)
             message(STATUS "defining project symbols target ${SUIL_PROJECT_SYMBOLS}")
-            set(iod_BINARY ${SUIL_BASE_PATH}/bin/iodsyms)
-            if (SUIL_PROJECT_IOD_BIN)
-                set(iod_BINARY ${SUIL_PROJECT_IOD_BIN})
-            endif()
             suil_iod_symbols(${name}
                     PROJECT ON
-                    BINARY  ${SUIL_PROJECT_IOD_BIN}
+                    BINARY  ${SUIL_iod_BINARY}
                     SYMBOLS ${SUIL_PROJECT_SYMBOLS}
                     OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${name}_symbols.h)
             set(SUIL_PROJECT_GENSYMS ON PARENT_SCOPE)
         endif()
+
         # add symbols target for current project
+        if (SUIL_PROJECT_GENTPS_BIN)
+            set(SUIL_gentps_BINARY ${SUIL_PROJECT_GENTPS_BIN} PARENT_SCOPE)
+        elseif(SUIL_BASE_PATH)
+            set(SUIL_gentps_BINARY ${SUIL_BASE_PATH}/bin/suiltps PARENT_SCOPE)
+        else()
+            set(SUIL_gentps_BINARY suiltps PARENT_SCOPE)
+        endif()
+
         if (SUIL_PROJECT_TYPES)
             message(STATUS "defining project types target ${SUIL_PROJECT_TYPES}")
-            set(gentps_BINARY ${SUIL_BASE_PATH}/bin/suiltps)
-            if (SUIL_PROJECT_GENTPS_BIN)
-                set(gentps_BINARY ${SUIL_PROJECT_GENTPS_BIN})
-            endif()
             suil_gen_types(${name}
                     PROJECT ON
-                    BINARY  ${gentps_BINARY}
+                    BINARY  ${SUIL_gentps_BINARY}
                     SCHEMA  ${SUIL_PROJECT_TYPE_SCHEMA}
                     OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${name}.types.h)
             set(SUIL_PROJECT_GENTYPES ON PARENT_SCOPE)
@@ -129,8 +139,8 @@ function(SuilApp name)
     endif()
 
     # parse function arguments
-    set(options DEBUG IODSYMS_PATHBIN)
-    set(kvargs)
+    set(options DEBUG)
+    set(kvargs TPSCHEMA)
     set(kvvargs LIBRARY DEPENDS INSTALL VERSION SOURCES TEST DEFINES SYMBOLS
                 EXTRA_SYMS LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
     cmake_parse_arguments(SUIL_APP "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
@@ -168,7 +178,6 @@ function(SuilApp name)
         add_executable(${name} ${${name}_SOURCES})
         target_compile_definitions(${name} PUBLIC "-DAPP_VERSION=\"${${name}_VERSION}\"")
         target_compile_definitions(${name} PUBLIC "-DAPP_NAME=\"${name}\"")
-        target_compile_definitions(${name} PUBLIC "-DLIB_VERSION=\"${${name}_VERSION}\"")
     endif()
 
     # depends on project types
@@ -191,16 +200,30 @@ function(SuilApp name)
 
     if (EXISTS ${${name}_SYMBOLS})
         message(STATUS "using symbols: ${${name}_SYMBOLS} ${SUIL_APP_EXTRA_SYMS}")
-        set(IODSYMS_BIN iodsyms)
-        if (SUIL_APP_IODSYMS_PATHBIN)
-            set(IODSYMS_BIN ${SUIL_BASE_PATH}/bin/iodsyms)
-        endif()
         # generate symbols if project uses symbols
+        GET_FILENAME_COMPONENT(${name}_SYMBOLS_ODIR   ${${name}_SYMBOLS} DIRECTORY)
         GET_FILENAME_COMPONENT(${name}_SYMBOLS_OUTPUT ${${name}_SYMBOLS} NAME)
         suil_iod_symbols(${name}
-                BINARY ${IODSYMS_BIN}
+                BINARY ${SUIL_iod_BINARY}
                 SYMBOLS ${${name}_SYMBOLS} ${SUIL_APP_EXTRA_SYMS}
-                OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${${name}_SYMBOLS_OUTPUT}.h)
+                OUTPUT  ${${name}_SYMBOLS_ODIR}/${${name}_SYMBOLS_OUTPUT}.h)
+    endif()
+
+    # generate types
+    set(${name}_TPSCHEMA ${SUIL_APP_TPSCHEMA})
+    if (NOT SUIL_APP_TPSCHEMA)
+        set(${name}_TPSCHEMA ${CMAKE_CURRENT_SOURCE_DIR}/types.json)
+    endif()
+
+    if (EXISTS ${${name}_TPSCHEMA})
+        message(STATUS "using type schemas: ${SUIL_gentps_BINARY} ${${name}_TPSCHEMA}")
+        # generate symbols if project uses symbols
+        GET_FILENAME_COMPONENT(${name}_TPSCHEMA_ODIR   ${${name}_TPSCHEMA} DIRECTORY)
+        GET_FILENAME_COMPONENT(${name}_TPSCHEMA_OUTPUT ${${name}_TPSCHEMA} NAME)
+        suil_gen_types(${name}
+                BINARY  ${SUIL_gentps_BINARY}
+                SCHEMAS ${${name}_TPSCHEMA}
+                OUTPUT  ${${name}_TPSCHEMA_ODIR}/${${name}_TPSCHEMA_OUTPUT}.h)
     endif()
 
     if (SUIL_APP_DEPENDS)
@@ -251,13 +274,14 @@ function(SuilApp name)
                     DESTINATION share/${${name}_ARTIFACTS_DIR})
         endif()
 
+        # install targets
         message(STATUS "target '${name} install target")
         install(TARGETS ${name}
                 ARCHIVE DESTINATION lib
                 LIBRARY DESTINATION lib
                 RUNTIME DESTINATION bin)
 
-
+        # install directories
         set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})
         if (${name}_INSTALL_DIRS)
             message(STATUS "target '${name} install directories: ${${name}_INSTALL_DIRS}")

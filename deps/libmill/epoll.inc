@@ -47,6 +47,7 @@ struct mill_crpair {
     struct mill_cr *in;
     struct mill_cr *out;
     uint32_t currevs;
+    uint32_t abortevs;
     /* 1-based index, 0 stands for "not part of the list", MILL_ENDLIST
        stads for "no more elements in the list. */
     uint32_t next;
@@ -125,8 +126,8 @@ static void mill_poller_rm(struct mill_cr *cr) {
 
 static void mill_poller_clean(int fd) {
     struct mill_crpair *crp = &mill_crpairs[fd];
-    mill_assert(!crp->in);
-    mill_assert(!crp->out);
+    //mill_assert(!crp->in);
+    //mill_assert(!crp->out);
     /* Remove the file descriptor from the pollset, if it is still present. */
     if(crp->currevs) {   
         struct epoll_event ev;
@@ -136,10 +137,54 @@ static void mill_poller_clean(int fd) {
         mill_assert(rc == 0 || errno == ENOENT);
     }
     /* Clean the cache. */
-    crp->currevs = 0;
+    crp->currevs  = 0;
+    crp->abortevs = 0;
     if(!crp->next) {
         crp->next = mill_changelist;
         mill_changelist = fd + 1;
+    }
+}
+
+void mill_poller_clear(int fd) {
+    struct mill_crpair *crp = &mill_crpairs[fd];
+    crp->abortevs = 0;
+    if (crp->in) {
+        crp->abortevs |= FDW_IN;
+    }
+    if (crp->out) {
+        crp->abortevs |= FDW_OUT;
+    }
+
+    /* Remove the file descriptor from the pollset, if it is still present. */
+    if(crp->currevs) {
+        struct epoll_event ev;
+        ev.data.fd = fd;
+        ev.events = 0;
+        int rc = epoll_ctl(mill_efd, EPOLL_CTL_DEL, fd, &ev);
+        mill_assert(rc == 0 || errno == ENOENT);
+        crp->currevs = 0;
+    }
+    /* Clean the cache. */
+    if(!crp->next) {
+        crp->next = mill_changelist;
+        mill_changelist = fd + 1;
+    }
+
+    if (crp->abortevs&FDW_IN) {
+        struct mill_cr *cr = crp->in;
+        crp->abortevs &= ~FDW_IN;
+        mill_resume(cr, FDW_ERR);
+        mill_poller_rm(cr);
+        if(mill_timer_enabled(&cr->timer))
+            mill_timer_rm(&cr->timer);
+    }
+    if (crp->abortevs&FDW_OUT) {
+        struct mill_cr *cr = crp->in;
+        crp->abortevs &= ~FDW_OUT;
+        mill_resume(cr, FDW_ERR);
+        mill_poller_rm(cr);
+        if(mill_timer_enabled(&cr->timer))
+            mill_timer_rm(&cr->timer);
     }
 }
 
@@ -152,10 +197,33 @@ static int mill_poller_wait(int timeout) {
         struct epoll_event ev;
         ev.data.fd = fd;
         ev.events = 0;
-        if(crp->in)
-            ev.events |= EPOLLIN;
-        if(crp->out)
-            ev.events |= EPOLLOUT;
+        if(crp->in) {
+            if (crp->abortevs&FDW_IN) {
+                struct mill_cr *cr = crp->in;
+                crp->abortevs &= ~FDW_IN;
+                mill_resume(cr, FDW_ERR);
+                mill_poller_rm(cr);
+                if(mill_timer_enabled(&cr->timer))
+                    mill_timer_rm(&cr->timer);
+            }
+            else {
+                ev.events |= EPOLLIN;
+            }
+        }
+        if(crp->out) {
+            if (crp->abortevs&FDW_OUT) {
+                struct mill_cr *cr = crp->in;
+                crp->abortevs &= ~FDW_OUT;
+                mill_resume(cr, FDW_ERR);
+                mill_poller_rm(cr);
+                if(mill_timer_enabled(&cr->timer))
+                    mill_timer_rm(&cr->timer);
+            }
+            else {
+                ev.events |= EPOLLOUT;
+            }
+        }
+
         if(crp->currevs != ev.events) {
             int op;
             if(!ev.events)

@@ -147,6 +147,8 @@ MILL_EXPORT int mill_fdwait_(
     const char *current);
 MILL_EXPORT void mill_fdclean_(
     int fd);
+MILL_EXPORT void mill_fdclear_(
+    int fd);
 MILL_EXPORT void *mill_cls_(
     void);
 MILL_EXPORT void mill_setcls_(
@@ -233,6 +235,7 @@ MILL_EXPORT void mill_setcls_(
 #define mill_msleep(dd) mill_msleep_((dd), MILL_HERE_)
 #define mill_fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE_)
 #define mill_fdclean mill_fdclean_
+#define mill_fdclear mill_fdclear_
 #define mill_cls mill_cls_
 #define mill_setcls mill_setcls_
 #else
@@ -246,6 +249,7 @@ MILL_EXPORT void mill_setcls_(
 #define msleep(deadline) mill_msleep_((deadline), MILL_HERE_)
 #define fdwait(fd, ev, dd) mill_fdwait_((fd), (ev), (dd), MILL_HERE_)
 #define fdclean mill_fdclean_
+#define fdclear mill_fdclear_
 #define cls mill_cls_
 #define setcls mill_setcls_
 #endif
@@ -753,6 +757,8 @@ MILL_EXPORT struct mill_file *mill_mfopen_(
     mode_t mode);
 MILL_EXPORT struct mill_file *mill_mfcreate_(
         int fd, int own);
+MILL_EXPORT int mill_mfget_(
+        struct mill_file *mfd);
 MILL_EXPORT size_t mill_mfwrite_(
     struct mill_file *f,
     const void *buf,
@@ -787,6 +793,7 @@ typedef struct mill_file *mill_mfile;
 #define mill_mfopen mill_mfopen_
 #define mill_mfmkstemp mill_mfmkstemp_
 #define mill_mfcreate  mill_mfcreate_
+#define mill_mfget mill_mfget_
 #define mill_mfwrite mill_mfwrite_
 #define mill_mfflush mill_mfflush_
 #define mill_mfread mill_mfread_
@@ -802,6 +809,7 @@ typedef struct mill_file *mfile;
 #define mfopen mill_mfopen_
 #define mfmktemp mill_mfmkstemp_
 #define mfcreate mill_mfcreate_
+#define mfget mill_mfget_
 #define mfwrite mill_mfwrite_
 #define mfflush mill_mfflush_
 #define mfread mill_mfread_

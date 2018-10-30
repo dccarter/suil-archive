@@ -6,3 +6,5 @@ set(SUIL_BASE_PATH "" CACHE STRING "Path to an install of suil package")
 # add all example projects
 add_subdirectory(basic)
 add_subdirectory(websock)
+add_subdirectory(process)
+add_subdirectory(docker)

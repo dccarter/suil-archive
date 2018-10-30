@@ -90,6 +90,11 @@ struct mill_file *mill_mfmkstemp_(
     return mill_mfcreate_(mkstemp((char *)pathname), 1);
 }
 
+int mill_mfget_(struct mill_file *mfd)
+{
+    return mfd? mfd->fd : -1;
+}
+
 size_t mill_mfwrite_(struct mill_file *f, const void *buf, size_t len,
       int64_t deadline) {
     /* If it fits into the output buffer dup it there and be done. */

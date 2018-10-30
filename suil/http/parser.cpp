@@ -2339,10 +2339,12 @@ namespace suil {
             strview sv = p->raw_url;
             size_t pos = sv.find("?");
             auto url = sv.substr(0, pos);
-            p->url = utils::strndup(url.data(), url.size());
-            if (pos != sv.size()) {
-                strview tmp((sv.data()+pos), sv.length()-pos);
-                p->qps = query_string(tmp);
+            if (!url.empty()) {
+                p->url = utils::strndup(url.data(), url.size());
+                if (pos != sv.size()) {
+                    strview tmp((sv.data() + pos), sv.length() - pos);
+                    p->qps = query_string(tmp);
+                }
             }
 
             p->body_complete = 1;

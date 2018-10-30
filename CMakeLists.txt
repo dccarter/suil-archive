@@ -145,6 +145,7 @@ add_subdirectory(suil)
 
 if (SUIL_BUILD_DEV_PACKAGE)
     # only build tools when building a development package
+    include_directories(tools)
     add_subdirectory(tools)
 endif(SUIL_BUILD_DEV_PACKAGE)
 

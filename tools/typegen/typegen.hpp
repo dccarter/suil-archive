@@ -14,7 +14,8 @@ namespace suil::tools {
 
     typedef decltype(iod::D(
         prop(name,    zcstring),
-        prop(type,    zcstring)
+        prop(type,    zcstring),
+        prop(attribs(var(optional)), std::vector<zcstring>)
     )) SuilgenSchemaField;
 
     typedef decltype(iod::D(

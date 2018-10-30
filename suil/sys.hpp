@@ -1524,6 +1524,10 @@ namespace suil {
             return fd != nullptr;
         }
 
+        virtual int raw() {
+            return mfget(fd);
+        }
+
         bool operator==(const File& other) {
             return (this == &other)  ||
                    ( fd == other.fd) ||
@@ -1803,6 +1807,8 @@ namespace suil {
 
             std::vector<zcstring> ls(const char *path, bool recursive = false);
 
+            void readall(zbuffer& out, const char *path, bool async = false);
+
             zcstring readall(const char* path, bool async = false);
 
             void append(const char *path, const void *data, size_t sz, bool async = true);
@@ -2026,14 +2032,41 @@ namespace suil {
             }
         }
 
-        template<typename __C, typename... __Opts>
-        inline void apply_config(__C& obj, __Opts... opts) {
-            auto options = iod::D(opts...);
-            utils::apply_options(obj, options);
-        }
-
         template<typename __C>
         inline void apply_config(__C& /* unsused parameter*/) {
+        }
+
+        template<typename __C, typename... __Opts>
+        inline void apply_config(__C& obj, __Opts... opts) {
+            if constexpr (sizeof...(opts) > 0) {
+                auto options = iod::D(opts...);
+                utils::apply_options(obj, options);
+            }
+        }
+
+        template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
+        inline void sio_zero(T& o) {
+            o = 0;
+        }
+
+        template<typename T>
+        inline void sio_zero(iod::Nullable<T>& o) {
+            o.isNull = false;
+        }
+
+        template<typename T>
+        inline void sio_zero(T& o) {
+        }
+
+        inline void sio_zero(bool& o) {
+            o = false;
+        }
+
+        template<typename... T>
+        void sio_zero(iod::sio<T...>& o) {
+            iod::foreach(o) | [&](auto m) {
+                sio_zero(m.symbol().member_access(o));
+            };
         }
 
         const char *mimetype(const zcstring filename);

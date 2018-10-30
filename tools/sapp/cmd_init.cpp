@@ -74,12 +74,14 @@ namespace suil::tools  {
         cmake << "cmake_minimum_required(VERSION 3.8)\n"
               << "\n";
         if (!basePath.empty())
-            cmake << "set(SUIL_BASE_PATH \"" << basePath << "\" CACHE STRING \"Path to an install of suil package\")\n"
-                  << "set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${SUIL_BASE_PATH}/share/cmake/Modules\")\n"
-                  << "\n";
+            cmake << "set(SUIL_BASE_PATH \"" << basePath << "\" CACHE STRING \"Path to an install of suil package\")\n";
         else
             cmake << "set(SUIL_BASE_PATH \"\" CACHE STRING \"Path to an install of suil package\")\n"
                   << "\n";
+        cmake << "if (SUIL_BASE_PATH)\n"
+              << "    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \"${SUIL_BASE_PATH}/share/cmake/Modules\")\n"
+              << "endif (SUIL_BASE_PATH)\n"
+              << "\n";
 
         cmake << "set(CMAKE_CXX_STANDARD 17)\n"
               << "include(Suil)\n"
