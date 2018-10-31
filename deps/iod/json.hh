@@ -26,9 +26,6 @@ namespace iod {
                 : obj(std::move(obj)),
                   isNull(false)
         {}
-        Nullable(nullptr_t)
-                : isNull(true)
-        {}
 
         Nullable()
         {}
@@ -496,7 +493,7 @@ namespace iod {
                 }
 
                 size_t remaining() const {
-                    p.str.size() - pos;
+                    return p.str.size() - pos;
                 }
 
                 void eat(char c) {

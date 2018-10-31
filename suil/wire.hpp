@@ -224,6 +224,7 @@ namespace suil {
         heapboard&operator=(const heapboard& hb) {
             if (hb.data != nullptr)
                 Ego.copyfrom(hb.data, hb.M);
+            return Ego;
         }
 
         heapboard(heapboard&& hb)

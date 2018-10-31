@@ -144,6 +144,7 @@ namespace suil {
     }
 
     static inline bool ipc_msg_check(__worker& wrk, uint8_t msg) {
+        return false;
     }
 
     static void ipc_init(__worker&  wrk) {

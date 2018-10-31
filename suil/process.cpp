@@ -3,7 +3,7 @@
 //
 #include <unistd.h>
 #include <sys/wait.h>
-#include <bits/types/siginfo_t.h>
+#include <signal.h>
 
 #include "suil/process.hpp"
 

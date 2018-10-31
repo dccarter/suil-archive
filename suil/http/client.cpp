@@ -191,6 +191,7 @@ namespace suil {
                     reader(nullptr, 0);
                 }
                 body_read = true;
+                return parser::msg_complete();
             }
 
             const strview Response::contenttype() const {
@@ -433,8 +434,8 @@ namespace suil {
             }
 
             Response Session::head(handle_t &h, const char *resource, zmap<zcstring> hdr) {
-
                 Response resp = std::move(perform(h, Method::Connect, resource));
+                return std::move(resp);
             }
 
 #undef CRLF

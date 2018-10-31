@@ -367,6 +367,7 @@ namespace suil {
 
             virtual int msg_complete() {
                 content_length = body.size();
+                return 0;
             }
 
             struct {

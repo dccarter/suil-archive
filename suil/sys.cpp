@@ -3,6 +3,7 @@
 //
 
 #include <dirent.h>
+#include <signal.h>
 #include <openssl/sha.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>

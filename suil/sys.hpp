@@ -295,6 +295,7 @@ namespace suil {
             d._data = nullptr;
             d._size = 0;
             d._own  = 0;
+            return Ego;
         }
 
         inline Data peek() {
@@ -1087,6 +1088,7 @@ namespace suil {
             other.data  = nullptr;
             other.offset = 0;
             other.dctor  = nullptr;
+            return Ego;
         }
 
         inline size_t size() const {
@@ -1508,9 +1510,10 @@ namespace suil {
             f.fd = nullptr;
         }
 
-        File&& operator=(File&& f) {
+        File& operator=(File&& f) {
             fd = f.fd;
             f.fd = nullptr;
+            return Ego;
         }
 
         virtual size_t write(const void*, size_t, int64_t);

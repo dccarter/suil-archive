@@ -334,6 +334,7 @@ namespace suil {
                         "duplicate global argument '", arg.lf,
                         " already registered");
             }
+            return Ego;
         }
 
         void Parser::add(Cmd &&cmd) {
@@ -560,6 +561,7 @@ namespace suil {
 
         zcstring readpasswd(const zcstring& display) {
             char *pass = getpass(display());
+            return zcstring{pass}.dup();
         }
     }
 }
