@@ -66,6 +66,8 @@ namespace suil {
                     zcstring name{n.data(), n.size(), false};
                     getvalue(name, m.value());
                 };
+                
+                return false;
             }
 
             inline bool interactive(bool showhelp=false) {
