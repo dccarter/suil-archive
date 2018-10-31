@@ -46,6 +46,7 @@ namespace suil {
                                              "' already assigned a handler");
                 }
                 Ego.handler = handler;
+                return Ego;
             }
             void showhelp(const char *app, zbuffer &help, bool ishelp = false) const;
             bool parse(int argc, char *argv[], bool debug = false);
