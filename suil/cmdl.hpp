@@ -71,6 +71,7 @@ namespace suil {
             inline bool interactive(bool showhelp=false) {
                 Ego.inter = true;
                 Ego.interhelp = showhelp;
+                return true;
             }
 
             zcstring operator[](char sf) {
