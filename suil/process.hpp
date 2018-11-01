@@ -5,6 +5,7 @@
 #ifndef SUIL_PROCESS_HPP
 #define SUIL_PROCESS_HPP
 
+#include <signal.h>
 #include <suil/sys.hpp>
 
 namespace suil {
@@ -104,13 +105,13 @@ namespace suil {
 
         template <typename Arg>
         static void pack(int& index, char* argv[], Arg arg) {
-            argv[index++] = arg;
+            argv[index++] = (char *) arg;
             argv[index++] = (char *) NULL;
         }
 
         template <typename Arg, typename... Args>
         static void pack(int& index, char* argv[], const Arg arg, Args... args) {
-            argv[index++] = arg;
+            argv[index++] = (char *)arg;
             pack(index, argv, std::forward<Args>(args)...);
         }
 

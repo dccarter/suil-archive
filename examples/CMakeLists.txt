@@ -7,4 +7,7 @@ set(SUIL_BASE_PATH "" CACHE STRING "Path to an install of suil package")
 add_subdirectory(basic)
 add_subdirectory(websock)
 add_subdirectory(process)
-add_subdirectory(docker)
+if (SUIL_PACKAGE_HAVE_DOCKER)
+    # Build docker example only when SDK has docker API support
+    add_subdirectory(docker)
+endif(SUIL_PACKAGE_HAVE_DOCKER)
