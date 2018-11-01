@@ -37,23 +37,26 @@ SuilApp(suilapp
         INSTALL    ON
         DEPENDS    suil)
 
-set(sdocker_SOURCES
-        sdocker/docker.cpp
-        sdocker/containers.cpp
-        sdocker/images.cpp
-        sdocker/networks.cpp
-        sdocker/volumes.cpp
-        sdocker/exec.cpp)
+if (SUIL_BUILD_DOCKER)
+    # Build docker only requested to do so
+    set(sdocker_SOURCES
+            sdocker/docker.cpp
+            sdocker/containers.cpp
+            sdocker/images.cpp
+            sdocker/networks.cpp
+            sdocker/volumes.cpp
+            sdocker/exec.cpp)
 
-SuilStatic(sdocker
-        SOURCES    ${sdocker_SOURCES}
-        VERSION    ${tools_VERSION}
-        DEFINES    ${tools_DEFINES}
-        INSTALL    ON
-        TPSCHEMA   ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json
-        DEPENDS    suiltps)
-set(sdocker_HEADERS
-        ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/docker.hpp)
-install(FILES ${sdocker_HEADERS}
+    SuilStatic(sdocker
+            SOURCES    ${sdocker_SOURCES}
+            VERSION    ${tools_VERSION}
+            DEFINES    ${tools_DEFINES}
+            INSTALL    ON
+            TPSCHEMA   ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json
+            DEPENDS    suiltps)
+    set(sdocker_HEADERS
+            ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/docker.hpp)
+    install(FILES ${sdocker_HEADERS}
         DESTINATION include/sdocker)
+endif(SUIL_BUILD_DOCKER)
