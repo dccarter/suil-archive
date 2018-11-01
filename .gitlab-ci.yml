@@ -29,6 +29,7 @@ build:dev:
        -DSUIL_BUILD_DEV_PACKAGE=ON
        -DSUIL_BUILD_EXAMPLES=OFF
        -DSUIL_BUILD_DOCKER=OFF
+       -DSUIL_BUILD_UNIT_TEST=ON
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean install
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
@@ -104,6 +105,7 @@ build:release:dev:alpine:
        -DSUIL_BUILD_DEV_PACKAGE=ON
        -DSUIL_BUILD_EXAMPLES=OFF
        -DSUIL_BUILD_DOCKER=OFF
+       -DSUIL_BUILD_UNIT_TEST=ON
        -DCMAKE_BUILD_TYPE=Release
        -DCMAKE_INSTALL_PREFIX=`pwd`/artifacts
     - make clean install
