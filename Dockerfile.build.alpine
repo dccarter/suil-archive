@@ -1,4 +1,4 @@
-FROM suilteam/mecury:latest
+FROM suilteam/mecury:alpine
 MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Copy Binaries
