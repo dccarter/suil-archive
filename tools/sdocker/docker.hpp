@@ -13,7 +13,7 @@ namespace suil::docker {
     define_log_tag(DOCKER);
     struct Docker;
 
-    struct Container : LOGGER(dtag(DOCKER)) {
+    struct Container : LOGGER(DOCKER) {
     sptr(Container)
 
         template <typename... Opts>
@@ -40,12 +40,12 @@ namespace suil::docker {
 
         json::Object create(const CreateReq& req);
 
-        json::Object inspect(const zcstring id, bool size = false);
+        json::Object inspect(const String id, bool size = false);
 
-        json::Object top(const zcstring id, const zcstring args = nullptr);
+        json::Object top(const String id, const String args = nullptr);
 
         template <typename... Args>
-        zcstring logs(const zcstring id, Args... args) {
+        String logs(const String id, Args... args) {
             LogsReq req;
             iod::zero(req);
             if constexpr (sizeof...(args)) {
@@ -61,38 +61,38 @@ namespace suil::docker {
             return Ego.logs(id, req);
         }
 
-        zcstring logs(const zcstring id, const LogsReq& req);
+        String logs(const String id, const LogsReq& req);
 
-        json::Object changes(const zcstring id);
+        json::Object changes(const String id);
 
-        void Export(const zcstring id);
+        void Export(const String id);
 
-        json::Object stats(const zcstring id, bool stream = false);
+        json::Object stats(const String id, bool stream = false);
 
-        void resize(const zcstring id, uint32_t x, uint32_t y);
+        void resize(const String id, uint32_t x, uint32_t y);
 
-        void start(const zcstring id, const zcstring detachKeys = nullptr);
+        void start(const String id, const String detachKeys = nullptr);
 
-        void stop(const zcstring id, uint64_t t = 0);
+        void stop(const String id, uint64_t t = 0);
 
-        void restart(const zcstring id, uint64_t t = 0);
+        void restart(const String id, uint64_t t = 0);
 
-        void kill(const zcstring id, const zcstring sig = nullptr);
+        void kill(const String id, const String sig = nullptr);
 
-        json::Object update(const zcstring id, const UpdateReq& request);
+        json::Object update(const String id, const UpdateReq& request);
 
-        void rename(const zcstring id, const zcstring name);
+        void rename(const String id, const String name);
 
-        void pause(const zcstring id);
+        void pause(const String id);
 
-        void unpause(const zcstring id);
+        void unpause(const String id);
 
-        json::Object wait(const zcstring id, const zcstring condition = nullptr);
+        json::Object wait(const String id, const String condition = nullptr);
 
-        void     remove(const zcstring id, const RemoveQuery& query);
+        void     remove(const String id, const RemoveQuery& query);
 
         template <typename... Args>
-        void remove(const zcstring id, Args... args) {
+        void remove(const String id, Args... args) {
             RemoveQuery req;
             iod::zero(req);
             if constexpr (sizeof...(args)) {
@@ -104,11 +104,11 @@ namespace suil::docker {
             Ego.remove(id, req);
         }
 
-        zcstring archiveInfo(const zcstring id, const zcstring path);
+        String archiveInfo(const String id, const String path);
 
-        void getArchive(const zcstring id, const zcstring path, const zcstring localDir = nullptr) {}
+        void getArchive(const String id, const String path, const String localDir = nullptr) {}
 
-        void putArchive(const zcstring id, const zcstring dstDir, const zcstring localArchive, bool force = false) {}
+        void putArchive(const String id, const String dstDir, const String localArchive, bool force = false) {}
 
         json::Object prune(const PruneQuery& query);
 
@@ -120,14 +120,14 @@ namespace suil::docker {
                 auto opts = iod::D(std::forward<Args>(args)...);
                 uint64_t u = opts.get(var(until), 0);
                 if (u) {
-                    req.until.emplace_back(utils::tozcstr(u));
+                    req.until.emplace_back(utils::tostr(u));
                 }
-                req.label = opts.get(var(label), std::vector<zcstring>{});
+                req.label = opts.get(var(label), std::vector<String>{});
             }
             return Ego.prune(req);
         }
 
-        json::Object exec(const zcstring id, const ExecCreateReq& request);
+        json::Object exec(const String id, const ExecCreateReq& request);
 
     private:
         friend struct Docker;
@@ -139,21 +139,21 @@ namespace suil::docker {
         Docker& ref;
     };
 
-    using XRegistryConfig = zstrmap<RegistryCredentials>;
-    using Filter = std::vector<zcstring>;
-    using Filters = zstrmap<Filter>;
+    using XRegistryConfig = Map<RegistryCredentials>;
+    using Filter = std::vector<String>;
+    using Filters = Map<Filter>;
 
     template <typename T>
     inline void add_Filter(Filters& filters, const char *name, T& value) {
-        zcstring tmp(name);
+        String tmp(name);
         if (filters.find(tmp) == filters.end()) {
             // add vector for filter
             filters.emplace(tmp.dup(), Filter{});
         }
-        filters[tmp].emplace_back(utils::tozcstr(value));
+        filters[tmp].emplace_back(utils::tostr(value));
     }
 
-    struct Images : LOGGER(dtag(DOCKER)) {
+    struct Images : LOGGER(DOCKER) {
     sptr(Images)
 
         inline json::Object ls(bool all = false, bool digest = false) {
@@ -174,13 +174,13 @@ namespace suil::docker {
         }
 
         template <typename... Args>
-        inline void build(const zcstring archive, const zcstring contentType, Args... args) {
+        inline void build(const String archive, const String contentType, Args... args) {
             XRegistryConfig registry;
             Ego.build(archive.peek(), contentType.peek(), registry, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
-        void build(const zcstring archive, const zcstring contentType, const XRegistryConfig& registries, Args... args) {
+        void build(const String archive, const String contentType, const XRegistryConfig& registries, Args... args) {
             BuildParams params;
             iod::zero(params);
             if constexpr (sizeof...(args)) {
@@ -190,7 +190,7 @@ namespace suil::docker {
             Ego.build(archive.peek(), contentType.peek(), registries, params);
         }
 
-        void build(const zcstring archive, const zcstring contentType, const XRegistryConfig& registries, const BuildParams& params);
+        void build(const String archive, const String contentType, const XRegistryConfig& registries, const BuildParams& params);
 
         json::Object buildPrune();
 
@@ -207,16 +207,16 @@ namespace suil::docker {
 
         void create(ImagesCreateParams& params);
 
-        json::Object inspect(const zcstring name);
+        json::Object inspect(const String name);
 
-        json::Object history(const zcstring name);
+        json::Object history(const String name);
 
-        void push(const zcstring name, const zcstring tag = nullptr);
+        void push(const String name, const String tag = nullptr);
 
-        void tag(const zcstring name, const ImagesTagParams& params);
+        void tag(const String name, const ImagesTagParams& params);
 
         template <typename... Args>
-        void tag(const zcstring name, Args... args) {
+        void tag(const String name, Args... args) {
             ImagesTagParams params;
             if constexpr (sizeof...(args)) {
                 // set values accordingly
@@ -225,10 +225,10 @@ namespace suil::docker {
             Ego.tag(name, params);
         }
 
-        json::Object remove(const zcstring name, const ImagesRemoveParams& params);
+        json::Object remove(const String name, const ImagesRemoveParams& params);
 
         template <typename... Args>
-        json::Object tag(const zcstring name, Args... args) {
+        json::Object tag(const String name, Args... args) {
             ImagesRemoveParams params;
             if constexpr (sizeof...(args)) {
                 // set values accordingly
@@ -267,9 +267,9 @@ namespace suil::docker {
             return Ego.commit(container, params);
         }
 
-        void get(const zcstring name, const char *output);
+        void get(const String name, const char *output);
 
-        void gets(const std::vector<zcstring> names, const char *output);
+        void gets(const std::vector<String> names, const char *output);
 
         void load(const char *input, bool quiet = false);
 
@@ -286,15 +286,15 @@ namespace suil::docker {
         Docker& ref;
     };
 
-    struct Networks : LOGGER(dtag(DOCKER)) {
+    struct Networks : LOGGER(DOCKER) {
     sptr(Networks)
 
         json::Object ls(const Filters& filters);
 
-        json::Object inspect(const zcstring id, const NetworksInspectParams& params);
+        json::Object inspect(const String id, const NetworksInspectParams& params);
 
         template <typename... Args>
-        json::Object inspect(const zcstring id, Args... args) {
+        json::Object inspect(const String id, Args... args) {
             NetworksInspectParams params;
             if constexpr (sizeof...(args)) {
                 utils::apply_config(params, std::forward<Args>(args)...);
@@ -302,13 +302,13 @@ namespace suil::docker {
             return Ego.inspect(id, params);
         }
 
-        void remove(const zcstring id);
+        void remove(const String id);
 
         json::Object create(const NetworksCreateReq& request);
 
-        void connect(const zcstring id, const NetworksConnectReq& request);
+        void connect(const String id, const NetworksConnectReq& request);
 
-        void disconnect(const zcstring id, const NetworksDisconnectReq& request);
+        void disconnect(const String id, const NetworksDisconnectReq& request);
 
         json::Object prune(Filters filters);
 
@@ -321,14 +321,14 @@ namespace suil::docker {
         Docker& ref;
     };
 
-    struct Volumes : LOGGER(dtag(DOCKER)) {
+    struct Volumes : LOGGER(DOCKER) {
     sptr(Volumes)
 
         json::Object ls(const Filters& filters);
 
-        json::Object inspect(const zcstring id);
+        json::Object inspect(const String id);
 
-        void remove(const zcstring id, bool force = false);
+        void remove(const String id, bool force = false);
 
         json::Object create(const VolumesCreateReq& request);
 
@@ -344,12 +344,12 @@ namespace suil::docker {
         Docker& ref;
     };
 
-    struct Exec : LOGGER(dtag(DOCKER)) {
+    struct Exec : LOGGER(DOCKER) {
     sptr(Exec)
 
-        void start(const zcstring id, const ExecStartReq& request);
-        void resize(const zcstring id, uint32_t h, uint32_t w);
-        json::Object inspect(const zcstring id);
+        void start(const String id, const ExecStartReq& request);
+        void resize(const String id, uint32_t h, uint32_t w);
+        json::Object inspect(const String id);
 
     private:
         friend struct Docker;
@@ -360,9 +360,9 @@ namespace suil::docker {
         Docker& ref;
     };
 
-    struct Docker : LOGGER(dtag(DOCKER)) {
+    struct Docker : LOGGER(DOCKER) {
     public:
-        Docker(zcstring host, int port);
+        Docker(String host, int port);
 
         template <typename... Options>
         bool connect(Options... options) {
@@ -422,8 +422,8 @@ namespace suil::docker {
 
         friend struct Images;
         friend struct Container;
-        zcstring              apiBase{nullptr};
-        zcstring              host{"localhost"};
+        String              apiBase{nullptr};
+        String              host{"localhost"};
         int                   port{4243};
         http::client::Session httpSession;
     };

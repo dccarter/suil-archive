@@ -2,7 +2,8 @@
 // Created by dc on 01/10/18.
 //
 
-#include <suil/cmdl.hpp>
+#include <suil/cmdl.h>
+#include <suil/init.h>
 #include "sapp.hpp"
 
 using namespace suil;
@@ -18,8 +19,8 @@ void cmd_GenProject(cmdl::Parser& parser) {
 
     init([&](cmdl::Cmd& cmd) {
         // get the name of the command
-        zcstring name = cmd["name"];
-        zcstring base = cmd["base"];
+        String name = cmd["name"];
+        String base = cmd["base"];
         tools::suil_InitProjectTemplate(name, base);
     });
 
@@ -39,8 +40,7 @@ int main(int argc, char *argv[])
     }
     catch (...)
     {
-        auto msg = exmsg();
-        fprintf(stderr, "error: %s\n", msg);
+        fprintf(stderr, "error: %s\n", Exception::fromCurrent().what());
     }
     return 0;
 }

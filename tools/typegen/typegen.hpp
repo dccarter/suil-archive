@@ -13,21 +13,21 @@
 namespace suil::tools {
 
     typedef decltype(iod::D(
-        prop(name,    zcstring),
-        prop(type,    zcstring),
-        prop(attribs(var(optional)), std::vector<zcstring>)
+        prop(name,    String),
+        prop(type,    String),
+        prop(attribs(var(optional)), std::vector<String>)
     )) SuilgenSchemaField;
 
     typedef decltype(iod::D(
-        prop(name,       zcstring),
+        prop(name,       String),
         prop(fields,     std::vector<SuilgenSchemaField>)
     )) SuilgenSchemaType;
 
     typedef decltype(iod::D(
-        prop(ns,           zcstring),
-        prop(includes,     std::vector<zcstring>),
-        prop(guard,        zcstring),
-        prop(extraSymbols, std::vector<zcstring>),
+        prop(ns,           String),
+        prop(includes,     std::vector<String>),
+        prop(guard,        String),
+        prop(extraSymbols, std::vector<String>),
         prop(types,        std::vector<SuilgenSchemaType>)
     )) SuilgenSchema;
 }

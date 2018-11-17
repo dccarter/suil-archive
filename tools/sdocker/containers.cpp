@@ -52,7 +52,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    json::Object Container::inspect(const zcstring id, bool size)
+    json::Object Container::inspect(const String id, bool size)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/json");
         trace("requesting resource at %s", resource());
@@ -73,7 +73,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    json::Object Container::top(const zcstring id, const zcstring args)
+    json::Object Container::top(const String id, const String args)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/top");
         trace("requesting resource at %s", resource());
@@ -94,7 +94,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    zcstring Container::logs(const zcstring id, const LogsReq& args)
+    String Container::logs(const String id, const LogsReq& args)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/logs");
         trace("requesting resource at %s", resource());
@@ -123,7 +123,7 @@ namespace suil::docker {
         return resp.getbody();
     }
 
-    json::Object Container::changes(const suil::zcstring id)
+    json::Object Container::changes(const suil::String id)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/changes");
         trace("requesting resource at %s", resource());
@@ -140,7 +140,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    void Container::Export(const suil::zcstring id)
+    void Container::Export(const suil::String id)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/export");
         trace("requesting resource at %s", resource());
@@ -153,7 +153,7 @@ namespace suil::docker {
         }
     }
 
-    json::Object Container::stats(const suil::zcstring id, bool stream)
+    json::Object Container::stats(const suil::String id, bool stream)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/stats");
         trace("requesting resource at %s", resource());
@@ -174,7 +174,7 @@ namespace suil::docker {
         return obj;
     }
 
-    void Container::resize(const suil::zcstring id, uint32_t x, uint32_t y)
+    void Container::resize(const suil::String id, uint32_t x, uint32_t y)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/resize");
         trace("requesting resource at %s", resource());
@@ -192,7 +192,7 @@ namespace suil::docker {
         }
     }
 
-    void Container::start(const suil::zcstring id, const suil::zcstring detachKeys)
+    void Container::start(const suil::String id, const suil::String detachKeys)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/start");
         trace("requesting resource at %s", resource());
@@ -209,7 +209,7 @@ namespace suil::docker {
         }
     }
 
-    void Container::stop(const suil::zcstring id, uint64_t t)
+    void Container::stop(const suil::String id, uint64_t t)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/stop");
         trace("requesting resource at %s", resource());
@@ -226,7 +226,7 @@ namespace suil::docker {
         }
     }
 
-    void Container::restart(const suil::zcstring id, uint64_t t)
+    void Container::restart(const suil::String id, uint64_t t)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/restart");
         trace("requesting resource at %s", resource());
@@ -243,7 +243,7 @@ namespace suil::docker {
         }
     }
 
-    void Container::kill(const suil::zcstring id, const suil::zcstring sig)
+    void Container::kill(const suil::String id, const suil::String sig)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/kill");
         trace("requesting resource at %s", resource());
@@ -260,7 +260,7 @@ namespace suil::docker {
         }
     }
 
-    json::Object Container::update(const suil::zcstring id, const UpdateReq &request)
+    json::Object Container::update(const suil::String id, const UpdateReq &request)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/update");
         trace("requesting resource at %s", resource());
@@ -281,7 +281,7 @@ namespace suil::docker {
         return std::move(respObj);
     }
 
-    void Container::pause(const suil::zcstring id)
+    void Container::pause(const suil::String id)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/pause");
         trace("requesting resource at %s", resource());
@@ -294,7 +294,7 @@ namespace suil::docker {
         }
     }
 
-    void Container::unpause(const suil::zcstring id)
+    void Container::unpause(const suil::String id)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/pause");
         trace("requesting resource at %s", resource());
@@ -307,7 +307,7 @@ namespace suil::docker {
         }
     }
 
-    json::Object Container::wait(const suil::zcstring id, const suil::zcstring condition)
+    json::Object Container::wait(const suil::String id, const suil::String condition)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/wait");
         trace("requesting resource at %s", resource());
@@ -328,7 +328,7 @@ namespace suil::docker {
         return std::move(respObj);
     }
 
-    void Container::remove(const suil::zcstring id, const RemoveQuery &query)
+    void Container::remove(const suil::String id, const RemoveQuery &query)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/wait");
         trace("requesting resource at %s", resource());
@@ -347,7 +347,7 @@ namespace suil::docker {
         }
     }
 
-    zcstring Container::archiveInfo(const suil::zcstring id, const suil::zcstring path)
+    String Container::archiveInfo(const suil::String id, const suil::String path)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/archive");
         trace("requesting resource at %s", resource());
@@ -367,7 +367,7 @@ namespace suil::docker {
         if (tmp.empty())
             return nullptr;
         else
-            return zcstring{tmp}.dup();
+            return String{tmp}.dup();
     }
 
     json::Object Container::prune(const PruneQuery &filters)
@@ -391,7 +391,7 @@ namespace suil::docker {
         return std::move(respObj);
     }
 
-    json::Object Container::exec(const suil::zcstring id, const ExecCreateReq &request)
+    json::Object Container::exec(const suil::String id, const ExecCreateReq &request)
     {
         auto resource = utils::catstr(ref.apiBase, "/containers/", id, "/exec");
         trace("requesting resource at %s", resource());

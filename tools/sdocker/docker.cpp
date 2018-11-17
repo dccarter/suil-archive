@@ -2,11 +2,12 @@
 // Created by dc on 28/09/18.
 //
 
+#include <suil/base64.h>
 #include "docker.hpp"
 
 namespace suil::docker {
 
-    Docker::Docker(suil::zcstring host, int port)
+    Docker::Docker(suil::String host, int port)
         : httpSession{},
           host(host.dup()),
           port(port),
@@ -24,7 +25,7 @@ namespace suil::docker {
         if (resp().empty())
         {
             // no body to decode
-            throw SuilError::create("docker request failed: ", http::status_text(resp.status()));
+            throw Exception::create("docker request failed: ", http::status_text(resp.status()));
         }
 
         RequestError e;
@@ -34,10 +35,10 @@ namespace suil::docker {
         }
         catch (...)
         {
-            throw SuilError::create("decoding docker error message failed: ", exmsg());
+            throw Exception::create("decoding docker error message failed: ", Exception::fromCurrent().what());
         }
 
-        throw SuilError::create("docker request failed: ", e.message());
+        throw Exception::create("docker request failed: ", e.message());
     }
 
     bool Docker::connect(LoginReq &params)
@@ -52,7 +53,7 @@ namespace suil::docker {
         Ego.httpSession = http::client::load(Ego.host(), Ego.port);
         // base64 encode json string
         auto paramsStr = json::encode(params);
-        httpSession.header("X-Registry-Auth", base64::encode(paramsStr));
+        httpSession.header("X-Registry-Auth", utils::base64::encode(paramsStr));
 
         return Ego.connect();
     }
@@ -70,7 +71,7 @@ namespace suil::docker {
 
         // base64 encode json string
         auto tokenStr = json::encode(token);
-        httpSession.header("X-Registry-Auth", base64::encode(tokenStr));
+        httpSession.header("X-Registry-Auth", utils::base64::encode(tokenStr));
 
         return Ego.connect(true);
     }
@@ -93,14 +94,14 @@ namespace suil::docker {
         }
         catch (...) {
             // failed to load API version
-            ierror("failed to load API version: %s", exmsg());
+            ierror("failed to load API version: %s", Exception::fromCurrent().what());
             return false;
         }
     }
 
     VersionResp Docker::version()
     {
-        zcstring resource{"/version"};
+        String resource{"/version"};
         trace("requesting resource at %s", resource());
         auto resp = http::client::get(httpSession, resource());
         trace("request resource status %d", resp.status());

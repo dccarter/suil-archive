@@ -48,7 +48,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    json::Object Volumes::inspect(const suil::zcstring id)
+    json::Object Volumes::inspect(const suil::String id)
     {
         auto resource = utils::catstr(ref.apiBase, "/volumes/", id);
         trace("requesting resource at %s", resource());
@@ -65,7 +65,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    void Volumes::remove(const suil::zcstring id, bool force)
+    void Volumes::remove(const suil::String id, bool force)
     {
         auto resource = utils::catstr(ref.apiBase, "/volumes/", id);
         trace("requesting resource at %s", resource());

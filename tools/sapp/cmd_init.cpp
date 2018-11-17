@@ -1,7 +1,7 @@
 //
 // Created by dc on 01/10/18.
 //
-
+#include <suil/file.h>
 #include "sapp.hpp"
 
 namespace suil::tools  {
@@ -14,15 +14,15 @@ namespace suil::tools  {
 
         File main(mainFile, O_WRONLY|O_CREAT|O_APPEND, 0666);
         // write stub code
-        main << "#include <suil/sys.hpp>\n"
-             << "#include <suil/cmdl.hpp>\n"
+        main << "#include <suil/init.h>\n"
+             << "#include <suil/cmdl.h>\n"
              << "\n"
              << "using namespace suil;\n"
              << "\n"
              << "int main(int argc, char *argv[])\n"
              << "{\n"
              << "    suil::init(opt(printinfo, false));\n"
-             << "    log::setup(opt(verbose,4));\n"
+             << "    log::setup(opt(verbose, 4));\n"
              << "    cmdl::Parser parser(APP_NAME, APP_VERSION, \"\");\n"
              << "\n"
              << "    try\n"
@@ -32,7 +32,7 @@ namespace suil::tools  {
              << "    }\n"
              << "    catch(...)\n"
              << "    {\n"
-             << "        fprintf(stderr, \"error: %s\\n\", exmsg());\n"
+             << "        fprintf(stderr, \"error: %s\\n\", Exception::fromCurrent().what());\n"
              << "        return EXIT_FAILURE;\n"
              << "    }\n"
              << "\n"
@@ -65,7 +65,7 @@ namespace suil::tools  {
         main.close();
     }
 
-    static void add_CMakeLists(const zcstring& name, const zcstring& basePath)
+    static void add_CMakeLists(const String& name, const String& basePath)
     {
         const char *cmakeFile = "CMakeLists.txt";
         sinfo("generating file %s ...", cmakeFile);
@@ -113,12 +113,12 @@ namespace suil::tools  {
         cmake.close();
     }
 
-    void suil_InitProjectTemplate(const zcstring& name, const zcstring& basePath)
+    void suil_InitProjectTemplate(const String& name, const String& basePath)
     {
         auto currdir = utils::fs::currdir();
         if (!utils::fs::isdirempty(currdir())) {
             // suil will not override current directory contents
-            throw SuilError::create("current directory '", currdir, "' is not empty");
+            throw Exception::create("current directory '", currdir, "' is not empty");
         }
 
         auto projectName = name.peek();
@@ -130,7 +130,7 @@ namespace suil::tools  {
         auto suilBasePath = basePath.peek();
         if (suilBasePath.empty() && utils::fs::exists(BASE_PATH)) {
             // use base path specified on project
-            suilBasePath = zcstring{BASE_PATH};
+            suilBasePath = String{BASE_PATH};
         }
 
         sinfo("initializing project %s", projectName());

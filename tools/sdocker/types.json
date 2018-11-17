@@ -2,7 +2,7 @@
   "ns": "suil::docker",
   "includes": [
     "<vector>",
-    "<suil/json.hpp>"
+    "<suil/json.h>"
   ],
   "guard": "_SUIL_DOCKER_TYPES_",
   "extraSymbols": [
@@ -13,53 +13,53 @@
     {
       "name": "LoginReq",
       "fields": [
-        {"name": "username",      "type": "zcstring"},
-        {"name": "password",      "type": "zcstring"},
-        {"name": "email",         "type": "zcstring"},
-        {"name": "serveraddress", "type": "zcstring"}
+        {"name": "username",      "type": "String"},
+        {"name": "password",      "type": "String"},
+        {"name": "email",         "type": "String"},
+        {"name": "serveraddress", "type": "String"}
       ]
     },
     {
       "name": "RegistryCredentials",
       "fields": [
-        {"name": "username",      "type": "zcstring"},
-        {"name": "password",      "type": "zcstring"}
+        {"name": "username",      "type": "String"},
+        {"name": "password",      "type": "String"}
       ]
     },
     {
       "name": "AuthToken",
       "fields": [
-        { "name":"identitytoken", "type":"zcstring"}
+        { "name":"identitytoken", "type":"String"}
       ]
     },
     {
       "name": "Error",
       "fields": [
-        {"name":"Message",  "type":"zcstring"}
+        {"name":"Message",  "type":"String"}
       ]
     },
     {
       "name": "RequestError",
       "fields": [
-        {"name":"message",  "type":"zcstring"}
+        {"name":"message",  "type":"String"}
       ]
     },
     {
       "name": "ListFilter",
       "fields": [
-        {"name":"ancestor",   "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"before",     "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"expose",     "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"exited",     "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"health",     "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"id",         "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"isolation",  "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"label",      "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"name",       "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"network",    "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"publish",    "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"status",     "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name":"volume",     "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]}
+        {"name":"ancestor",   "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"before",     "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"expose",     "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"exited",     "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"health",     "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"id",         "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"isolation",  "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"label",      "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"name",       "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"network",    "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"publish",    "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"status",     "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name":"volume",     "type":"std::vector<String>", "attribs": ["optional", "ignore"]}
       ]
     },
     {
@@ -74,10 +74,10 @@
     {
       "name": "Port",
       "fields": [
-        {"name": "IP",            "type":"zcstring", "attribs": ["optional"]},
+        {"name": "IP",            "type":"String", "attribs": ["optional"]},
         {"name": "PrivatePort",   "type":"uint16_t", "attribs": ["optional"]},
         {"name": "PublicPort",    "type":"uint16_t", "attribs": ["optional"]},
-        {"name": "Type",          "type":"zcstring", "attribs": ["optional"]}
+        {"name": "Type",          "type":"String", "attribs": ["optional"]}
       ]
     },
     {
@@ -85,21 +85,21 @@
       "fields": [
         {"name": "Platform",        "type":"json::Object", "attribs": ["optional"]},
         {"name": "Components",      "type":"json::Object", "attribs": ["optional"]},
-        {"name": "Version",         "type":"zcstring", "attribs": ["optional"]},
-        {"name": "ApiVersion",      "type":"zcstring", "attribs": ["optional"]},
-        {"name": "MinAPIVersion",   "type":"zcstring", "attribs": ["optional"]},
-        {"name": "GitCommit",       "type":"zcstring", "attribs": ["optional"]},
-        {"name": "GoVersion",       "type":"zcstring", "attribs": ["optional"]},
-        {"name": "Os",              "type":"zcstring", "attribs": ["optional"]},
-        {"name": "Arch",            "type":"zcstring", "attribs": ["optional"]},
-        {"name": "KernelVersion",   "type":"zcstring", "attribs": ["optional"]},
-        {"name": "BuildTime",       "type":"zcstring", "attribs": ["optional"]}
+        {"name": "Version",         "type":"String", "attribs": ["optional"]},
+        {"name": "ApiVersion",      "type":"String", "attribs": ["optional"]},
+        {"name": "MinAPIVersion",   "type":"String", "attribs": ["optional"]},
+        {"name": "GitCommit",       "type":"String", "attribs": ["optional"]},
+        {"name": "GoVersion",       "type":"String", "attribs": ["optional"]},
+        {"name": "Os",              "type":"String", "attribs": ["optional"]},
+        {"name": "Arch",            "type":"String", "attribs": ["optional"]},
+        {"name": "KernelVersion",   "type":"String", "attribs": ["optional"]},
+        {"name": "BuildTime",       "type":"String", "attribs": ["optional"]}
       ]
     },
     {
       "name": "HealthCheck",
       "fields": [
-        {"name": "Test",        "type":"std::vector<zcstring>",           "attribs": ["optional", "ignore"]},
+        {"name": "Test",        "type":"std::vector<String>",           "attribs": ["optional", "ignore"]},
         {"name": "Interval",    "type":"uint32_t",                        "attribs": ["optional", "ignore"]},
         {"name": "Timeout",     "type":"uint32_t",                        "attribs": ["optional", "ignore"]},
         {"name": "Retries",     "type":"uint32_t",                        "attribs": ["optional", "ignore"]},
@@ -109,21 +109,21 @@
     {
       "name": "IODeviceWeight",
       "fields": [
-        {"name": "Path",        "type":"zcstring",           "attribs": ["optional", "ignore"]},
+        {"name": "Path",        "type":"String",           "attribs": ["optional", "ignore"]},
         {"name": "Weight",      "type":"uint32_t",           "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "IODeviceRate",
       "fields": [
-        {"name": "Path",        "type":"zcstring",           "attribs": ["optional", "ignore"]},
+        {"name": "Path",        "type":"String",           "attribs": ["optional", "ignore"]},
         {"name": "Rate",        "type":"uint32_t",           "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ULimit",
       "fields": [
-        {"name": "Name",        "type":"zcstring",           "attribs": ["optional", "ignore"]},
+        {"name": "Name",        "type":"String",           "attribs": ["optional", "ignore"]},
         {"name": "Soft",        "type":"uint32_t",           "attribs": ["optional", "ignore"]},
         {"name": "Hard",        "type":"uint32_t",           "attribs": ["optional", "ignore"]}
       ]
@@ -131,28 +131,28 @@
     {
       "name": "LogConfig",
       "fields": [
-        {"name": "Type",        "type":"zcstring",           "attribs": ["optional", "ignore"]},
+        {"name": "Type",        "type":"String",           "attribs": ["optional", "ignore"]},
         {"name": "Config",      "type":"json::Object",       "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "PortMap",
       "fields": [
-        {"name": "HostIp",        "type":"zcstring",           "attribs": ["optional", "ignore"]},
-        {"name": "HostPort",      "type":"zcstring",           "attribs": ["optional", "ignore"]}
+        {"name": "HostIp",        "type":"String",           "attribs": ["optional", "ignore"]},
+        {"name": "HostPort",      "type":"String",           "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "RestartPolicy",
       "fields": [
-        {"name": "Name",              "type":"zcstring",           "attribs": ["optional", "ignore"]},
+        {"name": "Name",              "type":"String",           "attribs": ["optional", "ignore"]},
         {"name": "MaximumRetryCount", "type":"uint32_t",           "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "DriverConfig",
       "fields": [
-        {"name": "Name",              "type":"zcstring",           "attribs": ["optional", "ignore"]},
+        {"name": "Name",              "type":"String",           "attribs": ["optional", "ignore"]},
         {"name": "Options",           "type":"json::Object",       "attribs": ["optional", "ignore"]}
       ]
     },
@@ -174,13 +174,13 @@
     {
       "name": "Mount",
       "fields": [
-        {"name": "Source",        "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Destination",   "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Type",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Mode",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "Source",        "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Destination",   "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Type",          "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Mode",          "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "RW",            "type":"bool",                         "attribs": ["optional", "ignore"]},
-        {"name": "Consistency",   "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Propagation",   "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "Consistency",   "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Propagation",   "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "VolumeOptions", "type":"iod::Nullable<VolumeOptions>",  "attribs": ["optional", "ignore"]},
         {"name": "TmpfsOptions",  "type":"iod::Nullable<TmpfsOptions>",   "attribs": ["optional", "ignore"]}
       ]
@@ -188,37 +188,37 @@
     {
       "name": "MountPoint",
       "fields": [
-        {"name": "Name",          "type":"zcstring",                       "attribs": ["optional", "ignore"]},
-        {"name": "Source",        "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Destination",   "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Type",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Mode",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "Name",          "type":"String",                       "attribs": ["optional", "ignore"]},
+        {"name": "Source",        "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Destination",   "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Type",          "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Mode",          "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "RW",            "type":"bool",                         "attribs": ["optional", "ignore"]},
-        {"name": "Driver",        "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Propagation",   "type":"zcstring",                     "attribs": ["optional", "ignore"]}
+        {"name": "Driver",        "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Propagation",   "type":"String",                     "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "DeviceMapping",
       "fields": [
-        {"name": "PathOnHost",        "type":"zcstring", "attribs": ["optional", "ignore"]},
-        {"name": "PathOnContainer",   "type":"zcstring", "attribs": ["optional", "ignore"]},
-        {"name": "CgroupPermissions", "type":"zcstring", "attribs": ["optional", "ignore"]}
+        {"name": "PathOnHost",        "type":"String", "attribs": ["optional", "ignore"]},
+        {"name": "PathOnContainer",   "type":"String", "attribs": ["optional", "ignore"]},
+        {"name": "CgroupPermissions", "type":"String", "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "Address",
       "fields": [
-        {"name": "Addr",        "type":"zcstring", "attribs": ["optional", "ignore"]},
+        {"name": "Addr",        "type":"String", "attribs": ["optional", "ignore"]},
         {"name": "Prefix",      "type":"uint64_t", "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "IPAM",
       "fields": [
-        {"name": "Driver",        "type":"zcstring",                            "attribs": ["optional", "ignore"]},
-        {"name": "Config",        "type":"std::vector<iod::Object<zcstring>>",  "attribs": ["optional", "ignore"]},
-        {"name": "Options",       "type":"iod::Object<zcstring>",               "attribs": ["optional", "ignore"]}
+        {"name": "Driver",        "type":"String",                            "attribs": ["optional", "ignore"]},
+        {"name": "Config",        "type":"std::vector<iod::Object<String>>",  "attribs": ["optional", "ignore"]},
+        {"name": "Options",       "type":"iod::Object<String>",               "attribs": ["optional", "ignore"]}
       ]
     },
     {
@@ -226,7 +226,7 @@
       "fields":[
         {"name": "CpuShares",           "type":"uint32_t",                     "attribs": ["optional", "ignore"]},
         {"name": "Memory",              "type":"uint32_t",                     "attribs": ["optional", "ignore"]},
-        {"name": "CgroupParent",        "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "CgroupParent",        "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "BlkioWeight",         "type":"uint32_t",                     "attribs": ["optional", "ignore"]},
         {"name": "BlkioWeightDevice",   "type":"std::vector<IODeviceWeight>",  "attribs": ["optional", "ignore"]},
         {"name": "BlkioDeviceReadBps",  "type":"std::vector<IODeviceRate>",    "attribs": ["optional", "ignore"]},
@@ -237,10 +237,10 @@
         {"name": "CpuQuota",            "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "CpuRealtimePeriod",   "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "CpuRealtimeRuntime",  "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
-        {"name": "CpusetCpus",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "CpusetMems",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "CpusetCpus",          "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "CpusetMems",          "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "Devices",             "type":"std::vector<DeviceMapping>",   "attribs": ["optional", "ignore"]},
-        {"name": "DeviceCgroupRules",   "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "DeviceCgroupRules",   "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "DiskQuota",           "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "KernelMemory",        "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "MemoryReservation",   "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
@@ -255,68 +255,68 @@
         {"name": "CpuPercent",          "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "IOMaximumIOps",       "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "IOMaximumBandwidth",  "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
-        {"name": "MaskedPaths",         "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "ReadonlyPaths",       "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "Binds",               "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "ContainerIDFile",     "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "MaskedPaths",         "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "ReadonlyPaths",       "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "Binds",               "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "ContainerIDFile",     "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "LogConfig",           "type":"iod::Nullable<LogConfig>",     "attribs": ["optional", "ignore"]},
-        {"name": "NetworkMode",         "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "NetworkMode",         "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "PortBindings",        "type":"json::Object",                 "attribs": ["optional", "ignore"]},
         {"name": "RestartPolicy",       "type":"iod::Nullable<RestartPolicy>", "attribs": ["optional", "ignore"]},
         {"name": "AutoRemove",          "type":"bool",                         "attribs": ["optional", "ignore"]},
-        {"name": "VolumeDriver",        "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "VolumesFrom",         "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
+        {"name": "VolumeDriver",        "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "VolumesFrom",         "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
         {"name": "Mounts",              "type":"std::vector<Mount>",           "attribs": ["optional", "ignore"]},
-        {"name": "CapAdd",              "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "CapDrop",             "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "Dns",                 "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "DnsOptions",          "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "DnsSearch",           "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "ExtraHosts",          "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "GroupAdd",            "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "Links",               "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
-        {"name": "IpcMode",             "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Cgroup",              "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "CapAdd",              "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "CapDrop",             "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "Dns",                 "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "DnsOptions",          "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "DnsSearch",           "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "ExtraHosts",          "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "GroupAdd",            "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "Links",               "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
+        {"name": "IpcMode",             "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Cgroup",              "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "OomScoreAdj",         "type":"int64_t",                      "attribs": ["optional", "ignore"]},
-        {"name": "PidMode",             "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "PidMode",             "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "Privileged",          "type":"bool",                         "attribs": ["optional", "ignore"]},
         {"name": "PublishAllPorts",     "type":"bool",                         "attribs": ["optional", "ignore"]},
         {"name": "ReadonlyRootfs",      "type":"bool",                         "attribs": ["optional", "ignore"]},
-        {"name": "SecurityOpt",         "type":"std::vector<zcstring>",        "attribs": ["optional", "ignore"]},
+        {"name": "SecurityOpt",         "type":"std::vector<String>",        "attribs": ["optional", "ignore"]},
         {"name": "StorageOpt",          "type":"json::Object",                 "attribs": ["optional", "ignore"]},
         {"name": "Tmpfs",               "type":"json::Object",                 "attribs": ["optional", "ignore"]},
-        {"name": "UTSMode",             "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "UsernsMode",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "UTSMode",             "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "UsernsMode",          "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "ShmSize",             "type":"uint32_t",                     "attribs": ["optional", "ignore"]},
         {"name": "Sysctls",             "type":"json::Object",                 "attribs": ["optional", "ignore"]},
-        {"name": "Runtime",             "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "Runtime",             "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "ConsoleSize",         "type":"std::vector<uint32_t>",        "attribs": ["optional", "ignore"]},
-        {"name": "Isolation",           "type":"zcstring",                     "attribs": ["optional", "ignore"]}
+        {"name": "Isolation",           "type":"String",                     "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "EndpointIPAMConfig",
       "fields": [
-        {"name": "IPv4Address",           "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "IPv6Address",           "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "LinkLocalIPs",          "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]}
+        {"name": "IPv4Address",           "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "IPv6Address",           "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "LinkLocalIPs",          "type":"std::vector<String>", "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "EndpointSettings",
       "fields": [
         {"name": "IPAMConfig",              "type":"iod::Nullable<EndpointIPAMConfig>",              "attribs": ["optional", "ignore"]},
-        {"name": "Links",                   "type":"std::vector<zcstring>",              "attribs": ["optional", "ignore"]},
-        {"name": "Aliases",                 "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name": "NetworkID",               "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "EndpointID",              "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "Gateway",                 "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "IPv6Gateway",             "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "IPAddress",               "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "GlobalIPv6Address",       "type":"zcstring",              "attribs": ["optional", "ignore"]},
+        {"name": "Links",                   "type":"std::vector<String>",              "attribs": ["optional", "ignore"]},
+        {"name": "Aliases",                 "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name": "NetworkID",               "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "EndpointID",              "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "Gateway",                 "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "IPv6Gateway",             "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "IPAddress",               "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "GlobalIPv6Address",       "type":"String",              "attribs": ["optional", "ignore"]},
         {"name": "GlobalIPv6PrefixLen",     "type":"uint64_t",              "attribs": ["optional", "ignore"]},
         {"name": "IPPrefixLen",             "type":"uint64_t",              "attribs": ["optional", "ignore"]},
-        {"name": "MacAddress",              "type":"zcstring",              "attribs": ["optional", "ignore"]},
+        {"name": "MacAddress",              "type":"String",              "attribs": ["optional", "ignore"]},
         {"name": "DriverOpts",              "type":"json::Object",          "attribs": ["optional", "ignore"]}
       ]
     },
@@ -329,30 +329,30 @@
     {
       "name": "NetworkSettings",
       "fields": [
-        {"name": "Bridge",                "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "SandboxID",             "type":"zcstring",                  "attribs": ["optional", "ignore"]},
+        {"name": "Bridge",                "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "SandboxID",             "type":"String",                  "attribs": ["optional", "ignore"]},
         {"name": "HairpinMode",           "type":"bool",                      "attribs": ["optional", "ignore"]},
-        {"name": "LinkLocalIPv6Address",  "type":"zcstring",                  "attribs": ["optional", "ignore"]},
+        {"name": "LinkLocalIPv6Address",  "type":"String",                  "attribs": ["optional", "ignore"]},
         {"name": "LinkLocalIPv6PrefixLen","type":"uint32_t",                  "attribs": ["optional", "ignore"]},
         {"name": "Ports",                 "type":"json::Object",              "attribs": ["optional", "ignore"]},
-        {"name": "SandboxKey",            "type":"zcstring",                  "attribs": ["optional", "ignore"]},
+        {"name": "SandboxKey",            "type":"String",                  "attribs": ["optional", "ignore"]},
         {"name": "SecondaryIPAddresses",  "type":"iod::Nullable<Address>",    "attribs": ["optional", "ignore"]},
         {"name": "SecondaryIPv6Addresses","type":"iod::Nullable<Address>",    "attribs": ["optional", "ignore"]},
-        {"name": "EndpointID",            "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "Gateway",               "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "GlobalIPv6Address",     "type":"zcstring",                  "attribs": ["optional", "ignore"]},
+        {"name": "EndpointID",            "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "Gateway",               "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "GlobalIPv6Address",     "type":"String",                  "attribs": ["optional", "ignore"]},
         {"name": "GlobalIPv6PrefixLen",   "type":"uint32_t",                  "attribs": ["optional", "ignore"]},
-        {"name": "IPAddress",             "type":"zcstring",                  "attribs": ["optional", "ignore"]},
+        {"name": "IPAddress",             "type":"String",                  "attribs": ["optional", "ignore"]},
         {"name": "IPPrefixLen",           "type":"uint32_t",                  "attribs": ["optional", "ignore"]},
-        {"name": "IPv6Gateway",           "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "MacAddress",            "type":"zcstring",                  "attribs": ["optional", "ignore"]},
+        {"name": "IPv6Gateway",           "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "MacAddress",            "type":"String",                  "attribs": ["optional", "ignore"]},
         {"name": "Networks",              "type":"json::Object",              "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "State",
       "fields": [
-        {"name": "Status",        "type":"zcstring",          "attribs": ["optional", "ignore"]},
+        {"name": "Status",        "type":"String",          "attribs": ["optional", "ignore"]},
         {"name": "Running",       "type":"bool",              "attribs": ["optional", "ignore"]},
         {"name": "Paused",        "type":"bool",              "attribs": ["optional", "ignore"]},
         {"name": "Restarting",    "type":"bool",              "attribs": ["optional", "ignore"]},
@@ -360,24 +360,24 @@
         {"name": "Dead",          "type":"bool",              "attribs": ["optional", "ignore"]},
         {"name": "Pid",           "type":"int32_t",           "attribs": ["optional", "ignore"]},
         {"name": "ExitCode",      "type":"int32_t",           "attribs": ["optional", "ignore"]},
-        {"name": "Error",         "type":"zcstring",          "attribs": ["optional", "ignore"]},
-        {"name": "StartedAt",     "type":"zcstring",          "attribs": ["optional", "ignore"]},
-        {"name": "FinishedAt",    "type":"zcstring",          "attribs": ["optional", "ignore"]}
+        {"name": "Error",         "type":"String",          "attribs": ["optional", "ignore"]},
+        {"name": "StartedAt",     "type":"String",          "attribs": ["optional", "ignore"]},
+        {"name": "FinishedAt",    "type":"String",          "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "GraphDriverData",
       "fields": [
-        {"name": "Name",        "type":"zcstring",          "attribs": ["optional", "ignore"]},
+        {"name": "Name",        "type":"String",          "attribs": ["optional", "ignore"]},
         {"name": "Data",        "type":"json::Object",      "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ContainerConfig",
       "fields": [
-        {"name": "Hostname",        "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Domainname",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "User",            "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "Hostname",        "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Domainname",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "User",            "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "AttachStdin",     "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "AttachStdout",    "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "AttachStderr",    "type":"bool",                          "attribs": ["optional", "ignore"]},
@@ -385,52 +385,52 @@
         {"name": "Tty",             "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "OpenStdin",       "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "StdinOnce",       "type":"bool",                          "attribs": ["optional", "ignore"]},
-        {"name": "Env",             "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "Cmd",             "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
+        {"name": "Env",             "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "Cmd",             "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
         {"name": "Healthcheck",     "type":"HealthCheck",                   "attribs": ["optional", "ignore"]},
         {"name": "ArgsEscaped",     "type":"bool",                          "attribs": ["optional", "ignore"]},
-        {"name": "Image",           "type":"zcstring",                      "attribs": ["ignore"]},
+        {"name": "Image",           "type":"String",                      "attribs": ["ignore"]},
         {"name": "Volumes",         "type":"json::Object",                  "attribs": ["optional", "ignore"]},
-        {"name": "WorkingDir",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Entrypoint",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "MacAddress",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "OnBuild",         "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "WorkingDir",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Entrypoint",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "MacAddress",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "OnBuild",         "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "NetworkDisabled", "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "Labels",          "type":"json::Object",                  "attribs": ["optional", "ignore"]},
-        {"name": "StopSignal",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "StopSignal",      "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "StopTimeout",     "type":"uint32_t",                      "attribs": ["optional", "ignore"]},
-        {"name": "Shell",           "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]}
+        {"name": "Shell",           "type":"std::vector<String>",         "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "RootFS",
       "fields": [
-        {"name": "Type",            "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Layers",          "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "BaseLayer",       "type":"zcstring",                      "attribs": ["optional", "ignore"]}
+        {"name": "Type",            "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Layers",          "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "BaseLayer",       "type":"String",                      "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "Metadata",
       "fields": [
-        {"name": "LastTagTime",     "type":"zcstring",                      "attribs": ["optional", "ignore"]}
+        {"name": "LastTagTime",     "type":"String",                      "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ListResp",
       "fields": [
-        {"name":"Id",               "type":"zcstring",               "attribs": ["optional"]},
-        {"name": "Names",           "type":"std::vector<zcstring>",  "attribs": ["optional"]},
-        {"name": "Image",           "type":"zcstring",               "attribs": ["optional"]},
-        {"name": "ImageID",         "type":"zcstring",               "attribs": ["optional"]},
-        {"name": "Command",         "type":"zcstring",               "attribs": ["optional"]},
+        {"name":"Id",               "type":"String",               "attribs": ["optional"]},
+        {"name": "Names",           "type":"std::vector<String>",  "attribs": ["optional"]},
+        {"name": "Image",           "type":"String",               "attribs": ["optional"]},
+        {"name": "ImageID",         "type":"String",               "attribs": ["optional"]},
+        {"name": "Command",         "type":"String",               "attribs": ["optional"]},
         {"name": "Created",         "type":"int64_t",                "attribs": ["optional"]},
         {"name": "Ports",           "type":"std::vector<Port>",      "attribs": ["optional"]},
         {"name": "SizeRw",          "type":"int64_t",                "attribs": ["optional"]},
         {"name": "SizeRootFs",      "type":"int64_t",                "attribs": ["optional"]},
         {"name": "Labels",          "type":"json::Object",           "attribs": ["optional"]},
-        {"name": "State",           "type":"zcstring",               "attribs": ["optional"]},
-        {"name": "Status",          "type":"zcstring",               "attribs": ["optional"]},
+        {"name": "State",           "type":"String",               "attribs": ["optional"]},
+        {"name": "Status",          "type":"String",               "attribs": ["optional"]},
         {"name": "HostConfig",      "type":"json::Object",           "attribs": ["optional"]},
         {"name": "NetworkSettings", "type":"json::Object",           "attribs": ["optional"]},
         {"name": "Mounts",          "type":"std::vector<MountPoint>","attribs": ["optional"]}
@@ -439,9 +439,9 @@
     {
       "name": "CreateReq",
       "fields": [
-        {"name": "Hostname",        "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Domainname",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "User",            "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "Hostname",        "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Domainname",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "User",            "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "AttachStdin",     "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "AttachStdout",    "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "AttachStderr",    "type":"bool",                          "attribs": ["optional", "ignore"]},
@@ -449,21 +449,21 @@
         {"name": "Tty",             "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "OpenStdin",       "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "StdinOnce",       "type":"bool",                          "attribs": ["optional", "ignore"]},
-        {"name": "Env",             "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "Cmd",             "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
+        {"name": "Env",             "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "Cmd",             "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
         {"name": "Healthcheck",     "type":"HealthCheck",                   "attribs": ["optional", "ignore"]},
         {"name": "ArgsEscaped",     "type":"bool",                          "attribs": ["optional", "ignore"]},
-        {"name": "Image",           "type":"zcstring",                      "attribs": ["ignore"]},
+        {"name": "Image",           "type":"String",                      "attribs": ["ignore"]},
         {"name": "Volumes",         "type":"json::Object",                  "attribs": ["optional", "ignore"]},
-        {"name": "WorkingDir",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Entrypoint",      "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "MacAddress",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "OnBuild",         "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "WorkingDir",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Entrypoint",      "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "MacAddress",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "OnBuild",         "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "NetworkDisabled", "type":"bool",                          "attribs": ["optional", "ignore"]},
         {"name": "Labels",          "type":"json::Object",                  "attribs": ["optional", "ignore"]},
-        {"name": "StopSignal",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "StopSignal",      "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "StopTimeout",     "type":"uint32_t",                      "attribs": ["optional", "ignore"]},
-        {"name": "Shell",           "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
+        {"name": "Shell",           "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
         {"name": "HostConfig",      "type":"iod::Nullable<HostConfig>",     "attribs": ["optional", "ignore"]},
         {"name": "NetworkConfig",   "type":"iod::Nullable<NetworkConfig>",  "attribs": ["optional", "ignore"]}
       ]
@@ -471,32 +471,32 @@
     {
       "name": "CreateResp",
       "fields": [
-        {"name": "Id",            "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Warnings",      "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]}
+        {"name": "Id",            "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Warnings",      "type":"std::vector<String>",         "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "InspectResp",
       "fields": [
-        {"name": "Id",              "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Created",         "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Path",            "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Args",            "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
+        {"name": "Id",              "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Created",         "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Path",            "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Args",            "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
         {"name": "State",           "type":"iod::Nullable<State>",          "attribs": ["optional", "ignore"]},
-        {"name": "Image",           "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "ResolvConfPath",  "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "HostnamePath",    "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "HostsPath",       "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "LogPath",         "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "Image",           "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "ResolvConfPath",  "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "HostnamePath",    "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "HostsPath",       "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "LogPath",         "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "Node",            "type":"json::Object",                  "attribs": ["optional", "ignore"]},
-        {"name": "Name",            "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "Name",            "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "RestartCount",    "type":"uint32_t",                      "attribs": ["optional", "ignore"]},
-        {"name": "Driver",          "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "MountLabel",      "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "Platform",        "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "ProcessLabel",    "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "AppArmorProfile", "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "ExecIDs",         "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "Driver",          "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "MountLabel",      "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "Platform",        "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "ProcessLabel",    "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "AppArmorProfile", "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "ExecIDs",         "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "HostConfig",      "type":"iod::Nullable<HostConfig>",     "attribs": ["optional", "ignore"]},
         {"name": "GraphDriver",     "type":"iod::Nullable<GraphDriverData>","attribs": ["optional", "ignore"]},
         {"name": "StdinOnce",       "type":"bool",                          "attribs": ["optional", "ignore"]},
@@ -510,8 +510,8 @@
     {
       "name": "TopResp",
       "fields": [
-        {"name": "Titles",            "type":"std::vector<zcstring>",               "attribs": ["optional", "ignore"]},
-        {"name": "Processes",         "type":"std::vector<std::vector<zcstring>>",  "attribs": ["optional", "ignore"]}
+        {"name": "Titles",            "type":"std::vector<String>",               "attribs": ["optional", "ignore"]},
+        {"name": "Processes",         "type":"std::vector<std::vector<String>>",  "attribs": ["optional", "ignore"]}
       ]
     },
     {
@@ -523,13 +523,13 @@
         {"name": "since",             "type":"uint32_t",     "attribs": ["optional", "ignore"]},
         {"name": "until",             "type":"uint32_t",     "attribs": ["optional", "ignore"]},
         {"name": "timestamps",        "type":"bool",         "attribs": ["optional", "ignore"]},
-        {"name": "tail",              "type":"zcstring",     "attribs": ["optional", "ignore"]}
+        {"name": "tail",              "type":"String",     "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ChangesResp",
       "fields": [
-        {"name": "Path",            "type":"zcstring",         "attribs": ["optional", "ignore"]},
+        {"name": "Path",            "type":"String",         "attribs": ["optional", "ignore"]},
         {"name": "Kind",            "type":"uint8_t",          "attribs": ["optional", "ignore"]}
       ]
     },
@@ -538,7 +538,7 @@
       "fields":[
         {"name": "CpuShares",           "type":"uint32_t",                     "attribs": ["optional", "ignore"]},
         {"name": "Memory",              "type":"uint32_t",                     "attribs": ["optional", "ignore"]},
-        {"name": "CgroupParent",        "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "CgroupParent",        "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "BlkioWeight",         "type":"uint32_t",                     "attribs": ["optional", "ignore"]},
         {"name": "BlkioWeightDevice",   "type":"std::vector<IODeviceWeight>",  "attribs": ["optional", "ignore"]},
         {"name": "BlkioDeviceReadBps",  "type":"std::vector<IODeviceRate>",    "attribs": ["optional", "ignore"]},
@@ -549,10 +549,10 @@
         {"name": "CpuQuota",            "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "CpuRealtimePeriod",   "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "CpuRealtimeRuntime",  "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
-        {"name": "CpusetCpus",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "CpusetMems",          "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "CpusetCpus",          "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "CpusetMems",          "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "Devices",             "type":"std::vector<DeviceMapping>",   "attribs": ["optional", "ignore"]},
-        {"name": "DeviceCgroupRules",   "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "DeviceCgroupRules",   "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "DiskQuota",           "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "KernelMemory",        "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "MemoryReservation",   "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
@@ -573,7 +573,7 @@
     {
       "name": "UpdateResp",
       "fields":[
-        {"name": "Warnings",           "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]}
+        {"name": "Warnings",           "type":"std::vector<String>",         "attribs": ["optional", "ignore"]}
       ]
     },
     {
@@ -594,24 +594,24 @@
     {
       "name": "PruneQuery",
       "fields":[
-        {"name": "until",         "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "label",         "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]}
+        {"name": "until",         "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "label",         "type":"std::vector<String>",         "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "PruneResp",
       "fields":[
-        {"name": "ContainersDeleted",           "type":"std::vector<zcstring>",   "attribs": ["optional", "ignore"]},
+        {"name": "ContainersDeleted",           "type":"std::vector<String>",   "attribs": ["optional", "ignore"]},
         {"name": "SpaceReclaimed",              "type":"uint64_t",                "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ImagesFilter",
       "fields":[
-        {"name": "before",        "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "label",         "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "reference",     "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]},
-        {"name": "since",         "type":"std::vector<zcstring>",         "attribs": ["optional", "ignore"]}
+        {"name": "before",        "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "label",         "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "reference",     "type":"std::vector<String>",         "attribs": ["optional", "ignore"]},
+        {"name": "since",         "type":"std::vector<String>",         "attribs": ["optional", "ignore"]}
       ]
     },
     {
@@ -625,10 +625,10 @@
     {
       "name": "Image",
       "fields":[
-        {"name": "Id",                      "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "ParentId",                "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "RepoTags",                "type":"std::vector<zcstring>",   "attribs": ["optional", "ignore"]},
-        {"name": "RepoDigests",             "type":"std::vector<zcstring>",   "attribs": ["optional", "ignore"]},
+        {"name": "Id",                      "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "ParentId",                "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "RepoTags",                "type":"std::vector<String>",   "attribs": ["optional", "ignore"]},
+        {"name": "RepoDigests",             "type":"std::vector<String>",   "attribs": ["optional", "ignore"]},
         {"name": "Created",                 "type":"uint64_t",                "attribs": ["optional", "ignore"]},
         {"name": "Size",                    "type":"uint64_t",                "attribs": ["optional", "ignore"]},
         {"name": "SharedSize",              "type":"uint64_t",                "attribs": ["optional", "ignore"]},
@@ -640,25 +640,25 @@
     {
       "name": "ImageHistory",
       "fields":[
-        {"name": "Id",                      "type":"zcstring",                "attribs": ["optional", "ignore"]},
+        {"name": "Id",                      "type":"String",                "attribs": ["optional", "ignore"]},
         {"name": "Created",                 "type":"uint64_t",                "attribs": ["optional", "ignore"]},
-        {"name": "CreatedBy",               "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "Tags",                    "type":"std::vector<zcstring>",   "attribs": ["optional", "ignore"]},
+        {"name": "CreatedBy",               "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "Tags",                    "type":"std::vector<String>",   "attribs": ["optional", "ignore"]},
         {"name": "Size",                    "type":"uint64_t",                "attribs": ["optional", "ignore"]},
-        {"name": "Comment",                 "type":"zcstring",                "attribs": ["optional", "ignore"]}
+        {"name": "Comment",                 "type":"String",                "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "BuildParams",
       "fields":[
-        {"name": "dockerfile",              "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "t",                       "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "extrahosts",              "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "remote",                  "type":"zcstring",                "attribs": ["optional", "ignore"]},
+        {"name": "dockerfile",              "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "t",                       "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "extrahosts",              "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "remote",                  "type":"String",                "attribs": ["optional", "ignore"]},
         {"name": "q",                       "type":"bool",                    "attribs": ["optional", "ignore"]},
         {"name": "nocache",                 "type":"bool",                    "attribs": ["optional", "ignore"]},
-        {"name": "cachefrom",               "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "pull",                    "type":"zcstring",                "attribs": ["optional", "ignore"]},
+        {"name": "cachefrom",               "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "pull",                    "type":"String",                "attribs": ["optional", "ignore"]},
         {"name": "rm",                      "type":"bool",                    "attribs": ["optional", "ignore"]},
         {"name": "forcerm",                 "type":"bool",                    "attribs": ["optional", "ignore"]},
         {"name": "memory",                  "type":"uint32_t",                "attribs": ["optional", "ignore"]},
@@ -671,8 +671,8 @@
         {"name": "shmsize",                 "type":"uint32_t",                "attribs": ["optional", "ignore"]},
         {"name": "squash",                  "type":"bool",                    "attribs": ["optional", "ignore"]},
         {"name": "labels",                  "type":"json::Object",            "attribs": ["optional", "ignore"]},
-        {"name": "networkmode",             "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "platform",                "type":"zcstring",                "attribs": ["optional", "ignore"]}
+        {"name": "networkmode",             "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "platform",                "type":"String",                "attribs": ["optional", "ignore"]}
       ]
     },
     {
@@ -684,30 +684,30 @@
     {
       "name": "ImagesCreateParams",
       "fields": [
-        {"name": "fromImage",              "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "fromSrc",                "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "repo",                   "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "tag",                    "type":"zcstring",                "attribs": ["optional", "ignore"]},
-        {"name": "platform",               "type":"zcstring",                "attribs": ["optional", "ignore"]}
+        {"name": "fromImage",              "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "fromSrc",                "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "repo",                   "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "tag",                    "type":"String",                "attribs": ["optional", "ignore"]},
+        {"name": "platform",               "type":"String",                "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ImagesInspectResp",
       "fields": [
-        {"name": "Id",                    "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "RepoTags",              "type":"std::vector<zcstring>",           "attribs": ["optional", "ignore"]},
-        {"name": "RepoDigests",           "type":"std::vector<zcstring>",           "attribs": ["optional", "ignore"]},
-        {"name": "Parent",                "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Comment",               "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Created",               "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Container",             "type":"zcstring",                        "attribs": ["optional", "ignore"]},
+        {"name": "Id",                    "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "RepoTags",              "type":"std::vector<String>",           "attribs": ["optional", "ignore"]},
+        {"name": "RepoDigests",           "type":"std::vector<String>",           "attribs": ["optional", "ignore"]},
+        {"name": "Parent",                "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Comment",               "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Created",               "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Container",             "type":"String",                        "attribs": ["optional", "ignore"]},
         {"name": "ContainerConfig",       "type":"iod::Nullable<ContainerConfig>",  "attribs": ["optional", "ignore"]},
-        {"name": "DockerVersion",         "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Author",                "type":"zcstring",                        "attribs": ["optional", "ignore"]},
+        {"name": "DockerVersion",         "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Author",                "type":"String",                        "attribs": ["optional", "ignore"]},
         {"name": "Config",                "type":"iod::Nullable<ContainerConfig>",  "attribs": ["optional", "ignore"]},
-        {"name": "Os",                    "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Architecture",          "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "OsVersion",             "type":"zcstring",                        "attribs": ["optional", "ignore"]},
+        {"name": "Os",                    "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Architecture",          "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "OsVersion",             "type":"String",                        "attribs": ["optional", "ignore"]},
         {"name": "Size",                  "type":"uint64_t",                        "attribs": ["optional", "ignore"]},
         {"name": "VirtualSize",           "type":"uint64_t",                        "attribs": ["optional", "ignore"]},
         {"name": "GraphDriver",           "type":"iod::Nullable<GraphDriverData>",  "attribs": ["optional", "ignore"]},
@@ -718,20 +718,20 @@
     {
       "name": "ImagesInspectResp",
       "fields": [
-        {"name": "Id",                    "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "RepoTags",              "type":"std::vector<zcstring>",           "attribs": ["optional", "ignore"]},
-        {"name": "RepoDigests",           "type":"std::vector<zcstring>",           "attribs": ["optional", "ignore"]},
-        {"name": "Parent",                "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Comment",               "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Created",               "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Container",             "type":"zcstring",                        "attribs": ["optional", "ignore"]},
+        {"name": "Id",                    "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "RepoTags",              "type":"std::vector<String>",           "attribs": ["optional", "ignore"]},
+        {"name": "RepoDigests",           "type":"std::vector<String>",           "attribs": ["optional", "ignore"]},
+        {"name": "Parent",                "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Comment",               "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Created",               "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Container",             "type":"String",                        "attribs": ["optional", "ignore"]},
         {"name": "ContainerConfig",       "type":"iod::Nullable<ContainerConfig>",  "attribs": ["optional", "ignore"]},
-        {"name": "DockerVersion",         "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Author",                "type":"zcstring",                        "attribs": ["optional", "ignore"]},
+        {"name": "DockerVersion",         "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Author",                "type":"String",                        "attribs": ["optional", "ignore"]},
         {"name": "Config",                "type":"iod::Nullable<ContainerConfig>",  "attribs": ["optional", "ignore"]},
-        {"name": "Os",                    "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "Architecture",          "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "OsVersion",             "type":"zcstring",                        "attribs": ["optional", "ignore"]},
+        {"name": "Os",                    "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "Architecture",          "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "OsVersion",             "type":"String",                        "attribs": ["optional", "ignore"]},
         {"name": "Size",                  "type":"uint64_t",                        "attribs": ["optional", "ignore"]},
         {"name": "VirtualSize",           "type":"uint64_t",                        "attribs": ["optional", "ignore"]},
         {"name": "GraphDriver",           "type":"iod::Nullable<GraphDriverData>",  "attribs": ["optional", "ignore"]},
@@ -742,28 +742,28 @@
     {
       "name": "ImagesTagParams",
       "fields": [
-        {"name": "repo",                  "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "tag",                   "type":"zcstring",                        "attribs": ["optional", "ignore"]}
+        {"name": "repo",                  "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "tag",                   "type":"String",                        "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ImagesRemoveParams",
       "fields": [
-        {"name": "force",                  "type":"zcstring",                        "attribs": ["optional", "ignore"]},
-        {"name": "noprune",                "type":"zcstring",                        "attribs": ["optional", "ignore"]}
+        {"name": "force",                  "type":"String",                        "attribs": ["optional", "ignore"]},
+        {"name": "noprune",                "type":"String",                        "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ImagesRemoveStatus",
       "fields": [
-        {"name": "Untagged",                  "type":"zcstring",                     "attribs": ["optional", "ignore"]},
-        {"name": "Deleted",                   "type":"zcstring",                     "attribs": ["optional", "ignore"]}
+        {"name": "Untagged",                  "type":"String",                     "attribs": ["optional", "ignore"]},
+        {"name": "Deleted",                   "type":"String",                     "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "ImagesSearchParams",
       "fields": [
-        {"name": "term",                  "type":"zcstring",                     "attribs": ["optional", "ignore"]},
+        {"name": "term",                  "type":"String",                     "attribs": ["optional", "ignore"]},
         {"name": "limit",                 "type":"uint64_t",                     "attribs": ["optional", "ignore"]},
         {"name": "filters",               "type":"std::string",                  "attribs": ["optional", "ignore"]}
       ]
@@ -771,67 +771,67 @@
     {
       "name": "ImagesCommitParams",
       "fields": [
-        {"name": "container",             "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "repo",                  "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "tag",                   "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "comment",               "type":"zcstring",                      "attribs": ["optional", "ignore"]},
-        {"name": "author",                "type":"zcstring",                      "attribs": ["optional", "ignore"]},
+        {"name": "container",             "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "repo",                  "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "tag",                   "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "comment",               "type":"String",                      "attribs": ["optional", "ignore"]},
+        {"name": "author",                "type":"String",                      "attribs": ["optional", "ignore"]},
         {"name": "pause",                 "type":"bool",                          "attribs": ["optional", "ignore"]},
-        {"name": "changes",               "type":"zcstring",                      "attribs": ["optional", "ignore"]}
+        {"name": "changes",               "type":"String",                      "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "NetworksInspectParams",
       "fields": [
         {"name": "verbose",               "type":"bool",                          "attribs": ["optional", "ignore"]},
-        {"name": "scope",                 "type":"zcstring",                      "attribs": ["optional", "ignore"]}
+        {"name": "scope",                 "type":"String",                      "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "NetworksCreateReq",
       "fields": [
-        {"name": "Name",                  "type":"zcstring",                          "attribs": ["optional", "ignore"]},
+        {"name": "Name",                  "type":"String",                          "attribs": ["optional", "ignore"]},
         {"name": "CheckDuplicate",        "type":"bool",                              "attribs": ["optional", "ignore"]},
-        {"name": "Driver",                "type":"zcstring",                          "attribs": ["optional", "ignore"]},
+        {"name": "Driver",                "type":"String",                          "attribs": ["optional", "ignore"]},
         {"name": "Internal",              "type":"bool",                              "attribs": ["optional", "ignore"]},
         {"name": "Ingress",               "type":"bool",                              "attribs": ["optional", "ignore"]},
         {"name": "Attachable",            "type":"bool",                              "attribs": ["optional", "ignore"]},
         {"name": "IPAM",                  "type":"iod::Nullable<IPAM>",               "attribs": ["optional", "ignore"]},
         {"name": "EnableIPv6",            "type":"bool",                              "attribs": ["optional", "ignore"]},
-        {"name": "Options",               "type":"iod::Object<zcstring>",             "attribs": ["optional", "ignore"]},
-        {"name": "Labels",                "type":"iod::Object<zcstring>",             "attribs": ["optional", "ignore"]}
+        {"name": "Options",               "type":"iod::Object<String>",             "attribs": ["optional", "ignore"]},
+        {"name": "Labels",                "type":"iod::Object<String>",             "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "NetworksConnectReq",
       "fields": [
-        {"name": "Container",           "type":"zcstring",                          "attribs": ["optional", "ignore"]},
+        {"name": "Container",           "type":"String",                          "attribs": ["optional", "ignore"]},
         {"name": "EndpointConfig",      "type":"iod::Nullable<EndpointSettings>",   "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "VolumesCreateReq",
       "fields": [
-        {"name": "Name",            "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "Driver",          "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "DriverOpts",      "type":"iod::Object<zcstring>",     "attribs": ["optional", "ignore"]},
-        {"name": "Labels",          "type":"iod::Object<zcstring>",     "attribs": ["optional", "ignore"]}
+        {"name": "Name",            "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "Driver",          "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "DriverOpts",      "type":"iod::Object<String>",     "attribs": ["optional", "ignore"]},
+        {"name": "Labels",          "type":"iod::Object<String>",     "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "NetworksDisconnectReq",
       "fields": [
-        {"name": "Container",                  "type":"zcstring",                         "attribs": ["optional", "ignore"]},
+        {"name": "Container",                  "type":"String",                         "attribs": ["optional", "ignore"]},
         {"name": "Force",                      "type":"bool",                             "attribs": ["optional", "ignore"]}
       ]
     },
     {
       "name": "VolumesCreateReq",
       "fields": [
-        {"name": "Name",            "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "Driver",          "type":"zcstring",                  "attribs": ["optional", "ignore"]},
-        {"name": "DriverOpts",      "type":"iod::Object<zcstring>",     "attribs": ["optional", "ignore"]},
-        {"name": "Labels",          "type":"iod::Object<zcstring>",     "attribs": ["optional", "ignore"]}
+        {"name": "Name",            "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "Driver",          "type":"String",                  "attribs": ["optional", "ignore"]},
+        {"name": "DriverOpts",      "type":"iod::Object<String>",     "attribs": ["optional", "ignore"]},
+        {"name": "Labels",          "type":"iod::Object<String>",     "attribs": ["optional", "ignore"]}
       ]
     },
     {
@@ -840,13 +840,13 @@
         {"name": "AttachStdin",           "type":"bool",                  "attribs": ["optional", "ignore"]},
         {"name": "AttachStdout",          "type":"bool",                  "attribs": ["optional", "ignore"]},
         {"name": "AttachStderr",          "type":"bool",                  "attribs": ["optional", "ignore"]},
-        {"name": "DetachKeys",            "type":"zcstring",              "attribs": ["optional", "ignore"]},
+        {"name": "DetachKeys",            "type":"String",              "attribs": ["optional", "ignore"]},
         {"name": "Tty",                   "type":"bool",                  "attribs": ["optional", "ignore"]},
-        {"name": "Env",                   "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
-        {"name": "Cmd",                   "type":"std::vector<zcstring>", "attribs": ["optional", "ignore"]},
+        {"name": "Env",                   "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
+        {"name": "Cmd",                   "type":"std::vector<String>", "attribs": ["optional", "ignore"]},
         {"name": "Privileged",            "type":"bool",                  "attribs": ["optional", "ignore"]},
-        {"name": "User",                  "type":"zcstring",              "attribs": ["optional", "ignore"]},
-        {"name": "WorkingDir",            "type":"zcstring",              "attribs": ["optional", "ignore"]}
+        {"name": "User",                  "type":"String",              "attribs": ["optional", "ignore"]},
+        {"name": "WorkingDir",            "type":"String",              "attribs": ["optional", "ignore"]}
       ]
     },
     {

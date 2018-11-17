@@ -6,7 +6,7 @@
 
 namespace suil::docker {
 
-    void Exec::start(const suil::zcstring id, const ExecStartReq &request)
+    void Exec::start(const suil::String id, const ExecStartReq &request)
     {
         auto resource = utils::catstr(ref.apiBase, "/exec/", id, "/start");
         trace("requesting resource at %s", resource());
@@ -23,7 +23,7 @@ namespace suil::docker {
         }
     }
 
-    void Exec::resize(const suil::zcstring id, uint32_t h, uint32_t w)
+    void Exec::resize(const suil::String id, uint32_t h, uint32_t w)
     {
         auto resource = utils::catstr(ref.apiBase, "/exec/", id, "/resize");
         trace("requesting resource at %s", resource());
@@ -41,7 +41,7 @@ namespace suil::docker {
         }
     }
 
-    json::Object Exec::inspect(const suil::zcstring id)
+    json::Object Exec::inspect(const suil::String id)
     {
         auto resource = utils::catstr(ref.apiBase, "/exec/", id, "/json");
         trace("requesting resource at %s", resource());

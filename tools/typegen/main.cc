@@ -2,14 +2,16 @@
 // Created by dc on 28/09/18.
 //
 
-#include <suil/cmdl.hpp>
+#include <suil/cmdl.h>
+#include <suil/init.h>
 #include <suil/json.h>
+#include <suil/file.h>
 #include "typegen.hpp"
 
 
 using namespace suil;
 
-static void gen_Types(suil::zcstring& in, suil::zcstring& out);
+static void gen_Types(suil::String& in, suil::String& out);
 
 void cmd_generate(cmdl::Parser& parser) {
     cmdl::Cmd gen{"gen", "Generate type base of json file"};
@@ -21,14 +23,14 @@ void cmd_generate(cmdl::Parser& parser) {
                      'o', false};
 
     gen([&](cmdl::Cmd& cmd){
-        zcstring in = cmd["input"];
+        String in = cmd["input"];
         if (in.empty()) {
             // fail immediately
             fprintf(stderr, "error: input must be a valid filenamess\n");
             exit(EXIT_FAILURE);
         }
 
-        zcstring out = cmd["output"];
+        String out = cmd["output"];
         gen_Types(in, out);
     });
 
@@ -48,8 +50,7 @@ int main(int argc, char *argv[])
     }
     catch (...)
     {
-        auto msg = exmsg();
-        fprintf(stderr, "error: %s\n", msg);
+        fprintf(stderr, "error: %s\n", Exception::fromCurrent().what());
         exit(EXIT_FAILURE);
     }
     return 0;
@@ -62,7 +63,7 @@ namespace suil::tools  {
         if (!utils::fs::exists(schemaFile))
         {
             // cannot generate from non-existent file
-            throw SuilError::create(
+            throw Exception::create(
                     "input schema file '", schemaFile, "' does not exist");
         }
 
@@ -78,8 +79,8 @@ namespace suil::tools  {
 
     static void Schema_symbols(SuilgenSchema& schema, File& out)
     {
-        zstrmap<bool> added;
-        auto addSymbol = [&](const zcstring& name) {
+        Map<bool> added;
+        auto addSymbol = [&](const String& name) {
             if (added.find(name) != added.end())
                 return;
 
@@ -183,11 +184,11 @@ namespace suil::tools  {
     }
 }
 
-void gen_Types(suil::zcstring& in, suil::zcstring& out)
+void gen_Types(suil::String& in, suil::String& out)
 {
     auto outputFile = out.peek();
     if (outputFile.empty()) {
-        outputFile = utils::catstr(in, ".hpp");
+        outputFile = utils::catstr(in, ".h");
     }
 
     // load schema

@@ -27,7 +27,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    json::Object Networks::inspect(const suil::zcstring id, const NetworksInspectParams &params)
+    json::Object Networks::inspect(const suil::String id, const NetworksInspectParams &params)
     {
         auto resource = utils::catstr(ref.apiBase, "/networks/", id);
         trace("requesting resource at %s", resource());
@@ -48,7 +48,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    void Networks::remove(const suil::zcstring id)
+    void Networks::remove(const suil::String id)
     {
         auto resource = utils::catstr(ref.apiBase, "/networks/", id);
         trace("requesting resource at %s", resource());
@@ -82,7 +82,7 @@ namespace suil::docker {
         return respObj;
     }
 
-    void Networks::connect(const suil::zcstring id, const NetworksConnectReq &request)
+    void Networks::connect(const suil::String id, const NetworksConnectReq &request)
     {
         auto resource = utils::catstr(ref.apiBase, "/networks/", id, "/connect");
         trace("requesting resource at %s", resource());
@@ -99,7 +99,7 @@ namespace suil::docker {
         }
     }
 
-    void Networks::disconnect(const suil::zcstring id, const NetworksDisconnectReq &request)
+    void Networks::disconnect(const suil::String id, const NetworksDisconnectReq &request)
     {
         auto resource = utils::catstr(ref.apiBase, "/networks/", id, "/disconnect");
         trace("requesting resource at %s", resource());

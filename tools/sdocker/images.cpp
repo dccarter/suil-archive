@@ -30,12 +30,12 @@ namespace suil::docker {
     }
 
     void Images::build(
-            const suil::zcstring archive, const suil::zcstring contentType, const XRegistryConfig &registries,
+            const suil::String archive, const suil::String contentType, const XRegistryConfig &registries,
             const BuildParams &params)
     {
         if (!utils::fs::exists(archive())) {
             // archive does not exits
-            throw SuilError::create("build archive '", archive, "' does not exist");
+            throw Exception::create("build archive '", archive, "' does not exist");
         }
 
         auto resource = utils::catstr(ref.apiBase, "/build");
@@ -98,7 +98,7 @@ namespace suil::docker {
         }
     }
 
-    json::Object Images::inspect(const suil::zcstring name)
+    json::Object Images::inspect(const suil::String name)
     {
         auto resource = utils::catstr(ref.apiBase, "/images/", name, "/json");
 
@@ -116,7 +116,7 @@ namespace suil::docker {
         return std::move(respObj);
     }
 
-    json::Object Images::history(const suil::zcstring name)
+    json::Object Images::history(const suil::String name)
     {
         auto resource = utils::catstr(ref.apiBase, "/images/", name, "/history");
 
@@ -134,7 +134,7 @@ namespace suil::docker {
         return std::move(respObj);
     }
 
-    void Images::push(const suil::zcstring name, const suil::zcstring tag)
+    void Images::push(const suil::String name, const suil::String tag)
     {
         auto resource = utils::catstr(ref.apiBase, "/images/", name, "/push");
 
@@ -151,7 +151,7 @@ namespace suil::docker {
         }
     }
 
-    void Images::tag(const suil::zcstring name, const ImagesTagParams &params)
+    void Images::tag(const suil::String name, const ImagesTagParams &params)
     {
         auto resource = utils::catstr(ref.apiBase, "/images/", name, "/tag");
 
@@ -168,7 +168,7 @@ namespace suil::docker {
         }
     }
 
-    json::Object Images::remove(const suil::zcstring name, const ImagesRemoveParams &params)
+    json::Object Images::remove(const suil::String name, const ImagesRemoveParams &params)
     {
         auto resource = utils::catstr(ref.apiBase, "/images/", name);
 
@@ -253,14 +253,14 @@ namespace suil::docker {
         return std::move(respObj);
     }
 
-    void Images::get(const suil::zcstring name, const char *output)
+    void Images::get(const suil::String name, const char *output)
     {
         auto resource = utils::catstr(ref.apiBase, "/images/", name, "/get");
 
         trace("requesting resource at %s", resource());
         if (utils::fs::exists(output)) {
             // cannot override existing file
-            throw SuilError::create("file '", output, "' already exists");
+            throw Exception::create("file '", output, "' already exists");
         }
 
         http::client::FileOffload offload(output);
@@ -273,24 +273,24 @@ namespace suil::docker {
         }
     }
 
-    void Images::gets(const std::vector<suil::zcstring> names, const char *output)
+    void Images::gets(const std::vector<suil::String> names, const char *output)
     {
         auto resource = utils::catstr(ref.apiBase, "/images/get");
 
         trace("requesting resource at %s", resource());
         if (utils::fs::exists(output)) {
             // cannot override existing file
-            throw SuilError::create("file '", output, "' already exists");
+            throw Exception::create("file '", output, "' already exists");
         }
 
-        zbuffer tmp(64);
+        OBuffer tmp(64);
         for (auto& name: names) {
             tmp << name;
             if (name != names.back())
                 tmp << ",";
         }
 
-        zcstring param(tmp);
+        String param(tmp);
         http::client::FileOffload offload(output);
         auto resp = http::client::get(offload, ref.httpSession, resource(), [&](http::client::Request &req) {
             Docker::arg(req, "names", param);
@@ -308,7 +308,7 @@ namespace suil::docker {
     {
         if (!utils::fs::exists(input)) {
             // input file must exist
-            throw SuilError::create("Images::load input file '", input, "' does not exist");
+            throw Exception::create("Images::load input file '", input, "' does not exist");
         }
 
         auto resource = utils::catstr(ref.apiBase, "/images/load");

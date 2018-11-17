@@ -276,6 +276,8 @@ namespace iod {
 
     template<>
     inline json_internals::json_parser& json_internals::json_parser::fill<suil::String>(suil::String& s) {
+        Ego >> '"';
+
         int start = pos;
         int end = pos;
 
@@ -293,7 +295,7 @@ namespace iod {
                 end++;
         }
         s = suil::String(str.data() + start, (size_t)(end-start), false).dup();
-        pos = end;
+        pos = end+1;
         return *this;
     }
 

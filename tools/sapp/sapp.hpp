@@ -13,6 +13,6 @@ namespace suil::tools {
      * @details Generate a project template using the given
      * generation parameters
      */
-    void suil_InitProjectTemplate(const zcstring& name, const zcstring& basePath);
+    void suil_InitProjectTemplate(const String& name, const String& basePath);
 }
 #endif //SUIL_SUIL_HPP
