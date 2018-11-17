@@ -101,6 +101,7 @@ static void tcpconn_init(struct mill_tcpconn *conn, int fd) {
     conn->ifirst = 0;
     conn->ilen = 0;
     conn->olen = 0;
+    conn->buffered = 1;
 }
 
 struct mill_tcpsock_ *mill_tcplisten_(ipaddr addr, int backlog) {
@@ -551,6 +552,19 @@ void mill_tcpshutdown_(struct mill_tcpsock_ *s, int how) {
         int rc = shutdown(c->fd, how);
         mill_assert(rc == 0 || errno == ENOTCONN);
     }
+}
+
+void mill_tcpbuffering_(struct mill_tcpsock_ *s, int on, int64_t deadline) {
+    // only supported on socket connections
+    if (s->type != MILL_TCPCONN)
+        mill_panic("trying to receive from an unconnected socket");
+    struct mill_tcpconn *conn = (struct mill_tcpconn *) s;
+    if (conn->buffered && !on) {
+        // buffered connection, turning off
+        tcpflush(s, deadline);
+    }
+    // toggle buffering
+    conn->buffered = on? 1 : 0;
 }
 
 void mill_tcpclose_(struct mill_tcpsock_ *s) {

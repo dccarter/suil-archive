@@ -8,7 +8,7 @@
 #include <openssl/bn.h>
 #include <openssl/ecdsa.h>
 
-#include "crypto.hpp"
+#include "crypto.h"
 
 namespace suil {
 
@@ -345,7 +345,7 @@ namespace suil {
                 return p != nullptr;
             }
 
-            suil::zcstring encode(const privkey_bin& key) {
+            suil::String encode(const privkey_bin& key) {
                 netaddr_bin addr{};
                 char out[BASE58_KEY_MAX_LEN];
                 char *p{nullptr};
@@ -361,10 +361,10 @@ namespace suil {
                 base58Checksum(addr.csum(), &addr.bin(), (1 + SUIL_PUBKEY_LEN));
                 p = encode_base58(out, BASE58_KEY_MAX_LEN, &addr.bin(), sizeof(addr));
 
-                return zcstring{p}.dup();
+                return String{p}.dup();
             }
 
-            suil::zcstring encode(const pubkey_bin& key) {
+            suil::String encode(const pubkey_bin& key) {
                 netaddr_bin addr{};
                 char out[BASE58_KEY_MAX_LEN];
                 char *p{nullptr};
@@ -377,24 +377,24 @@ namespace suil {
                 base58Checksum(addr.csum(), &addr.bin(), (1 + SUIL_PUBKEY_LEN));
                 p = encode_base58(out, BASE58_KEY_MAX_LEN, &addr.bin(), sizeof(addr));
 
-                return zcstring{p}.dup();
+                return String{p}.dup();
             }
 
-            suil::zcstring encode(const Address& addr) {
+            suil::String encode(const Address& addr) {
                 char out[BASE58_ADDR_MAX_LEN];
                 char *p = encode_base58(out, BASE58_KEY_MAX_LEN, &addr.cbin(), addr.size());
-                return zcstring{p}.dup();
+                return String{p}.dup();
             }
 
-            suil::zcstring encode(const netaddr_bin& addr) {
+            suil::String encode(const netaddr_bin& addr) {
                 char out[BASE58_KEY_MAX_LEN];
                 char *p{nullptr};
                 p =  encode_base58(out, BASE58_ADDR_MAX_LEN,
                                    &addr.cbin(), sizeof(addr));
-                return zcstring{p}.dup();
+                return String{p}.dup();
             }
 
-            suil::zcstring encode(const address_bin& ripemd) {
+            suil::String encode(const address_bin& ripemd) {
                 char out[BASE58_ADDR_MAX_LEN];
                 char *p{nullptr};
                 address_bin tmp;
@@ -402,10 +402,10 @@ namespace suil {
                 base58Checksum(tmp.csum(), &tmp.cbin(), (1 + RIPEMD160_DIGEST_LENGTH));
                 // encode the ripemd160
                 p = encode_base58(out, BASE58_ADDR_MAX_LEN, &tmp.cbin(), sizeof(tmp));
-                return zcstring{p}.dup();
+                return String{p}.dup();
             }
 
-            bool decode(const suil::zcstring &b58, pubkey_bin &pub) {
+            bool decode(const suil::String &b58, pubkey_bin &pub) {
                 size_t keylen;
                 netaddr_bin addr{};
                 uint8_t csum[4];
@@ -449,7 +449,7 @@ namespace suil {
                 return status;
             }
 
-            bool decode(const suil::zcstring &b58, privkey_bin &priv) {
+            bool decode(const suil::String &b58, privkey_bin &priv) {
                 size_t keylen;
                 netaddr_bin addr{};
                 uint8_t csum[4];
@@ -493,7 +493,7 @@ namespace suil {
                 return status;
             }
 
-            bool decode(const suil::zcstring &b58, privkey_bin& priv, pubkey_bin &pub) {
+            bool decode(const suil::String &b58, privkey_bin& priv, pubkey_bin &pub) {
                 size_t keylen;
                 uint8_t *pubkey, *privkey;
                 netaddr_bin addr{};
@@ -573,7 +573,7 @@ namespace suil {
                 return status;
             }
 
-            bool decode(const suil::zcstring& b58, address_bin& addr, bool vcs) {
+            bool decode(const suil::String& b58, address_bin& addr, bool vcs) {
                 uint8_t buf[1 + RIPEMD160_DIGEST_LENGTH + 4];
                 uint8_t csum[4];
                 BIGNUM  bn{};

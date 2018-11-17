@@ -2,13 +2,13 @@
 // Created by dc on 3/21/18.
 //
 
-#include <suil/sql/pgsql.hpp>
+#include <suil/sql/pgsql.h>
 
 namespace suil::sql {
 
-    PGSQLStatement PgSqlConnection::operator()(zbuffer& req) {
+    PGSQLStatement PgSqlConnection::operator()(OBuffer& req) {
         /* temporary zero copy string */
-        zcstring tmp(req, false);
+        String tmp(req, false);
         trace("%s", tmp());
 
         auto it = stmt_cache.find(tmp);
@@ -17,7 +17,7 @@ namespace suil::sql {
         }
 
         /* statement not cached, create new */
-        zcstring key(req);
+        String key(req);
         /* the key will be copied to statement so it won't be delete
          * when the statement is deleted */
         auto ret = stmt_cache.insert(it,
@@ -29,7 +29,7 @@ namespace suil::sql {
 
     PGSQLStatement PgSqlConnection::operator()(const char *req) {
         /* temporary zero copy string */
-        zcstring tmp(req);
+        String tmp(req);
         trace("%s", tmp());
 
         auto it = stmt_cache.find(tmp);
@@ -37,7 +37,7 @@ namespace suil::sql {
             return it->second;
         }
 
-        zbuffer breq;
+        OBuffer breq;
         breq << req;
         return (*this)(breq);
     }
@@ -73,13 +73,16 @@ namespace suil::sql {
     }
 
     bool PgSqlTransaction::begin() {
-        if (Ego.valid) return Ego("BEGIN;");
+        if (!Ego.valid) {
+            Ego.valid = true;
+            return Ego("BEGIN;");
+        }
         return false;
     }
 
     bool PgSqlTransaction::commit() {
         if (Ego.valid) {
-            Ego.valid = true;
+            Ego.valid = false;
             return Ego("COMMIT;");
         }
         return false;
@@ -104,7 +107,7 @@ namespace suil::sql {
     }
 
     bool PgSqlTransaction::release(const char *name) {
-        if (Ego.valid) return Ego("RELEASE SAVEPOINT $1", name);
+        if (Ego.valid) return Ego("RELEASE SAVEPOINT $1;", name);
         return false;
     }
 
@@ -128,17 +131,30 @@ namespace suil::sql {
     }
 
     PgSqlDb::Connection& PgSqlDb::connection() {
-        PGconn *conn;
+        PGconn *conn{nullptr};
         if (conns.empty()) {
             /* open a new Connection */
-            conn = open();
+            int y{2};
+            do {
+                conn = open();
+                if (conn) break;
+                yield();
+            } while (conns.empty() && y--);
         }
-        else {
-            conn_handle_t h = conns.back();
-            /* cancel Connection expiry */
-            h.alive = -1;
-            conn = h.conn;
-            conns.pop_back();
+
+        if (conn == nullptr){
+            // try find connection from cached list
+            if(!conns.empty()){
+                conn_handle_t h = conns.back();
+                /* cancel Connection expiry */
+                h.alive = -1;
+                conn = h.conn;
+                conns.pop_back();
+            }
+            else {
+                // connection limit reach
+                throw Exception::create("Postgres SQL connection limit reached");
+            }
         }
 
         Connection *c = new Connection(
@@ -153,8 +169,9 @@ namespace suil::sql {
         PGconn *conn;
         conn = PQconnectdb(conn_str.data());
         if (conn == nullptr || (PQstatus(conn) != CONNECTION_OK)) {
-            ierror("CONNECT: %s", PQerrorMessage(conn));
-            throw std::runtime_error("connecting to database failed");
+            trace("CONNECT: %s", PQerrorMessage(conn));
+            if (conn) PQfinish(conn);
+            return nullptr;
         }
 
         if (async) {

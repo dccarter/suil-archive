@@ -5,7 +5,7 @@
 #ifndef SUIL_SUIL_HPP
 #define SUIL_SUIL_HPP
 
-#include <suil/sys.hpp>
+#include <suil/utils.h>
 
 namespace suil::tools {
 

@@ -5,7 +5,7 @@
 
 #include "catch/catch.hpp"
 
-#include <suil/net.hpp>
+#include <suil/net.h>
 #include <suil/config.hpp>
 
 TEST_CASE("Suil Version Test", "[version]") {

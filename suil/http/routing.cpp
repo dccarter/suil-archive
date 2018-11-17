@@ -2,7 +2,7 @@
 // Created by dc on 28/06/17.
 //
 
-#include <suil/http/routing.hpp>
+#include <suil/http/routing.h>
 
 namespace suil {
 
@@ -13,7 +13,7 @@ namespace suil {
             {
                 if (!x)
                     continue;
-                node_t* child = &nodes_[x];
+                node_t* child = &m_nodes[x];
                 optimize_node(child);
             }
             if (n->children.empty())
@@ -21,7 +21,7 @@ namespace suil {
             bool merge_with_child = true;
             for(auto& kv : n->children)
             {
-                node_t* child = &nodes_[kv.second];
+                node_t* child = &m_nodes[kv.second];
                 if (!child->issimple())
                 {
                     merge_with_child = false;
@@ -33,7 +33,7 @@ namespace suil {
                 decltype(n->children) merged;
                 for(auto& kv : n->children)
                 {
-                    node_t* child = &nodes_[kv.second];
+                    node_t* child = &m_nodes[kv.second];
                     for(auto& child_kv : child->children)
                     {
                         merged[kv.first + child_kv.first] = child_kv.second;
@@ -46,7 +46,7 @@ namespace suil {
             {
                 for(auto& kv : n->children)
                 {
-                    node_t* child = &nodes_[kv.second];
+                    node_t* child = &m_nodes[kv.second];
                     optimize_node(child);
                 }
             }
@@ -91,7 +91,7 @@ namespace suil {
                     if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->push(value);
-                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)suil::detail::ParamType::INT]], eptr - req_url.data(), params);
+                        auto ret = find(req_url, &m_nodes[node->param_childrens[(int)suil::detail::ParamType::INT]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->pop(value);
                     }
@@ -109,7 +109,7 @@ namespace suil {
                     if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->push(value);
-                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)suil::detail::ParamType::UINT]], eptr - req_url.data(), params);
+                        auto ret = find(req_url, &m_nodes[node->param_childrens[(int)suil::detail::ParamType::UINT]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->pop(value);
                     }
@@ -127,7 +127,7 @@ namespace suil {
                     if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->push(value);
-                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)suil::detail::ParamType::DOUBLE]], eptr - req_url.data(), params);
+                        auto ret = find(req_url, &m_nodes[node->param_childrens[(int)suil::detail::ParamType::DOUBLE]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->pop(value);
                     }
@@ -147,7 +147,7 @@ namespace suil {
                 {
                     auto sv = req_url.substr(pos, epos-pos);
                     params->push(sv);
-                    auto ret = find(req_url, &nodes_[node->param_childrens[(int)suil::detail::ParamType::STRING]], epos, params);
+                    auto ret = find(req_url, &m_nodes[node->param_childrens[(int)suil::detail::ParamType::STRING]], epos, params);
                     update_found(ret);
                     params->pop(sv);
                 }
@@ -161,7 +161,7 @@ namespace suil {
                 {
                     auto sv = req_url.substr(pos, epos-pos);
                     params->push(sv);
-                    auto ret = find(req_url, &nodes_[node->param_childrens[(int)suil::detail::ParamType::PATH]], epos, params);
+                    auto ret = find(req_url, &m_nodes[node->param_childrens[(int)suil::detail::ParamType::PATH]], epos, params);
                     update_found(ret);
                     params->pop(sv);
                 }
@@ -170,7 +170,7 @@ namespace suil {
             for(auto& kv : node->children)
             {
                 const std::string& fragment = kv.first;
-                const node_t* child = &nodes_[kv.second];
+                const node_t* child = &m_nodes[kv.second];
 
                 if (req_url.compare(pos, fragment.size(), fragment) == 0)
                 {
@@ -209,12 +209,12 @@ namespace suil {
                     {
                         if (url.compare(i, x.name.size(), x.name) == 0)
                         {
-                            if (!nodes_[idx].param_childrens[(int)x.type])
+                            if (!m_nodes[idx].param_childrens[(int)x.type])
                             {
                                 auto new_node_idx = new_node();
-                                nodes_[idx].param_childrens[(int)x.type] = new_node_idx;
+                                m_nodes[idx].param_childrens[(int)x.type] = new_node_idx;
                             }
-                            idx = nodes_[idx].param_childrens[(int)x.type];
+                            idx = m_nodes[idx].param_childrens[(int)x.type];
                             i += x.name.size();
                             break;
                         }
@@ -225,17 +225,17 @@ namespace suil {
                 else
                 {
                     std::string piece(&c, 1);
-                    if (!nodes_[idx].children.count(piece))
+                    if (!m_nodes[idx].children.count(piece))
                     {
                         auto new_node_idx = new_node();
-                        nodes_[idx].children.emplace(piece, new_node_idx);
+                        m_nodes[idx].children.emplace(piece, new_node_idx);
                     }
-                    idx = nodes_[idx].children[piece];
+                    idx = m_nodes[idx].children[piece];
                 }
             }
-            if (nodes_[idx].rule_index)
+            if (m_nodes[idx].rule_index)
                 throw std::runtime_error(("handler already exists for " + url).c_str());
-            nodes_[idx].rule_index = rule_index;
+            m_nodes[idx].rule_index = rule_index;
         }
 
         void Trie::debug_node_print(std::string &dbpr, node_t *n, int level) {
@@ -263,20 +263,20 @@ namespace suil {
                             break;
                     }
 
-                    debug_node_print(dbpr, &nodes_[n->param_childrens[i]], level + 1);
+                    debug_node_print(dbpr, &m_nodes[n->param_childrens[i]], level + 1);
                 }
             }
             for (auto &kv : n->children) {
                 dbpr.append(2 * level, ' ');
                 dbpr.append(kv.first.c_str());
-                debug_node_print(dbpr, &nodes_[kv.second], level + 1);
+                debug_node_print(dbpr, &m_nodes[kv.second], level + 1);
             }
         }
 
 
         void Router::validate() {
-            trie_.validate();
-            for(auto& rule : rules_)
+            m_trie.validate();
+            for(auto& rule : m_rules)
             {
                 if (rule)
                 {
@@ -294,8 +294,8 @@ namespace suil {
         }
 
         void Router::internal_add_rule_object(const std::string &rule, BaseRule *rule_obj) {
-            rules_.emplace_back(rule_obj);
-            trie_.add(rule, rules_.size() - 1);
+            m_rules.emplace_back(rule_obj);
+            m_trie.add(rule, m_rules.size() - 1);
 
             // directory case:
             //   Request to `/about' url matches `/about/' rule
@@ -303,13 +303,13 @@ namespace suil {
             {
                 std::string rule_without_trailing_slash = rule;
                 rule_without_trailing_slash.pop_back();
-                trie_.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
+                m_trie.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
             }
         }
 
         void Router::before(Request &req, Response &resp) {
             char *url;
-            zcstring tmp(req.url);
+            String tmp(req.url);
             if (tmp.empty() || (tmp == "/")) {
                 // just use find as it
                 static const char *ROOT_URL = "/";
@@ -327,20 +327,20 @@ namespace suil {
                 url = (char *) FS_URL;
             }
 
-            auto params = trie_.find(url);
+            auto params = m_trie.find(url);
 
             if (params.first == 0) {
-                throw error::not_found();
+                throw Error::notFound();
             }
 
-            if (params.first >= rules_.size())
+            if (params.first >= m_rules.size())
                 throw std::runtime_error("trie internal structure corrupted!");
 
             // update Request with params
             req.params.index = params.first;
             req.params.decoded = std::move(params.second);
-            req.params.attrs = &rules_[params.first]->attrs_;
-            req.params.methods = rules_[params.first]->methods_;
+            req.params.attrs = &m_rules[params.first]->attrs_;
+            req.params.methods = m_rules[params.first]->methods_;
         }
 
         void Router::handle(const Request &req, Response &res) {
@@ -352,14 +352,14 @@ namespace suil {
                 // TODO absolute url building
                 if (req.header("Host").empty())
                 {
-                    zbuffer b(0);
+                    OBuffer b(0);
                     b += req.url;
                     b += "/";
                     res.header("Location", b);
                 }
                 else
                 {
-                    zbuffer b(16);
+                    OBuffer b(16);
                     b += "http://";
                     b += req.header("Host");
                     b += req.url;
@@ -370,23 +370,23 @@ namespace suil {
                 return;
             }
 
-            if ((rules_[req.params.index]->get_methods() & (1<<(uint32_t)req.method)) == 0)
+            if ((m_rules[req.params.index]->get_methods() & (1<<(uint32_t)req.method)) == 0)
             {
-                throw  error::not_found();
+                throw  Error::notFound();
             }
 
             // any uncaught exceptions become 500s
             try
             {
-                rules_[req.params.index]->handle(req, res, req.params.decoded);
+                m_rules[req.params.index]->handle(req, res, req.params.decoded);
             }
-            catch(http::exception& e)
+            catch(Exception& e)
             {
                 throw std::move(e);
             }
             catch(...)
             {
-                throw error::internal();
+                throw Error::internal();
             }
         }
 
@@ -400,7 +400,7 @@ namespace suil {
 
             if (attrs.PARSE_FORM) {
                 /* parse Request form if route expects form */
-                req.parse_form();
+                req.parseForm();
             }
         }
 

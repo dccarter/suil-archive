@@ -1,7 +1,7 @@
 //
 // Created by dc on 11/12/17.
 //
-#include "redis.hpp"
+#include "redis.h"
 
 namespace suil {
     namespace redis {
@@ -71,7 +71,7 @@ namespace suil {
 
         Response base_client::dosend(Commmand &cmd, size_t nrps) {
             // send the command to the server
-            zcstring data = cmd.prepared();
+            String data = cmd.prepared();
             size_t size = adaptor.send(data.data(), data.size(), config.timeout);
             if (size != data.size()) {
                 // sending failed somehow
@@ -93,13 +93,13 @@ namespace suil {
             return std::move(resp);
         }
 
-        zcstring base_client::commit(Response &resp) {
+        String base_client::commit(Response &resp) {
             // send all the commands at once and read all the responses in one go
             Commmand *last = batched.back();
             batched.pop_back();
 
             for (auto& cmd: batched) {
-                zcstring data = cmd->prepared();
+                String data = cmd->prepared();
                 size_t size = adaptor.send(data.data(), data.size(), config.timeout);
                 if (size != data.size()) {
                     // sending command failure
@@ -112,10 +112,10 @@ namespace suil {
                 // return error message
                 return resp.error();
             }
-            return zcstring{nullptr};
+            return String{nullptr};
         }
 
-        bool base_client::recvresp(zbuffer& out, std::vector<Reply>& stagging) {
+        bool base_client::recvresp(OBuffer& out, std::vector<Reply>& stagging) {
             size_t rxd{1}, offset{out.size()};
             char prefix;
             if (!adaptor.read(&prefix, rxd, config.timeout)) {
@@ -129,7 +129,7 @@ namespace suil {
                     if (!readline(out)) {
                         return false;
                     }
-                    zcstring tmp{(char *)&out[offset], out.size()-offset, false};
+                    String tmp{(char *)&out[offset], out.size()-offset, false};
                     out << '\0';
                     stagging.emplace_back(Reply(prefix, std::move(tmp)));
                     return true;
@@ -140,7 +140,7 @@ namespace suil {
                         return false;
                     }
 
-                    zcstring  tmp = zcstring{nullptr};
+                    String  tmp = String{nullptr};
                     if (len >= 0) {
                         size_t size = (size_t) len + 2;
                         out.reserve((size_t) size + 2);
@@ -151,7 +151,7 @@ namespace suil {
                         // only interested in actual string
                         if (len) {
                             out.seek(len);
-                            tmp = zcstring{(char *) &out[offset], (size_t) len, false};
+                            tmp = String{(char *) &out[offset], (size_t) len, false};
                             // terminate string
                             out << '\0';
                         }
@@ -192,17 +192,17 @@ namespace suil {
         }
 
         bool base_client::readlen(int64_t &len) {
-            zbuffer out{16};
+            OBuffer out{16};
             if (!readline(out)) {
                 return false;
             }
-            zcstring tmp{(char *) &out[0], out.size(), false};
+            String tmp{(char *) &out[0], out.size(), false};
             tmp.data()[tmp.size()] = '\0';
             utils::cast(tmp, len);
             return true;
         }
 
-        bool base_client::readline(zbuffer &out) {
+        bool base_client::readline(OBuffer &out) {
             out.reserve(255);
             size_t cap{out.capacity()};
             do {
@@ -239,7 +239,7 @@ namespace suil {
             }
 
             Reply& rp = resp.entries[0];
-            auto parts = utils::strsplit(rp.data, "\r");
+            auto parts = rp.data.split("\r");
             for (auto& part: parts) {
                 if (*part == '\n') part++;
                 if (part[0] == '#' || strlen(part) == 0) continue;
@@ -247,9 +247,9 @@ namespace suil {
                 char *k = part;
                 char *v = strchr(part, ':');
                 v[0] = '\0';
-                zcstring key{k, (size_t) (v-k)-1, false};
+                String key{k, (size_t) (v-k)-1, false};
                 v++;
-                zcstring val{v, strlen(v), false};
+                String val{v, strlen(v), false};
 
                 if (key.compare("redis_version") == 0) {
                     out.version =  std::move(val);

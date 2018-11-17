@@ -2,7 +2,7 @@
 // Created by dc on 28/06/17.
 //
 
-#include <suil/http/parser.hpp>
+#include <suil/http/parser.h>
 
 //
 // Created by dc on 02/04/17.
@@ -2278,8 +2278,8 @@ namespace suil {
                 case STATE_FIELD:
                     if (p->hv)
                     {
-                        zcstring hf(p->hf);
-                        zcstring hv(p->hv);
+                        String hf(p->hf);
+                        String hv(p->hv);
                         p->headers.emplace(
                                 std::move(hf),
                                 std::move(hv));
@@ -2318,8 +2318,8 @@ namespace suil {
             parser *p = static_cast<parser*>(s);
             if (p->hf)
             {
-                zcstring hf(p->hf);
-                zcstring hv(p->hv);
+                String hf(p->hf);
+                String hv(p->hv);
                 p->headers.emplace(
                         std::move(hf),
                         std::move(hv));
@@ -2340,10 +2340,10 @@ namespace suil {
             size_t pos = sv.find("?");
             auto url = sv.substr(0, pos);
             if (!url.empty()) {
-                p->url = utils::strndup(url.data(), url.size());
+                p->url = strndup(url.data(), url.size());
                 if (pos != sv.size()) {
                     strview tmp((sv.data() + pos), sv.length() - pos);
-                    p->qps = query_string(tmp);
+                    //p->qps = QueryString(tmp);
                 }
             }
 
@@ -2390,7 +2390,7 @@ namespace suil {
 
         void parser::clear(bool internal) {
             if (url) {
-                memory::free(url);
+                free(url);
                 url = nullptr;
             }
 

@@ -1,7 +1,7 @@
 //
 // Created by dc on 1/5/18.
 //
-#include "sys.hpp"
+#include "varint.h"
 
 namespace suil {
 
@@ -27,29 +27,6 @@ namespace suil {
             sz++;
         }
         return sz;
-    }
-
-    void varint::in(Wire& w) {
-        uint8_t sz{0};
-        if (w.pull(&sz, 1)) {
-            // read actual size
-            uint64_t tmp{0};
-            if (w.pull((uint8_t *)&tmp, sz)) {
-                Ego.write<uint64_t>(tmp);
-                return;
-            }
-        }
-        SuilError::create("pulling varint failed");
-    }
-
-    void varint::out(Wire& w) const {
-        uint8_t sz{Ego.length()};
-        if (w.push(&sz, 1)) {
-            uint64_t val = Ego.read<uint64_t>();
-            if (w.push((uint8_t *)&val, sz))
-                return;
-        }
-        SuilError::create("pushing varint failed");
     }
 }
 

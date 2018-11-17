@@ -529,6 +529,8 @@ MILL_EXPORT size_t mill_tcpread_(
         struct mill_tcpsock_ *s,
         void *buf, size_t len,
         int64_t deadline);
+MILL_EXPORT void mill_tcpbuffering_(
+        struct mill_tcpsock_ *s, int on, int64_t deadline);
 MILL_EXPORT void mill_tcpshutdown_(
     struct mill_tcpsock_ *s, int how);
 MILL_EXPORT void mill_tcpclose_(
@@ -546,6 +548,7 @@ typedef struct mill_tcpsock_ *mill_tcpsock;
 #define mill_tcprecv mill_tcprecv_
 #define mill_tcprecvuntil mill_tcprecvuntil_
 #define mill_tcpread mill_tcpread_
+#define mill_tcpbuffering mill_tcpbuffering_
 #define mill_tcpshutdown mill_tcpshutdown_
 #define mill_tcpclose mill_tcpclose_
 #else
@@ -562,6 +565,7 @@ typedef struct mill_tcpsock_ *tcpsock;
 #define tcprecvuntil mill_tcprecvuntil_
 #define tcpread mill_tcpread_
 #define tcpshutdown mill_tcpshutdown_
+#define tcpbuffering mill_tcpbuffering_
 #define tcpclose mill_tcpclose_
 #endif
 

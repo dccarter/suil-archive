@@ -13,8 +13,8 @@ _onConnect
 _onMessage
 _onClose
 _onDisconnect
-_logsink
-_logformat
+_sink
+_format
 _key
 _val
 _authenticate
@@ -76,6 +76,7 @@ _http_endpoint
 _allow_caching
 _allow_compress
 _root
+_enable_send_file
 _route
 _nworkers
 _port
@@ -83,6 +84,7 @@ _verbose
 _V
 _background
 _accept_timeout
+_accept_backlog
 _timeout
 _expires
 _E

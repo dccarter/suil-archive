@@ -7,26 +7,26 @@
 namespace suil {
     namespace cmdl {
 
-        Cmd::Cmd(zcstring &&name, const char *descript, bool help)
+        Cmd::Cmd(String &&name, const char *descript, bool help)
             : name(name.dup()),
-              descript(zcstring{descript}.dup())
+              descript(String{descript}.dup())
         {
             if (help)
                 Ego << Arg{"help", "Show this command's help", 'h', true, false};
         }
 
-        Cmd& Cmd::operator()(zcstring &&lf, zcstring&& help, char sf, bool opt, bool req) {
+        Cmd& Cmd::operator()(String &&lf, String&& help, char sf, bool opt, bool req) {
             return (Ego << Arg{lf.dup(), help.dup(), sf, opt, req});
         }
 
         Cmd& Cmd::operator<<(Arg &&arg) {
             if (!arg.lf) {
-                throw SuilError::create(
+                throw Exception::create(
                         "command line argument missing log format (--help) option");
             }
             for (auto& a : args) {
                 if (a.check(arg.sf, arg.lf)) {
-                    throw SuilError::create(
+                    throw Exception::create(
                             "command line '", arg.sf, "' or \"",
                             arg.lf, "\" argument duplicated");
                 }
@@ -43,7 +43,7 @@ namespace suil {
             return Ego;
         }
 
-        void Cmd::showhelp(const char *app, zbuffer &help, bool ishelp) const {
+        void Cmd::showhelp(const char *app, OBuffer &help, bool ishelp) const {
 
             if (ishelp) {
                 help << descript << "\n";
@@ -88,21 +88,21 @@ namespace suil {
             }
         }
 
-        Arg& Cmd::check(const zcstring &lf, char sf) {
+        Arg& Cmd::check(const String &lf, char sf) {
             Arg *arg{nullptr};
             if (check(arg, lf, sf)) {
                 return *arg;
             }
             else {
                 if (lf) {
-                    throw SuilError::create("error: command argument '--", lf, "' not recognized");
+                    throw Exception::create("error: command argument '--", lf, "' not recognized");
                 } else {
-                    throw SuilError::create("error: command argument '-", sf, "' not recognized");
+                    throw Exception::create("error: command argument '-", sf, "' not recognized");
                 }
             }
         }
 
-        bool Cmd::check(Arg*& found, const zcstring &lf, char sf) {
+        bool Cmd::check(Arg*& found, const String &lf, char sf) {
             for (auto& arg: args) {
                 if (arg.check(sf, lf)) {
                     found = &arg;
@@ -114,7 +114,7 @@ namespace suil {
 
         bool Cmd::parse(int argc, char **argv, bool dbg) {
             int pos{0};
-            zcstring zarg{};
+            String zarg{};
 
             bool  ishelp{false};
 
@@ -129,7 +129,7 @@ namespace suil {
                 int dashes = Cmd::isvalid(carg);
                 // are we passing option (or value)
                 if (!dashes) {
-                    throw SuilError::create("error: Unsupported argument syntax: ", carg);
+                    throw Exception::create("error: Unsupported argument syntax: ", carg);
                 }
 
                 if (dashes == 2) {
@@ -141,24 +141,24 @@ namespace suil {
                     }
 
                     if (passed.find(arg.lf) != passed.end()) {
-                        throw SuilError::create("error: command argument '",
+                        throw Exception::create("error: command argument '",
                                                  arg.lf, "' appearing more than once");
                     }
-                    zcstring val{"1"};
+                    String val{"1"};
                     if (!arg.option) {
                         if (cval == nullptr) {
                             pos++;
                             if (pos >= argc) {
-                                throw SuilError::create("error: command argument '",
+                                throw Exception::create("error: command argument '",
                                                          arg.lf,
                                                          "' expects a value but none provided");
                             }
                             cval = argv[pos];
                         }
-                        val = zcstring{cval}.dup();
+                        val = String{cval}.dup();
                     }
                     else if (cval != nullptr) {
-                        throw SuilError::create("error: command argument '",
+                        throw Exception::create("error: command argument '",
                                                  arg.lf, "' assigned value but is an option");
                     }
                     passed.emplace(std::make_pair(arg.lf.dup(), std::move(val)));
@@ -175,10 +175,10 @@ namespace suil {
                             break;
                         }
 
-                        zcstring val{"1"};
+                        String val{"1"};
                         if (!arg.option) {
                             if (opos < nopts) {
-                                throw SuilError::create("error: command argument '",
+                                throw Exception::create("error: command argument '",
                                                          arg.lf,
                                                          "' passed as an option but expects value");
                             }
@@ -186,17 +186,17 @@ namespace suil {
                             if (cval == nullptr) {
                                 pos++;
                                 if (pos >= argc) {
-                                    throw SuilError::create("error: command argument '",
+                                    throw Exception::create("error: command argument '",
                                                              arg.lf,
                                                              "' expects a value but none provided");
                                 }
                                 cval = argv[pos];
                             }
 
-                            val = zcstring{cval}.dup();
+                            val = String{cval}.dup();
                         }
                         else if (cval != nullptr) {
-                            throw SuilError::create("error: command argument '",
+                            throw Exception::create("error: command argument '",
                                             arg.lf, "' assigned value but is an option");
                         }
                         passed.emplace(std::make_pair(arg.lf.dup(), std::move(val)));
@@ -209,7 +209,7 @@ namespace suil {
 
             if (!ishelp) {
                 // verify required arguments
-                zbuffer msg{127};
+                OBuffer msg{127};
                 msg << "error: missing required arguments:";
                 int  missing{false};
                 for (auto& arg: args) {
@@ -227,7 +227,7 @@ namespace suil {
 
                 if (missing) {
                     if (!Ego.inter) {
-                        throw SuilError::create(zcstring(msg));
+                        throw Exception::create(String(msg));
                     }
                     else {
                         printf("\n");
@@ -247,32 +247,32 @@ namespace suil {
         }
 
         void Cmd::requestvalue(Arg &arg) {
-            zcstring display{utils::catstr("Enter ", arg.lf)};
+            String display{utils::catstr("Enter ", arg.lf)};
             if (Ego.interhelp) {
                 write(STDOUT_FILENO, arg.help(), arg.help.size());
                 printf("\n");
             }
 
-            zcstring val = cmdl::readparam(display, nullptr);
+            String val = cmdl::readparam(display, nullptr);
             passed.emplace(std::make_pair(arg.lf.peek(), std::move(val)));
         }
 
-        zcstring Cmd::operator[](const zcstring &lf) {
+        String Cmd::operator[](const String &lf) {
             auto it = passed.find(lf);
             if (it != passed.end())
                 return it->second.peek();
-            return zcstring{nullptr};
+            return String{nullptr};
         }
 
         Parser::Parser(const char *app, const char *version, const char *descript)
-            : appname(zcstring{app}.dup()),
-              appversion(zcstring{version}.dup()),
-              descript(zcstring{descript}.dup())
+            : appname(String{app}.dup()),
+              appversion(String{version}.dup()),
+              descript(String{descript}.dup())
         {
             // application version command
             Cmd ver("version", "Show the application version", false);
             ver([&](Cmd& cmd){
-                zbuffer b{63};
+                OBuffer b{63};
                 b << appname << " v" << appversion << '\n';
                 if (!Ego.descript.empty()) {
                     b << Ego.descript << '\n';
@@ -294,7 +294,7 @@ namespace suil {
             Ego << Arg{"help", "Show the help for application", 'h'};
         }
 
-        Cmd* Parser::find(const zcstring &name) {
+        Cmd* Parser::find(const String &name) {
             Cmd *cmd{nullptr};
             for (auto& c: commands) {
                 if (c.name == name) {
@@ -306,7 +306,7 @@ namespace suil {
             return cmd;
         }
 
-        Arg* Parser::findarg(const zcstring &name, char sf) {
+        Arg* Parser::findarg(const String &name, char sf) {
             for (auto& a: globals) {
                 if (a.sf == sf || a.lf == name) {
                     return &a;
@@ -330,7 +330,7 @@ namespace suil {
                 globals.emplace_back(std::move(arg));
             }
             else {
-                throw SuilError::create(
+                throw Exception::create(
                         "duplicate global argument '", arg.lf,
                         " already registered");
             }
@@ -358,13 +358,13 @@ namespace suil {
                 commands.emplace_back(std::move(cmd));
             }
             else {
-                throw SuilError::create(
+                throw Exception::create(
                         "command with name '", cmd.name, " already registered");
             }
         }
 
         void Parser::showhelp(const char *prefix) {
-            zbuffer out{254};
+            OBuffer out{254};
             if (prefix != nullptr) {
                 out << prefix << '\n';
             }
@@ -436,11 +436,11 @@ namespace suil {
                 << "Use \"" << appname
                 << "\" [command] --help for more information about a command"
                 << "\n";
-            zcstring str(out);
+            String str(out);
             write(STDOUT_FILENO, str.data(), str.size());
         }
 
-        void Parser::showcmdhelp(zbuffer &out, Cmd &cmd, bool ishelp) {
+        void Parser::showcmdhelp(OBuffer &out, Cmd &cmd, bool ishelp) {
             // help was requested or an error occurred
             if (!out.empty()) out << "\n";
             cmd.showhelp(appname.data(), out, ishelp);
@@ -489,7 +489,7 @@ namespace suil {
                 exit(EXIT_FAILURE);
             }
 
-            zcstring  cmdstr{argv[1]};
+            String  cmdstr{argv[1]};
             Cmd *cmd = Ego.find(cmdstr);
             if (cmd == nullptr) {
                 fprintf(stderr, "error: unknown command \"%s\" for \"%s\"\n",
@@ -498,14 +498,14 @@ namespace suil {
             }
 
             bool showhelp[2] ={false, true};
-            zbuffer errbuf{126};
+            OBuffer errbuf{126};
             try {
                 // parse command line (appname command)
                 int nargs{argc-2};
                 char  **args = nargs? &argv[2] : &argv[1];
                 showhelp[0] = cmd->parse(argc-2, args);
             }
-            catch (SuilError& ser) {
+            catch (Exception& ser) {
                 showhelp[0] = true;
                 showhelp[1] = false;
                 errbuf << ser.what() << "\n";
@@ -532,36 +532,36 @@ namespace suil {
                 parsed->handler(*parsed);
                 return;
             }
-            throw SuilError::create("parser::parse should be "
+            throw Exception::create("parser::parse should be "
                                              "invoked before invoking handle");
         }
 
-        zcstring Parser::getvalue(const zcstring &lf, Arg *arg) {
+        String Parser::getvalue(const String &lf, Arg *arg) {
             arg = arg? arg: Ego.findarg(lf);
             if (arg == nullptr) {
-                return zcstring{nullptr};
+                return String{nullptr};
             }
             // find the parameter value
             if (parsed) {
                 return (*parsed)[lf];
             }
-            return zcstring{nullptr};
+            return String{nullptr};
         }
 
-        zcstring readparam(const zcstring& display, const char *def) {
+        String readparam(const String& display, const char *def) {
             char line[512];
             write(STDOUT_FILENO, display.data(), display.size());
             printf(": ");
             if (fgets(line, sizeof(line), stdin)) {
-                // copy data to zcstring, trimming of \n
-                return zcstring{line, strlen(line)-1, false}.dup();
+                // copy data to String, trimming of \n
+                return String{line, strlen(line)-1, false}.dup();
             }
-            return zcstring{def};
+            return String{def};
         }
 
-        zcstring readpasswd(const zcstring& display) {
+        String readpasswd(const String& display) {
             char *pass = getpass(display());
-            return zcstring{pass}.dup();
+            return String{pass}.dup();
         }
     }
 }

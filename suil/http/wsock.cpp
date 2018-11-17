@@ -2,7 +2,8 @@
 // Created by dc on 28/06/17.
 //
 #include <openssl/sha.h>
-#include <suil/http/wsock.hpp>
+#include <suil/base64.h>
+#include <suil/http/wsock.h>
 
 #define WS_FRAME_HDR		2
 #define WS_MASK_LEN		    4
@@ -44,7 +45,7 @@ namespace suil {
                 return Status::BAD_REQUEST;
             }
 
-            zbuffer     buf(127);
+            OBuffer     buf(127);
             uint8_t         digest[SHA_DIGEST_LENGTH];
             buf += key;
             buf.append(WS_SERVER_RESPONSE, sizeof(WS_SERVER_RESPONSE)-1);
@@ -53,7 +54,7 @@ namespace suil {
             SHA1_Final(digest, &sctx);
             buf.clear();
 
-            zcstring base64 = base64::encode(digest, sizeof(digest));
+            String base64 = utils::base64::encode(digest, sizeof(digest));
             res.header("Upgrade", "WebSocket");
             res.header("Connection", "Upgrade");
             res.header("Sec-WebSocket-Accept", std::move(base64));
@@ -159,7 +160,7 @@ namespace suil {
             return true;
         }
 
-        bool WebSock::receive_frame(header& h, zbuffer& b) {
+        bool WebSock::receive_frame(header& h, OBuffer& b) {
             if (!receive_opcode(h)) {
                 idebug("%s - receiving op code failed", sock.id());
                 return false;
@@ -191,13 +192,13 @@ namespace suil {
                 }
             }
 
-            zcstring key = std::move(zcstring(sock.id()).dup());
+            String key = std::move(String(sock.id()).dup());
             api.websocks.emplace(key, *this);
             api.nsocks++;
 
             idebug("%s - entering Connection loop %lu", key(), api.nsocks);
 
-            zbuffer b(0);
+            OBuffer b(0);
             while (!end_session && sock.isopen()) {
                 header h;
                 b.clear();
@@ -334,9 +335,9 @@ namespace suil {
             // only broadcast when there are other web socket clients
             if (api.nsocks > 0) {
                 trace("broadcasting %lu web sockets", api.nsocks);
-                uint8_t *copy = (uint8_t *) memory::alloc(
+                auto *copy = (uint8_t *) malloc(
                                      sizeof(WsockBcastMsg) + sz +16);
-                WsockBcastMsg *msg = (WsockBcastMsg *)copy;
+                auto *msg = (WsockBcastMsg *)copy;
 
                 uint8_t payload_1;
                 uint8_t hlen = WS_FRAME_HDR;
@@ -383,10 +384,10 @@ namespace suil {
             api.broadcast(&ws, data, size);
             // free the allocated memory
             strace("done broadcasting message %p", data);
-            memory::free(data);
+            free(data);
         }
 
-        void WebSockApi::bsend(Async<int>& ch, WebSock& ws, const void *data, size_t len) {
+        void WebSockApi::bsend(Channel<int>& ch, WebSock& ws, const void *data, size_t len) {
             bool result = ws.bsend(data, len);
             if (ch)
                 ch << result;
@@ -396,7 +397,7 @@ namespace suil {
             strace("WebSockApi::broadcast src %p, data %p, size %lu",
                    src, data, size);
 
-            Async<int> async(-1);
+            Channel<int> async(-1);
             uint32_t wait = 0;
 
             const WsockBcastMsg *msg = (const WsockBcastMsg *)data;

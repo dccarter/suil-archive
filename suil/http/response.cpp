@@ -2,7 +2,7 @@
 // Created by dc on 28/06/17.
 //
 
-#include <suil/http/response.hpp>
+#include <suil/http/response.h>
 
 namespace suil {
     namespace http {
@@ -39,7 +39,7 @@ namespace suil {
             completed = true;
         }
 
-        void Response::end(Status status, zbuffer& body) {
+        void Response::end(Status status, OBuffer& body) {
             if (this->body)
                 this->body << body;
             else
@@ -55,7 +55,7 @@ namespace suil {
 
         void Response::flush_cookies() {
             // avoid allocating unnecessary memory
-            zbuffer b(0);
+            OBuffer b(0);
             for(auto& it : cookies) {
                 Cookie& ck = it.second;
                 if (!ck || !ck.value()) {
@@ -100,8 +100,8 @@ namespace suil {
                     b.append(ck.expires(), nullptr);
                 }
 
-                zcstring ckv(b);
-                zcstring ckh = zcstring("Set-Cookie").dup();
+                String ckv(b);
+                String ckh = String("Set-Cookie").dup();
                 header(std::move(ckh), std::move(ckv));
             }
         }

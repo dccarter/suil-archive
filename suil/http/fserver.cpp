@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
-#include <suil/http/fserver.hpp>
+#include <suil/http/fserver.h>
 
 namespace suil {
     namespace http {
@@ -85,13 +85,13 @@ namespace suil {
             }
 
             // this will dup over the base
-            www_dir = zcstring{base}.dup();
+            www_dir = String{base}.dup();
 
             // add some basic redirects
             alias("/", "index.html");
         }
 
-        void FileServer::alias(const suil::zcstring from, const suil::zcstring to)
+        void FileServer::alias(const suil::String from, const suil::String to)
         {
             if (strrchr(to.data(), '.') == nullptr)
             {
@@ -110,7 +110,7 @@ namespace suil {
             }
         }
 
-        zcstring FileServer::aliased(const suil::zcstring &path)
+        String FileServer::aliased(const suil::String &path)
         {
             auto it = redirects.find(path);
             if (it != redirects.end())
@@ -118,14 +118,14 @@ namespace suil {
                 // found, return redirected path
                 return it->second.peek();
             }
-            return zcstring{nullptr};
+            return String{nullptr};
         };
 
-        void FileServer::get(const Request &req, Response &resp, zcstring &path, zcstring &ext) {
+        void FileServer::get(const Request &req, Response &resp, String &path, String &ext) {
             auto mime = mime_types_.find(ext);
             if (mime == mime_types_.end()) {
                 trace("extension type (%s) not supported", ext());
-                throw error::not_found();
+                throw Error::notFound();
             }
 
             mime_type_t& mm = mime->second;
@@ -133,7 +133,7 @@ namespace suil {
             if (sf == cached_files_.end()) {
                 trace("requested static resource (%s) does not exist", path());
                 // static file not found;
-                throw error::not_found();
+                throw Error::notFound();
             }
 
             cached_file_t& cf = sf->second;
@@ -159,19 +159,19 @@ namespace suil {
             prepare_response(req,resp, cf, mm);
         }
 
-        void FileServer::head(const Request &req, Response &resp, zcstring &path, zcstring &ext) {
+        void FileServer::head(const Request &req, Response &resp, String &path, String &ext) {
             // FIXME: part of code is the similar to GET code, move to common stub
             auto mime = mime_types_.find(ext);
             if (mime == mime_types_.end()) {
                 trace("extension type (%s) not supported", ext());
-                throw error::not_found();
+                throw Error::notFound();
             }
             mime_type_t& mm = mime->second;
             auto sf = load_file(path, mm);
             if (sf == cached_files_.end()) {
                 trace("requested static resource (%s) does not exist", path());
                 // static file not found;
-                throw error::not_found();
+                throw Error::notFound();
             }
 
             cached_file_t& cf = sf->second;
@@ -278,7 +278,7 @@ namespace suil {
                     resp.chunk(Response::Chunk(cf.data, range.first, range.second));
                 }
                 // add the range header
-                zbuffer b(16);
+                OBuffer b(16);
                 b.appendf("bytes %lu-%lu/%lu", range.first, range.second-1, cf.len);
                 resp.header("Content-Range", b);
 
@@ -294,22 +294,22 @@ namespace suil {
                 const Request &req, Response &resp, cached_file_t &cf, mime_type_t &mm)
         {
             // get http data format
-            zcstring dt(Datetime(cf.last_mod)(Datetime::HTTP_FMT));
+            String dt(Datetime(cf.last_mod)(Datetime::HTTP_FMT));
             resp.header("Last-Modified", dt);
             // add cache control header
             if (mm.cache_expires > 0) {
-                zbuffer b(31);
+                OBuffer b(31);
                 b.appendnf(30, "public, max-age=%ld", mm.cache_expires);
                 resp.header("Cache-Control", b);
             }
         }
 
-        FileServer::cached_files_t::iterator FileServer::load_file(const zcstring &rel, const mime_type_t &mm)
+        FileServer::cached_files_t::iterator FileServer::load_file(const String &rel, const mime_type_t &mm)
         {
             auto it = cached_files_.find(rel);
 
             if (it == cached_files_.end()) {
-                zcstring path;
+                String path;
                 if (file_exists(path, rel)) {
                     cached_file_t cf;
                     cf.clear();
@@ -406,7 +406,7 @@ namespace suil {
             else {
                 // read file
                 uint32_t total = (uint32_t) st.st_size + 8;
-                zbuffer b(total);
+                OBuffer b(total);
                 size_t nread = 0, toread = (size_t) st.st_size;
                 ssize_t cread = 0;
                 char *ptr = b;
@@ -429,15 +429,15 @@ namespace suil {
             return true;
         }
 
-        bool FileServer::file_exists(zcstring &path, const zcstring &rel) const
+        bool FileServer::file_exists(String &path, const String &rel) const
         {
             // we want to ensure that the file is within the base directory
-            zbuffer b(0);
+            OBuffer b(0);
             // append base, followed by file (notice rel(), ensure's const char* is used and size recomputed)
             b << www_dir << rel();
             char absolute[PATH_MAX];
             realpath((char *)b, absolute);
-            zcstring tmp(absolute, www_dir.size(), false);
+            String tmp(absolute, www_dir.size(), false);
 
             if (tmp != www_dir) {
                 // path violation
@@ -453,7 +453,7 @@ namespace suil {
             }
 
             // dup over the generated path buffer
-            path = zcstring(absolute, strlen(absolute) + 1, false).dup();
+            path = String(absolute, strlen(absolute) + 1, false).dup();
             return true;
         }
 
@@ -463,7 +463,7 @@ namespace suil {
                     munmap(data, size);
                 }
                 else {
-                    memory::free(data);
+                    free(data);
                 }
                 data = nullptr;
             }

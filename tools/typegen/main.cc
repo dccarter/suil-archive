@@ -3,7 +3,7 @@
 //
 
 #include <suil/cmdl.hpp>
-#include <suil/json.hpp>
+#include <suil/json.h>
 #include "typegen.hpp"
 
 

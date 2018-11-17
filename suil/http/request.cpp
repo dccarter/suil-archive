@@ -6,13 +6,13 @@
 #include <fcntl.h>
 #include <sys/param.h>
 
-#include <suil/http/request.hpp>
+#include <suil/http/request.h>
 
 namespace suil {
     namespace http {
 
         bool Request::parse_cookies() {
-            zcstring key("Cookie");
+            String key("Cookie");
             cookied = true;
             auto it = headers.find(key);
             if (it == headers.end()) {
@@ -20,9 +20,8 @@ namespace suil {
                 return false;
             }
 
-            const std::vector<char *> parts = utils::strsplit(it->second, ";");
+            const std::vector<char *> parts = it->second.split(";");
             for (char *ch: parts) {
-                char *tmp = ch;
 
                 while(isspace(*ch) && *ch != '\0') ch++;
                 if (*ch == '\0')  {
@@ -40,19 +39,19 @@ namespace suil {
                 else {
                     value = nullptr;
                 }
-                zcstring ck(name, (k-name-1), false);
+                String ck(name, (k-name-1), false);
                 if (value) {
-                    zcstring cv(value, strlen(value), false);
+                    String cv(value, strlen(value), false);
                     cookies.emplace(std::move(ck), std::move(cv));
                 } else {
-                    cookies.emplace(std::move(ck), zcstring());
+                    cookies.emplace(std::move(ck), String());
                 }
             }
 
             return true;
         }
 
-        bool Request::parse_form() {
+        bool Request::parseForm() {
             if (formed) {
                 trace("form parse already attempted");
                 return true;
@@ -67,7 +66,7 @@ namespace suil {
             }
 
             auto ctype = header("Content-Type");
-            if (ctype.size() == 0) {
+            if (ctype.empty()) {
                 trace("only posts with content type are supported");
                 return false;
             }
@@ -86,7 +85,7 @@ namespace suil {
                     return false;
                 }
                 boundary++;
-                zcstring tmp(boundary);
+                String tmp(boundary);
 
                 return parse_multipart_form(boundary);
             }
@@ -145,8 +144,8 @@ namespace suil {
             return true;
         }
 
-        bool Request::parse_multipart_form(const zcstring& boundary) {
-            zbuffer rb((uint32_t) content_length+2);
+        bool Request::parse_multipart_form(const String& boundary) {
+            OBuffer rb((uint32_t) content_length+2);
             if (read_body(rb.data(), content_length) <= 0) {
                 trace("error: reading body failed");
                 return false;
@@ -220,8 +219,8 @@ namespace suil {
                         trace("multipart/form-data state_save_file");
                         *dend-- = '\0';
                         UploadedFile f;
-                        zcstring tmp(filename);
-                        zcstring tmp_name(name);
+                        String tmp(filename);
+                        String tmp_name(name);
                         f.name_ = std::move(tmp);
                         f.len_  = dend - data;
                         f.data_ = data;
@@ -237,8 +236,8 @@ namespace suil {
                     case state_save_data: {
                         trace("multipart/form-data state_save_data");
                         *--dend = '\0';
-                        zcstring tmp(name);
-                        zcstring tmp_data(data, dend - data, false);
+                        String tmp(name);
+                        String tmp_data(data, dend - data, false);
                         form.emplace(std::move(tmp), std::move(tmp_data));
                         name = data = dend = nullptr;
 
@@ -310,9 +309,9 @@ namespace suil {
                         state = state_end;
                         trace("multipart/form-data state machine done %d fields, %d files %d",
                                 form.size(), files.size(), mnow());
-                        if (form.size() || files.size()) {
+                        if (!form.empty() || !files.empty()) {
                             // cache the buffer for later references
-                            zcstring tmp(rb);
+                            String tmp(rb);
                             form_str = std::move(tmp);
                         }
                         return true;
@@ -331,11 +330,11 @@ namespace suil {
 #undef goto_chr
 
         bool Request::parse_url_encoded_form() {
-            zbuffer rb((uint32_t) content_length+2);
+            OBuffer rb((uint32_t) content_length+2);
             if (read_body(rb.data(), content_length) > 0) {
                 rb.bseek(content_length);
-                zcstring tmp(rb);
-                auto parts = utils::strsplit(tmp, "&");
+                String tmp(rb);
+                auto parts = tmp.split("&");
                 for(auto& part : parts) {
                     /* save all parameters in part */
                     char *name = part;
@@ -347,8 +346,8 @@ namespace suil {
                         (*value) = '\0';
                         value++;
                     }
-                    zcstring tname(name);
-                    zcstring tvalue = utils::urldecode(value, strlen(value));
+                    String tname(name);
+                    String tvalue = utils::urldecode(value, strlen(value));
                     form.emplace(std::move(tname), std::move(tvalue));
                 }
 
@@ -362,11 +361,11 @@ namespace suil {
             return false;
         }
         
-        Request::BodyOffload::BodyOffload(zbuffer &path)
+        Request::BodyOffload::BodyOffload(OBuffer &path)
             : File(mfmktemp((char *)path))
         {
             if (fd) {
-                this->path = std::move(zcstring(path));
+                this->path = std::move(String(path));
             }
         }
 
@@ -418,7 +417,7 @@ namespace suil {
             if (has_body && config.disk_offload &&
                 content_length > config.disk_offload_min)
             {
-                zbuffer tmp(64);
+                OBuffer tmp(64);
                 tmp.appendf(tmp,"%s/http_body.XXXXXX", config.offload_path.c_str());
                 if (offload == nullptr) {
                     offload = new BodyOffload(tmp);
@@ -573,7 +572,7 @@ namespace suil {
             cookies.clear();
             if (offload) {
                 delete offload;
-                offload = NULL;
+                offload = nullptr;
             }
 
             if (!internal) {
@@ -614,29 +613,29 @@ namespace suil {
             }
         }
 
-        const zcstring RequestForm::operator[](const char *key) {
-            zcstring tmp(key);
+        const String RequestForm::operator[](const char *key) {
+            String tmp(key);
             const auto it = req.form.find(tmp);
             if (it != req.form.end()) {
                 return std::move(it->second.peek());
             }
-            throw error::internal("form data not found in post form");
+            throw Error::internal("form data not found in post form");
         }
 
         const UploadedFile& RequestForm::operator()(const char *f) {
-            zcstring tmp(f);
+            String tmp(f);
             const auto it = req.files.find(tmp);
             if (it != req.files.end()) {
                 return it->second;
             }
-            throw error::internal("file not found in form");
+            throw Error::internal("file not found in form");
         }
 
-        bool RequestForm::find(zcstring& out, const char *name) {
-            zcstring tmp(name);
+        bool RequestForm::find(String& out, const char *name) {
+            String tmp(name);
             auto it = req.form.find(tmp);
             if (it != req.form.end()) {
-                out = std::move(zcstring(it->second.data(), it->second.size(), false));
+                out = std::move(String(it->second.data(), it->second.size(), false));
                 return true;
             }
 
@@ -644,16 +643,16 @@ namespace suil {
         }
 
         void UploadedFile::save(const char *dir, int64_t timeout) const {
-            zcstring real_dir = utils::fs::realpath(dir);
+            String real_dir = utils::fs::realpath(dir);
             if (!real_dir || !utils::fs::isdir(real_dir.data())) {
                 /* directory is not valid */
-                throw SuilError::create("directory: '", dir, "' invalid.");
+                throw Exception::create("directory: '", dir, "' invalid.");
             }
 
-            zcstring path = utils::catstr(real_dir, "/", basename((char *)name_.data()));
+            String path = utils::catstr(real_dir, "/", basename((char *)name_.data()));
             if (!path || utils::fs::isdir(path.data())) {
                 /* directory is not valid */
-                throw SuilError::create("file with name: '", name_(), "' not supported.");
+                throw Exception::create("file with name: '", name_(), "' not supported.");
             }
 
             /* async write data to disk */

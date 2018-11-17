@@ -5,108 +5,109 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
-#include <suil/http/auth.hpp>
+#include <suil/http/auth.h>
+#include <suil/base64.h>
 
 namespace suil {
     namespace http {
 
-        bool Jwt::decode(Jwt& jwt,zcstring &&jwtstr, zcstring& secret) {
+        bool Jwt::decode(Jwt& jwt,String &&jwtstr, String& secret) {
             /* header.payload.signature */
             char *tok_sig = strrchr(jwtstr.data(), '.');
-            if (tok_sig == NULL) {
+            if (tok_sig == nullptr) {
                 /* invalid json token */
-                throw error::unauthorized(
+                throw Error::unauthorized(
                         "invalid token");
             }
             *tok_sig++ = '\0';
-            zcstring data(jwtstr.data());
+            String data(jwtstr.data());
 
             /* get signature hash  */
-            zcstring signature =
-                    utils::shaHMAC256(secret, data, true);
+            String signature =
+                    utils::SHA_HMAC256(secret, data, true);
             strace("token signature orig:%s, generated %s",
                    tok_sig, signature.data());
 
-            if (strcmp(tok_sig, signature.data())) {
+            if (strcmp(tok_sig, signature.data()) != 0) {
                 /* token invalid */
                 return false;
             }
 
-            auto parts = std::move(utils::strsplit(data, "."));
+            auto parts = data.split(".");
             if (parts.size() != 2) {
                 /* invalid token */
                 /* invalid json token */
-                throw error::unauthorized(
+                throw Error::unauthorized(
                         "invalid token");
             }
 
-            zcstring header(base64::decode(parts[0]));
+            String header(utils::base64::decode(parts[0]));
             strace("header: %s", header.data());
             iod::json_decode(jwt.header, header);
-            zcstring payload(base64::decode(parts[1]));
+            String payload(utils::base64::decode(parts[1]));
             strace("header: %s", payload.data());
             iod::json_decode(jwt.payload, payload);
             return true;
         }
 
-        bool Jwt::verify(zcstring&& jwtstr, zcstring &secret) {
+        bool Jwt::verify(String&& jwtstr, String &secret) {
             /* header.payload.signature */
             char *tok_sig = strrchr(jwtstr.data(), '.');
-            if (tok_sig == NULL) {
+            if (tok_sig == nullptr) {
                 /* invalid json token */
-                throw error::unauthorized(
+                throw Error::unauthorized(
                         "invalid token");
             }
             *tok_sig++ = '\0';
-            zcstring data(jwtstr.data());
+            String data(jwtstr.data());
 
             /* get signature hash  */
-            zcstring signature =
-                    utils::shaHMAC256(secret, data);
+            String signature =
+                    utils::SHA_HMAC256(secret, data);
             strace("token signature orig:%s, generated %s",
                    tok_sig, signature.data());
 
             return strcmp(tok_sig, signature.data()) == 0;
         }
 
-        zcstring Jwt::encode(zcstring& secret) {
+        String Jwt::encode(String& secret) {
             /* encode jwt */
             /* 1. base64(hdr) & base64(payload)*/
             std::string raw_hdr(iod::json_encode(header));
-            zcstring hdr(std::move(base64::encode(raw_hdr)));
+            String hdr(std::move(utils::base64::encode(raw_hdr)));
             std::string raw_data(iod::json_encode(payload));
-            zcstring data(std::move(base64::encode(raw_data)));
+            String data(std::move(utils::base64::encode(raw_data)));
 
             /* 2. base64(hdr).base64(payload) */
-            zbuffer tmp(hdr.size() + data.size() + 4);
+            OBuffer tmp(hdr.size() + data.size() + 4);
             tmp << hdr << "." << data;
 
             /* 3. HMAC_Sha256 (base64(hdr).base64(payload))*/
-            zcstring signature =
-                    utils::shaHMAC256(secret,
-                                      (const uint8_t *) tmp.data(),
-                                      tmp.size(), true);
+            String signature =
+                    utils::SHA_HMAC256(secret,
+                                       (const uint8_t *) tmp.data(),
+                                       tmp.size(), true);
 
             /* 4. header.payload.signature */
             tmp << "." << signature;
             strace("encoded jwt: %s", tmp.data());
 
-            return std::move(zcstring(tmp));
+            return std::move(String(tmp));
         }
 
-        zcstring rand_8byte_salt::operator()(const zcstring &) {
+        String rand_8byte_salt::operator()(const String &) {
             /* simple generate random bytes */
             uint8_t key[8];
             RAND_bytes(key, 8);
             return std::move(utils::hexstr(key, 8));
         }
 
-        zcstring pbkdf2_sha1_hash::operator()(zcstring &passwd, zcstring& salt) {
+        String pbkdf2_sha1_hash::operator()(String &passwd, String& salt) {
             /* simply hash using SHA_256 appsalt.passwd.salt*/
-            zcstring tmp = utils::catstr(appsalt, ".", salt);
+            String tmp = utils::catstr(appsalt, ".", salt);
             uint8_t out[SHA_DIGEST_LENGTH];
-            int rc = PKCS5_PBKDF2_HMAC_SHA1(passwd.data(), passwd.size(),
-                              (const uint8_t*)tmp.data(), tmp.size(),
+            int rc = PKCS5_PBKDF2_HMAC_SHA1(passwd.data(), (int) passwd.size(),
+                              (const uint8_t*)tmp.data(), (int) tmp.size(),
                                    1000, SHA_DIGEST_LENGTH, out);
 
             if (rc) {
@@ -114,22 +115,22 @@ namespace suil {
                 return std::move(utils::hexstr(out, SHA_DIGEST_LENGTH));
             }
 
-            return zcstring();
+            return String();
         }
 
         void JwtAuthorization::before(Request& req, Response& resp, Context& ctx) {
             if (req.route().AUTHORIZE) {
-                zcstring tkhdr;
+                String tkhdr;
                 if (use.use == JwtUse::HEADER) {
                     auto auth = req.header(use.key);
                     if (auth.empty() ||
-                        strncasecmp(auth.data(), "Bearer ", 7)) {
+                        strncasecmp(auth.data(), "Bearer ", 7) != 0) {
                         /* user is not authorized */
                         authrequest(resp);
                     }
                     /* temporary dup of the token */
-                    tkhdr = zcstring(auth.data(), auth.size(), false);
-                    ctx.actual_token = zcstring(&auth.data()[7], auth.size() - 7, false);
+                    tkhdr = String(auth.data(), auth.size(), false);
+                    ctx.actual_token = String(&auth[7], auth.size() - 7, false);
                 }
                 else {
                     // token
@@ -143,12 +144,12 @@ namespace suil {
                     ctx.actual_token = auth;
                 }
 
-                if (ctx.actual_token.size() == 0) {
+                if (ctx.actual_token.empty()) {
                     /* no need to proceed, token is invalid */
                     authrequest(resp);
                 }
 
-                zcstring token(ctx.actual_token.dup());
+                String token(ctx.actual_token.dup());
 
                 bool valid{false};
                 try {
@@ -159,7 +160,7 @@ namespace suil {
                     authrequest(resp, "Invalid authorization token.");
                 }
 
-                if (!valid || (ctx.jwt.exp() < time(NULL))) {
+                if (!valid || (ctx.jwt.exp() < time(nullptr))) {
                     /* token unauthorized */
                     authrequest(resp);
                 }
@@ -177,12 +178,12 @@ namespace suil {
         void JwtAuthorization::after(Request&, http::Response& resp, Context& ctx) {
             /* if authorized token should have been set */
             if (ctx.send_tok) {
-                zcstring tok{nullptr}, tok2{nullptr};
+                String tok{nullptr}, tok2{nullptr};
                 /* send token in header */
                 if (ctx.encode) {
                     /* encode the current json web-token*/
-                    ctx.jwt.exp(time(NULL) + expiry);
-                    zcstring encoded(ctx.jwt.encode(key));
+                    ctx.jwt.exp(time(nullptr) + expiry);
+                    String encoded(ctx.jwt.encode(key));
                     tok = utils::catstr("Bearer ", encoded);
                     tok2 = std::move(encoded);
                 }
@@ -203,7 +204,7 @@ namespace suil {
                     } else {
                         cookie.value(std::move(tok));
                     }
-                    cookie.expires(time(NULL) + expiry);
+                    cookie.expires(time(nullptr) + expiry);
                     resp.cookie(cookie);
                 }
             } else if(!ctx.logout_url.empty()) {
@@ -216,10 +217,10 @@ namespace suil {
                 /* send authentication Request */
                 resp.header("WWW-Authenticate", authenticate);
                 if (ctx.token_hdr) {
-                    throw error::unauthorized(ctx.token_hdr.data());
+                    throw Error::unauthorized(ctx.token_hdr.data());
                 }
                 else {
-                    throw error::unauthorized();
+                    throw Error::unauthorized();
                 }
             }
         }

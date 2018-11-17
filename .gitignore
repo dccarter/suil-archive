@@ -85,6 +85,7 @@ cmake/SuilConfigVersion.cmake
 
 # Application projects
 apps
+suil-examples
 
 # Ignore protobuf files
 *.pb.*

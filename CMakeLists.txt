@@ -35,10 +35,12 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result -Wno-format-security")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes -fpermissive -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result -Wno-format-security")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
 set(CMAKE_CXX_FLAGS_DEBUG   "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-z now")
+set(CMAKE_SHARED_LINKER_FLAGS  ${CMAKE_SHARED_LINKER_FLAGS} "-z now")
 
 include(CheckSymbolExists)
 include(CheckFunctionExists)
@@ -49,8 +51,8 @@ SuilCheckLibrary(sqlite3 LIBRARY sqlite3 libsqlite3)
 
 # Configuration file
 configure_file(
-        ${CMAKE_SOURCE_DIR}/config.hpp.in
-        ${CMAKE_BINARY_DIR}/.generated/suil/config.hpp)
+        ${CMAKE_SOURCE_DIR}/base.cmake.in
+        ${CMAKE_BINARY_DIR}/.generated/suil/base.inc)
 include_directories(${CMAKE_BINARY_DIR}/.generated)
 
 find_package(OpenSSL REQUIRED)
@@ -80,6 +82,8 @@ add_definitions(${SUIL_DEFINES})
 add_subdirectory(deps/libmill)
 add_subdirectory(deps/iod)
 add_subdirectory(deps/snappy)
+add_subdirectory(deps/lua)
+
 include_directories(deps)
 
 if (SUIL_BUILD_DEV_PACKAGE)
@@ -149,19 +153,6 @@ if (SUIL_BUILD_DEV_PACKAGE)
     add_subdirectory(tools)
 endif(SUIL_BUILD_DEV_PACKAGE)
 
-if (SUIL_BUILD_UNIT_TEST)
-    get_property(_SUIL_SOURCES GLOBAL PROPERTY prop_SUIL_SOURCES)
-    file(GLOB_RECURSE SUIL_TEST_SOURCES tests/*.cpp test/*.c)
-    add_executable(sut ${_SUIL_SOURCES} ${SUIL_TEST_SOURCES})
-    add_dependencies(sut suil-gensyms)
-    target_link_libraries(sut ${SUIL_LIBRARIES} mill_s snappy)
-    target_compile_definitions(sut PUBLIC -DSUIL_TESTING)
-endif()
-
-if (SUIL_BUILD_EXAMPLES)
-    add_subdirectory(examples)
-endif()
-
 if (SUIL_BUILD_DEV_PACKAGE)
     message(STATUS "Development package enabled")
     set(SUIL_PACKAGE_POSTFIX dev)
@@ -171,9 +162,9 @@ else()
 endif()
 
 if (SUIL_DEV_IDE)
-#    add_subdirectory(apps/suil-web)
-#    add_subdirectory(apps/molly)
-#    add_subdirectory(apps/smarthood)
+    if (SUIL_BUILD_EXAMPLES)
+        add_subdirectory(suil-examples)
+    endif()
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

@@ -5,7 +5,7 @@
 #ifndef SUIL_DOCKER_HPP
 #define SUIL_DOCKER_HPP
 
-#include <suil/http/clientapi.hpp>
+#include <suil/http/clientapi.h>
 #include <sdocker/types.json.h>
 
 namespace suil::docker {

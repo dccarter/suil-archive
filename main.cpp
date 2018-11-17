@@ -1,13 +1,13 @@
 //
 // Created by dc on 20/06/17.
 //
-#include <suil/http/endpoint.hpp>
-#include <suil/http/fserver.hpp>
-#include <suil/sql/sqlite.hpp>
-#include <suil/sql/pgsql.hpp>
+#include <suil/http/endpoint.h>
+#include <suil/http/fserver.h>
+#include <suil/sql/sqlite.h>
+#include <suil/sql/pgsql.h>
 #include <suil/app.hpp>
-#include <suil/http/clientapi.hpp>
-#include <suil/email.hpp>
+#include <suil/http/clientapi.h>
+#include <suil/email.h>
 
 using  namespace suil;
 using  namespace suil::http;

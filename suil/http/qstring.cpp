@@ -2,7 +2,7 @@
 // Created by dc on 02/04/17.
 //
 
-#include <suil/http.hpp>
+#include <suil/http.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -223,10 +223,10 @@ inline char *qs_scanvalue(const char *key, const char *qs, char *val, size_t val
 namespace suil {
     namespace http {
 
-        query_string::query_string() {}
+        QueryString::QueryString() {}
 
-        query_string::query_string(strview &sv)
-                : url_(sv.empty() ? nullptr : utils::strndup(sv.data(), sv.size())) {
+        QueryString::QueryString(strview &sv)
+                : url_(sv.empty() ? nullptr : strndup(sv.data(), sv.size())) {
             if (sv.empty())
                 return;
 
@@ -235,14 +235,14 @@ namespace suil {
                                  MAX_KEY_VALUE_PAIRS_COUNT);
             if (count > 0) {
                 nparams_ = count;
-                params_ = (char **) memory::alloc((sizeof(char *)) * (count + 1));
+                params_ = (char **) malloc((sizeof(char *)) * (count + 1));
             }
             for (int i = 0; i < count; i++)
                 params_[i] = params[i];
 
         }
 
-        query_string &query_string::operator=(query_string &&qs) {
+        QueryString &QueryString::operator=(QueryString &&qs) {
             params_ = qs.params_;
             qs.params_ = nullptr;
             nparams_ = qs.nparams_;
@@ -252,34 +252,34 @@ namespace suil {
             return *this;
         }
 
-        query_string::query_string(query_string &&qs) {
+        QueryString::QueryString(QueryString &&qs) {
             *this = std::move(qs);
         }
 
-        void query_string::clear() {
+        void QueryString::clear() {
             if (params_) {
 
-                memory::free(params_);
+                free(params_);
                 params_ = nullptr;
             }
 
             if (url_) {
-                memory::free(url_);
+                free(url_);
                 url_ = nullptr;
             }
             nparams_ = 0;
         }
 
-        strview query_string::get(const char* name) const {
+        strview QueryString::get(const char* name) const {
             if (params_) {
                 return strview(qs_k2v(name, params_, nparams_));
             }
             return strview("");
         }
 
-        std::vector<char *> query_string::get_all(const char* name) const {
+        std::vector<char *> QueryString::get_all(const char* name) const {
             std::vector<char *> ret;
-            zbuffer search(0);
+            OBuffer search(0);
             search << name << "[]";
             char *element = nullptr;
 

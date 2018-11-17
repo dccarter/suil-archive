@@ -5,7 +5,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#include "suil/process.hpp"
+#include "suil/process.h"
 
 
 namespace suil {
@@ -26,12 +26,11 @@ namespace suil {
         }
     }
 
-    void Process_sa_handler(int sig, siginfo_t *info, void *context)
-    {
+    void Process_sa_handler(int sig, siginfo_t *info, void *context) {
         if (PROC_Exiting)
             return;
 
-        switch(sig) {
+        switch (sig) {
             case SIGCHLD:
                 suil::Process::on_SIGCHLD(sig, info, context);
                 break;
@@ -49,7 +48,7 @@ namespace suil {
 
     }
 
-    static void __updateEnv(zmap<zcstring>& env)
+    static void __updateEnv(Map<String>& env)
     {
         if (env.empty())
             return;
@@ -127,7 +126,7 @@ namespace suil {
         PID_Process.clear();
     }
 
-    Process::Ptr Process::start(zmap<zcstring>& env, const char * cmd, int argc, char *argv[])
+    Process::Ptr Process::start(Map<String>& env, const char * cmd, int argc, char *argv[])
     {
         int out[2], err[2], in[2];
         if (!__openPipes(in, out, err))
@@ -270,7 +269,7 @@ namespace suil {
         }
     }
 
-    zcstring Process::getStdError()
+    String Process::getStdError()
     {
         if (Ego.stdErr <= 0) {
             // cannot read standard error from an exited process
@@ -278,7 +277,7 @@ namespace suil {
             return nullptr;
         }
 
-        zbuffer buf(1024);
+        OBuffer buf(1024);
         ssize_t sz = read(Ego.stdErr, buf.data(), buf.capacity());
         if (sz == -1) {
             if (errno != EWOULDBLOCK)
@@ -289,10 +288,10 @@ namespace suil {
         }
         // advance and grow buffer
         buf.seek(sz);
-        return zcstring{buf};
+        return String{buf};
     }
 
-    zcstring Process::getStdOutput()
+    String Process::getStdOutput()
     {
         if (Ego.stdOut <= 0) {
             // cannot read standard error from an exited process
@@ -300,7 +299,7 @@ namespace suil {
             return nullptr;
         }
 
-        zbuffer buf(1024);
+        OBuffer buf(1024);
         ssize_t sz = read(Ego.stdOut, buf.data(), buf.capacity());
         if (sz == -1) {
             if (errno != EWOULDBLOCK)
@@ -310,7 +309,7 @@ namespace suil {
         }
         // advance and grow buffer
         buf.seek(sz);
-        return zcstring{buf};
+        return String{buf};
     }
 
     void Process::processAsyncRead(Process& proc, int fd, Process::__ReadCallback& readCb)
@@ -333,7 +332,7 @@ namespace suil {
                     continue;
 
                 // something has been read
-                if (!readCb(zcstring{buffer, (size_t)nread, false}.dup())) {
+                if (!readCb(String{buffer, (size_t)nread, false}.dup())) {
                     // read has been aborted by callback
                     break;
                 }
