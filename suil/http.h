@@ -7,7 +7,6 @@
 
 #include <ostream>
 
-#include <suil/config.hpp>
 #include <suil/http/common.h>
 #include <suil/net.h>
 
