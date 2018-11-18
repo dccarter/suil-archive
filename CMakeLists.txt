@@ -136,7 +136,7 @@ if (SUIL_BUILD_DEV_PACKAGE)
             FILES_MATCHING PATTERN "*.h")
     install(DIRECTORY cmake/
             DESTINATION share/cmake/Modules
-            FILES_MATCHING PATTERN "*.cmake")\
+            FILES_MATCHING PATTERN "*.cmake")
 endif()
 
 include_directories(${PostgreSQL_INCLUDE_DIRS})
