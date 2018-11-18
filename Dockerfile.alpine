@@ -3,7 +3,7 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Install dependencies
 RUN apk update
-RUN apk  add libressl libstdc++ libpq libuuid
+RUN apk  add libressl libstdc++ libpq libuuid sqlite-libs bash
 
 # Copy Binaries
 COPY artifacts/ /usr/
