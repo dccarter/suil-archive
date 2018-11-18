@@ -3,7 +3,7 @@ MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Copy Binaries
 COPY artifacts/ /usr/
-COPY sut        /usr/local/bin/sut
+COPY suil/sut        /usr/local/bin/sut
 COPY buildapp   /usr/local/bin/
 RUN  chmod +x   /usr/local/bin/buildapp
 
