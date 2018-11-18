@@ -495,11 +495,9 @@ TEST_CASE("OBuffer tests", "[common][obuffer]")
             REQUIRE(old == ob.m_data);
 
             ob << "Hello";
-            old = ob.m_data;
             ob.reset(17, true); // must grow buffer since size is larger
             REQUIRE(ob.m_offset == 0);
             REQUIRE(ob.m_size   == __TALIGN(17));
-            REQUIRE(ob.m_data   != old);
         }
 
         WHEN("Seeking with buffer") {
