@@ -277,19 +277,23 @@ function(SuilApp name)
         # install targets
         message(STATUS "target '${name} install target")
         install(TARGETS ${name}
-                ARCHIVE DESTINATION lib
-                LIBRARY DESTINATION lib
-                RUNTIME DESTINATION bin)
+                ARCHIVE DESTINATION ${${name}_ARTIFACTS_DIR}
+                LIBRARY DESTINATION ${${name}_ARTIFACTS_DIR}
+                RUNTIME DESTINATION ${${name}_ARTIFACTS_DIR})
 
         # install directories
         set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})
         if (${name}_INSTALL_DIRS)
             message(STATUS "target '${name} install directories: ${${name}_INSTALL_DIRS}")
             install(DIRECTORY ${${name}_INSTALL_DIRS}
-                    DESTINATION share/${${name}_ARTIFACTS_DIR})
+                    DESTINATION ${${name}_ARTIFACTS_DIR})
         endif()
     else()
-        message(STATUS "target install is disabled")
+        message(STATUS "target install disabled, will use default")
+        install(TARGETS ${name}
+                ARCHIVE DESTINATION lib
+                LIBRARY DESTINATION lib
+                RUNTIME DESTINATION bin)
     endif()
 endfunction()
 
