@@ -2,7 +2,7 @@
 image: suilteam/mecury:alpine
 
 variables:
-  SUIL_BUILD_VERSION: $SUIL_MAJOR_VERSION.$SUIL_MINOR_VERSION.$SUIL_PATCH_VERSION-$SUIL_VERSION_TAG
+  SUIL_BUILD_VERSION: $SUIL_MAJOR_VERSION.$SUIL_MINOR_VERSION.$SUIL_PATCH_VERSION
 
 .job_def:
   before_script: &docker_hub_login
@@ -111,8 +111,8 @@ build:release:dev:alpine:
     - make clean install
     - cp -r ../Dockerfile.build.alpine ./Dockerfile
     - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
-    - docker build --pull -t suilteam/suil-dev:$SUIL_BUILD_VERSION .
-    - docker push suilteam/suil-dev:$SUIL_BUILD_VERSION
+    - docker build --pull -t suilteam/suil-dev:$SUIL_VERSION_TAG .
+    - docker push suilteam/suil-dev:$SUIL_VERSION_TAG
 
 build:release:dev:
   image: suilteam/mecury:ubuntu
@@ -188,8 +188,8 @@ build:release:prod:
     - make clean install
     - cp -r ../Dockerfile.alpine ./Dockerfile
     - cp -r ../suilteam.ddns.net.crt ./suilteam.ddns.net.crt
-    - docker build --pull -t suilteam/suil-prod:$SUIL_BUILD_VERSION .
-    - docker push suilteam/suil-prod:$SUIL_BUILD_VERSION
+    - docker build --pull -t suilteam/suil-prod:$SUIL_VERSION_TAG .
+    - docker push suilteam/suil-prod:$SUIL_VERSION_TAG
     - cd ..
       
 test:devel:
@@ -212,4 +212,4 @@ test:production:
   before_script: *docker_hub_login
   script:
     - docker pull suilteam/suil-dev:$SUIL_BUILD_VERSION
-    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:$SUIL_BUILD_VERSION /usr/local/bin/sut
+    - docker run --rm -i --name "$CI_COMMIT_REF_SLUG" suilteam/suil-dev:$SUIL_VERSION_TAG/usr/local/bin/sut
