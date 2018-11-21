@@ -493,7 +493,7 @@ namespace suil {
         public:
             Router(std::string& base)
                 : m_rules(2),
-                  api_base(base)
+                  api_base((base=="/")? "": base)
             {}
 
             DynamicRule& new_rule_dynamic(const std::string& rule);
@@ -517,6 +517,10 @@ namespace suil {
 
             void debug_print() {
                 m_trie.debug_print();
+            }
+
+            inline const std::string& apiBaseRoute() const {
+                return api_base;
             }
 
         private:

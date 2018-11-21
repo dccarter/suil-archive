@@ -178,6 +178,14 @@ namespace suil {
                 return get_element_by_type<T, Mws...>(basesrv_t::mws);
             }
 
+            inline const std::string& getApiBaseRoute() const {
+                return router.apiBaseRoute();
+            }
+
+            const HttpConfig& getConfig() const {
+                return Ego.config;
+            }
+
         private:
             Router   router;
         };

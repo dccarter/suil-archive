@@ -12,6 +12,7 @@
 namespace suil {
 
     struct OBuffer;
+    struct Wire;
 
     /**
      * A light-weight string abstraction
@@ -366,6 +367,24 @@ namespace suil {
         ~String();
 
     private suil_ut:
+        /**
+         * serialization into a wire operator
+         * @param w
+         * @param s
+         * @return
+         */
+        friend
+        Wire& operator<<(Wire& w, const String& s);
+
+        /**
+         * deserialization from a wire operator
+         * @param w
+         * @param s
+         * @return
+         */
+        friend
+        Wire& operator>>(Wire& w, String& s);
+
         friend struct hasher;
         union {
             char  *m_str;

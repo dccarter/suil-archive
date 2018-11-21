@@ -5,21 +5,20 @@
 
 namespace suil {
 
-    varint::varint(uint64_t v)
-        : Blob()
+    VarInt::VarInt(uint64_t v)
     {
         write(v);
     }
 
-    varint::varint()
-            : varint(0)
+    VarInt::VarInt()
+            : VarInt(0)
     {}
 
-    uint8_t *varint::raw() {
-        return (uint8_t *) Ego.begin();
+    uint8_t *VarInt::raw() {
+        return mData;
     }
 
-    uint8_t varint::length() const {
+    uint8_t VarInt::length() const {
         uint8_t sz{0};
         auto tmp = Ego.read<uint64_t>();
         while (tmp > 0) {
@@ -30,16 +29,16 @@ namespace suil {
     }
 }
 
-#ifdef SUIL_TESTING
+#ifdef unit_test
 #include <catch/catch.hpp>
 
 using namespace suil;
 
-TEST_CASE("suil::varint", "[suil][varint]")
+TEST_CASE("suil::VarInt", "[suil][VarInt]")
 {
-    SECTION("when initializing varint") {
+    SECTION("when initializing VarInt") {
         uint64_t num = 0xaa;
-        varint   vnum(num);
+        VarInt   vnum(num);
         REQUIRE(vnum.length() == 1);
         REQUIRE(vnum.read<uint64_t>() == num);
 
@@ -48,12 +47,13 @@ TEST_CASE("suil::varint", "[suil][varint]")
             uint64_t current = (num << i*8);
             vnum = current;
             REQUIRE(vnum.length() == (i+1));
+            REQUIRE(vnum.read<uint64_t>() == current);
         }
     }
 
     SECTION("operations on varint") {
         // Some basic operations
-        varint v1(10), v2(10), v3(100);
+        VarInt v1(10), v2(10), v3(100);
         REQUIRE(v1 == v2);
         REQUIRE_FALSE(v2 == v3);
         REQUIRE(v1.read<uint64_t>() == v1.read<uint8_t>());

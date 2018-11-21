@@ -3,6 +3,7 @@ project(libsuil C CXX)
 
 set(LIB_SUIL_BASE_SOURCES
         base.cpp
+        wire.cpp
         buffer.cpp
         channel.cpp
         cmdl.cpp

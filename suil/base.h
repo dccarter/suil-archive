@@ -609,7 +609,9 @@ public:                                     \
 
         Data();
 
-        Data(uint8_t *data, size_t size, bool own = true);
+        Data(void *data, size_t size, bool own = true);
+
+        Data(const void *data, size_t size, bool own = true);
 
         Data(const Data& d) noexcept;
 
@@ -652,6 +654,7 @@ public:                                     \
                    (memcmp(Ego.m_data, other.m_data, Ego.m_size) != 0);
         }
 
+        Data copy() const;
         void clear();
 
         ~Data() {

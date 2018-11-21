@@ -25,6 +25,12 @@ namespace suil {
             template <typename E, typename... Opts>
             FileServer(E& ep, Opts&&... opts)
             {
+                // file server can only on an ep with an api base
+                if (ep.getApiBaseRoute().empty()) {
+                    // cannot attach a file server to an endpoint with a base route
+                    throw Exception::create("cannot attach a file server to an endpoint without and API base route");
+                }
+
                 // apply  file server configurations
                 utils::apply_config(config, opts...);
 
@@ -65,6 +71,8 @@ namespace suil {
                         res.end(Status::INTERNAL_ERROR);
                     }
                 });
+                inotice("attached file server to endpoint %s:%d",
+                        ep.getConfig().name.c_str(), ep.getConfig().port);
             }
 
             template <typename... Opts>

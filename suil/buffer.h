@@ -7,7 +7,7 @@
 
 #include <type_traits>
 
-#include <suil/base.h>
+#include <suil/wire.h>
 
 namespace suil {
 

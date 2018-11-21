@@ -165,6 +165,7 @@ if (SUIL_DEV_IDE)
     if (SUIL_BUILD_EXAMPLES)
         add_subdirectory(suil-examples)
     endif()
+    add_subdirectory(apps/utouch)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

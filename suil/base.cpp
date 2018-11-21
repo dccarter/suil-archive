@@ -80,11 +80,17 @@ namespace suil {
     }
 
     Data::Data()
-        : Data(nullptr, 0)
+        : Data((void *)nullptr, 0)
     {}
 
-    Data::Data(uint8_t *data, size_t size, bool own)
-        : m_cdata(data),
+    Data::Data(void *data, size_t size, bool own)
+        : m_data((uint8_t*) data),
+          m_size((uint32_t)(size)),
+          m_own(own)
+    {}
+
+    Data::Data(const void *data, size_t size, bool own)
+        : m_cdata((uint8_t*) data),
           m_size((uint32_t)(size)),
           m_own(own)
     {}
@@ -129,6 +135,17 @@ namespace suil {
         d.m_size = 0;
         d.m_own  = false;
         return Ego;
+    }
+
+    Data Data::copy() const {
+        Data tmp{};
+        if (Ego.m_size) {
+            tmp.m_data = (uint8_t *) malloc(Ego.m_size);
+            tmp.m_size = Ego.m_size;
+            memcpy(tmp.m_data, Ego.m_data, Ego.m_size);
+            tmp.m_own  = true;
+        }
+        return std::move(tmp);
     }
 
     void Data::clear() {
