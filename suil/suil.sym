@@ -115,6 +115,9 @@ _iss
 _aud
 _sub
 _exp
+_iat
+_nbf
+_jti
 _alg
 _typ
 _claims
@@ -187,3 +190,22 @@ KeyValPair:
 Process:
   _onStdError
   _onStdOutput
+
+PasswordValidator:
+  _minChars
+  _maxChars
+  _upper
+  _lower
+  _special
+  _numbers
+
+
+JsonRPC:
+  _jsonrpc
+  _method
+  _params
+  @id
+  _result
+  _error
+  _message
+  @data

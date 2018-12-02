@@ -24,7 +24,9 @@ namespace suil {
                 s::_aud(var(optional),   var(ignore))    = String(),
                 s::_sub(var(optional),   var(ignore))    = String(),
                 s::_exp(var(optional),   var(ignore))    = int64_t(),
-                s::_roles(var(optional), var(ignore))    = std::vector<String>(),
+                s::_iat(var(optional),   var(ignore))    = int64_t(),
+                s::_nbf(var(optional),   var(ignore))    = int64_t(),
+                s::_jti(var(optional),   var(ignore))    = String(),
                 s::_claims(var(optional),var(ignore))    = json::Object()
             )) JwtPayload;
 
@@ -32,46 +34,59 @@ namespace suil {
             {
                 header.typ = String(typ).dup();
                 header.alg = String("HS256").dup();
+                iod::zero(payload);
+                payload.claims = json::Object(json::Obj);
             }
 
             Jwt()
                 : Jwt("JWT")
             {}
 
-            template <typename __T>
-            inline void claims(__T& claims) {
-                /* encode the claims to a json string*/;
-                payload.claims = std::move(iod::json_encode(claims));
+            Jwt(Jwt&& o) noexcept
+                : header(std::move(o.header)),
+                  payload(std::move(o.payload))
+            {}
+
+            Jwt& operator=(Jwt&& o) noexcept {
+                if (this != &o) {
+                    Ego.header  = std::move(o.header);
+                    Ego.payload = std::move(o.payload);
+                }
+                return Ego;
             }
 
-            template <typename... __Claims>
-            inline void claims(__Claims... c) {
-                auto tmp = iod::D(c...);
-                /* encode the claims to a json string*/
-                claims(tmp);
+            Jwt(const Jwt&) = delete;
+            Jwt& operator=(const Jwt&) = delete;
+
+            template <typename T, typename... Claims>
+            inline void claims(const char* key, T value, Claims... c) {
+                Ego.payload.claims.set(key, std::forward<T>(value), std::forward<Claims>(c)...);
             }
 
             inline void roles(std::vector<String>& roles) {
-                for (auto& r : roles) {
-                    payload.roles.push_back(std::move(r.dup()));
-                }
+                auto rs = Ego.payload.claims["roles"];
+                if (rs.empty())
+                    Ego.payload.claims.set("roles", json::Object{roles});
+                else for(auto& r: roles)
+                    rs.push(r);
             }
 
-            inline std::vector<String>& roles() {
-                return payload.roles;
+            template <typename R, typename... Roles>
+            inline void roles(R r, Roles... roles) {
+                auto rs = Ego.payload.claims["roles"];
+                if (rs.empty())
+                    Ego.payload.claims.set("roles", json::Object(json::Arr,
+                            std::forward<R>(r), std::forward<Roles>(roles)...));
+                else
+                    rs.push(std::forward<R>(r), std::forward<Roles>(roles)...);
             }
 
-            inline void roles(const char *r) {
-                payload.roles.push_back(std::move(String(r).dup()));
-            }
-
-            template <typename... __T>
-            inline void roles(const char *a, __T... args) {
-                roles(a);
-                roles(args...);
+            inline json::Object roles() {
+                return Ego.payload.claims["roles"];
             }
 
             inline json::Object& claims() {
+                // get the claims
                 return payload.claims;
             }
 
@@ -125,6 +140,30 @@ namespace suil {
 
             inline void exp(int64_t exp) {
                 payload.exp = exp;
+            }
+
+            inline const int64_t iat() const {
+                return payload.iat;
+            }
+
+            inline void iat(int64_t iat) {
+                payload.iat = iat;
+            }
+
+            inline const int64_t nfb() const {
+                return payload.nbf;
+            }
+
+            inline void nbf(int64_t nbf) {
+                payload.exp = nbf;
+            }
+
+            inline const String& jti() const {
+                return payload.jti;
+            }
+
+            inline void jti(String&& jti) {
+                payload.jti = std::move(jti);
             }
 
             static bool decode(Jwt& jwt, String&& zcstr, String& secret);
@@ -191,26 +230,46 @@ namespace suil {
         struct JwtAuthorization : LOGGER(AUTHENTICATION) {
             struct Context{
                 Context()
-                    : send_tok(0),
+                    : sendTok(0),
                       encode(0),
-                      request_auth(0)
+                      requestAuth(0)
                 {}
 
-                inline void authorize(Jwt&& jwt, User& user) {
+                inline void authorize(Jwt&& jwt) {
                     this->jwt = std::move(jwt);
-                    this->jwt.roles(user.roles);
-                    this->jwt.sub(user.email);
-                    send_tok = 1;
+                    Ego.jwt.iat(time(nullptr));
+                    Ego.jwt.exp(time(nullptr) + jwtAuth->expiry);
+                    sendTok = 1;
                     encode = 1;
-                    request_auth = 0;
+                    requestAuth = 0;
+                    Ego.actualToken = Ego.jwt.encode(jwtAuth->key);
+                }
+
+                inline bool authorize(const String& token) {
+                    /* decode and use given token in authorization */
+                    Jwt tok;
+                    if (Jwt::decode(tok, token.dup(), jwtAuth->key)) {
+                        /* decoded, authorize only if not expired */
+                        if (tok.exp() > time(NULL)) {
+                            /* token valid, authorize with token */
+                            this->jwt = std::move(tok);
+                            sendTok = 1;
+                            encode  = 1;
+                            requestAuth = 0;
+                            Ego.actualToken = token.dup();
+                            return true;
+                        }
+                    }
+                    /*  token not valid */
+                    return false;
                 }
 
                 inline Status authenticate(Status status, const char *msg = NULL) {
-                    send_tok = 0;
+                    sendTok = 0;
                     encode   = 0;
-                    request_auth = 1;
+                    requestAuth = 1;
                     if (msg) {
-                        token_hdr = String(msg).dup();
+                        tokenHdr = String(msg).dup();
                     }
 
                     return status;
@@ -222,14 +281,18 @@ namespace suil {
 
                 inline void logout(const char* redirect = NULL) {
                     if (redirect) {
-                        logout_url = String(redirect).dup();
+                        redirectUrl = String(redirect).dup();
                     }
                     // do not send token, but send delete cookie if using cookie method
-                    send_tok = 0;
+                    sendTok = 0;
                 }
 
                 const String& token() const  {
-                    return actual_token;
+                    return actualToken;
+                }
+
+                const Jwt& jwtRef() const {
+                    return jwt;
                 }
 
             private:
@@ -237,16 +300,18 @@ namespace suil {
                 friend struct JwtAuthorization;
                 union {
                     struct {
-                        uint8_t send_tok : 1;
+                        uint8_t sendTok : 1;
                         uint8_t encode : 1;
-                        uint8_t request_auth: 1;
+                        uint8_t requestAuth: 1;
                         uint8_t __u8r5: 5;
                     };
                     uint8_t     _u8;
                 } __attribute__((packed));
-                String token_hdr{};
-                String actual_token{};
-                String logout_url{};
+
+                String tokenHdr{};
+                String actualToken{};
+                String redirectUrl{};
+                JwtAuthorization *jwtAuth{nullptr};
             };
 
             void before(Request& req, Response& resp, Context& ctx);
@@ -261,7 +326,7 @@ namespace suil {
                 /* configure key */
                 if (tmp) {
                     key = std::move(tmp.dup());
-                    idebug("jwt key changed to %s", key());
+                    trace("jwt key changed to %s", key());
                 }
 
                 /* configure authenticate header string */
@@ -301,7 +366,7 @@ namespace suil {
             }
 
         private:
-            inline void delete_cookie(Response& resp) {
+            inline void deleteCookie(Response &resp) {
                 Cookie cookie(use.key());
                 cookie.value("");
                 cookie.domain(domain.peek());
@@ -309,19 +374,21 @@ namespace suil {
                 cookie.expires(time(NULL)-2);
                 resp.cookie(cookie);
             }
+
             inline void authrequest(Response& resp, const char *msg = "")
             {
+                deleteCookie(resp);
                 resp.header("WWW-Authenticate", authenticate);
                 throw Error::unauthorized(msg);
             }
 
-            uint64_t  expiry{3600};
-            String  key;
-            String  authenticate;
+            uint64_t  expiry{900};
+            String    key;
+            String    authenticate;
             JwtUse    use;
             // cookie attributes
-            String  domain{""};
-            String  path{"/"};
+            String    domain{""};
+            String    path{"/"};
         };
 
         namespace auth {

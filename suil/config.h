@@ -7,6 +7,7 @@
 
 #include <suil/utils.h>
 #include <suil/logging.h>
+#include <suil/json.h>
 
 struct lua_State;
 
@@ -33,15 +34,23 @@ namespace suil {
             auto what = loadValue(key);
             if (what) {
                 unloadValue();
-                throw Exception::keyNotFound(what);
+                throw Exception::keyNotFound(what());
             }
-            what = get(key, tmp);
+            what = getValue(key, tmp);
             if (what) {
                 unloadValue();
-                throw Exception::keyNotFound(what);
+                throw Exception::keyNotFound(what());
             }
+            unloadValue();
             return std::move(tmp);
         }
+
+        template <typename T>
+        T operator()(const char* key, T&& def) {
+            return Ego.get<T>(key, std::forward<T>(def));
+        }
+
+        json::Object operator[](const char* key);
 
         template <typename T>
         T get(const char* key, T&& def) {
@@ -50,8 +59,8 @@ namespace suil {
                 return std::forward<T>(def);
             }
 
-            T tmp{def};
-            Ego.get(key, tmp);
+            T tmp = std::forward<T>(def);
+            Ego.getValue(key, tmp);
             unloadValue();
 
             return std::move(tmp);
@@ -64,15 +73,14 @@ namespace suil {
         ~Config();
 
     private:
-
         String loadValue(const char *key);
         void unloadValue();
 
-        String get(const char *key, String& out);
-        String get(const char *key, bool& out);
-        String get(const char *key, double& out);
-        String get(const char *key, int& out);
-        String get(const char *key, std::string& out);
+        String getValue(const char *key, String& out);
+        String getValue(const char *key, bool& out);
+        String getValue(const char *key, double& out);
+        String getValue(const char *key, int& out);
+        String getValue(const char *key, std::string& out);
 
         lua_State *L{nullptr};
         int        level{0};

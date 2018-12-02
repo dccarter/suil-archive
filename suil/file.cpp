@@ -386,7 +386,7 @@ namespace suil {
             throw Exception::create("opening file '", path, "' failed: ", errno_s);
         }
 
-        out.reserve((uint32_t) st.st_size);
+        out.reserve((uint32_t) st.st_size+4);
         char *data = out.data();
         ssize_t nread = 0, rc = 0;
         do {

@@ -55,7 +55,9 @@ namespace suil {
         if (rc) {
             OUT[rc] = '\0';
             tmp = String(OUT, (size_t)rc, true);
-        }
+        } else
+            ::free(OUT);
+
         return std::move(tmp);
     }
 
@@ -214,6 +216,16 @@ namespace suil {
         else {
             return hexstr(result, SHA256_DIGEST_LENGTH);
         }
+    }
+
+    static void _AES_init(uint8_t *keyData, int keyDataLen, uint8_t *salt, EVP_CIPHER_CTX *ctx, int rounds) {
+        /* generate 256 bit key */
+        uint8_t key[32], iv[32];
+
+    }
+
+    String AES_Encrypt(String &key, const uint8_t *buf, size_t size, bool b64 = true) {
+
     }
 
     uint8_t utils::c2i(char c) {

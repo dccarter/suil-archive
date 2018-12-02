@@ -48,7 +48,7 @@ namespace suil {
             }
 
         private:
-            friend struct base_client;
+            friend struct BaseClient;
 
             String prepared() const {
                 return String{buffer.data(), buffer.size(), false};
@@ -144,7 +144,7 @@ namespace suil {
 
         private:
             friend struct Response;
-            friend struct base_client;
+            friend struct BaseClient;
             String data{nullptr};
             OBuffer recvd;
             char     prefix{'-'};
@@ -240,8 +240,8 @@ namespace suil {
                 d = tmp.dup();
             }
 
-            friend struct base_client;
-            friend struct transaction;
+            friend struct BaseClient;
+            friend struct Transaction;
 
             std::vector<Reply> entries;
             OBuffer           buffer{128};
@@ -249,23 +249,23 @@ namespace suil {
 
         struct redisdb_config {
             int64_t     timeout;
-            std::string password;
+            std::string passwd;
         };
 
-        struct server_info {
+        struct ServerInfo {
             String    version;
-            server_info(){}
+            ServerInfo(){}
 
-            server_info(const server_info& o) = delete;
-            server_info&operator=(const server_info& o) = delete;
+            ServerInfo(const ServerInfo& o) = delete;
+            ServerInfo&operator=(const ServerInfo& o) = delete;
 
-            server_info(server_info&& o)
+            ServerInfo(ServerInfo&& o)
                 : version(std::move(o.version)),
                   buffer(std::move(o.buffer)),
                   params(std::move(o.params))
             {}
 
-            server_info&operator=(server_info&& o) {
+            ServerInfo&operator=(ServerInfo&& o) {
                 version = std::move(o.version);
                 buffer  = std::move(o.buffer);
                 params  = std::move(o.params);
@@ -286,12 +286,12 @@ namespace suil {
             }
 
         private:
-            friend  struct base_client;
+            friend  struct BaseClient;
             CaseMap<String> params;
             OBuffer      buffer;
         };
 
-        struct base_client : LOGGER(REDIS) {
+        struct BaseClient : LOGGER(REDIS) {
 
             Response send(Commmand& cmd) {
                 return dosend(cmd, 1);
@@ -513,11 +513,10 @@ namespace suil {
                 }
             }
 
-            template <typename T>
-            auto hdel(const String&& hash, const String&& key) -> T {
+            int hdel(const String&& hash, const String&& key) {
                 Response resp = send("HDEL", hash, key);
                 if (resp) {
-                    return (T) resp != 0;
+                    return (int) resp;
                 }
                 else {
                     throw Exception::create("redis HDEL  '", key,
@@ -525,7 +524,6 @@ namespace suil {
                 }
             }
 
-            template <typename T>
             bool hexists(String&& hash, String&& key) {
                 Response resp = send("HEXISTS", hash, key);
                 if (resp) {
@@ -574,7 +572,12 @@ namespace suil {
 
             template <typename T>
             inline bool hset(String&& hash, String&& key, const T val) {
-                return send("HSET", hash, key, val).status();
+                Response resp = send("HSET", hash, key, val);
+                if (!resp) {
+                    throw Exception::create("redis HSET '", hash, " ", key,
+                                            "' failed: ", resp.error());
+                }
+                return (int) resp != 0;
             }
 
             inline size_t hlen(String&& hash) {
@@ -622,17 +625,17 @@ namespace suil {
             }
 
 
-            bool info(server_info&);
+            bool info(ServerInfo&);
 
         protected:
-            base_client(SocketAdaptor& adaptor, redisdb_config& config)
+            BaseClient(SocketAdaptor& adaptor, redisdb_config& config)
                 : adaptor(adaptor),
                   config(config)
             {}
 
             Response dosend(Commmand& cmd, size_t nreply);
 
-            friend struct transaction;
+            friend struct Transaction;
             inline void reset() {
                 batched.clear();
             }
@@ -659,32 +662,32 @@ namespace suil {
         };
 
         template <typename Sock>
-        struct client : base_client {
-            client(Sock&& insock, redisdb_config& config)
-                : base_client(sock, config),
+        struct Client : BaseClient {
+            Client(Sock&& insock, redisdb_config& config)
+                : BaseClient(sock, config),
                   sock(std::move(insock))
             {}
 
-            client()
-                : base_client(sock, config)
+            Client()
+                : BaseClient(sock, config)
             {}
 
-            client(client&& o)
-                : base_client(sock, o.config),
+            Client(Client&& o)
+                : BaseClient(sock, o.config),
                   sock(std::move(o.sock))
             {}
 
-            client&operator=(client&& o) {
+            Client&operator=(Client&& o) {
                 sock = std::move(o.sock);
                 adaptor = sock;
                 config  = o.config;
                 return *this;
             }
 
-            client&operator=(const client&) = delete;
-            client(const client&) = delete;
+            Client&operator=(const Client&) = delete;
+            Client(const Client&) = delete;
 
-            ~client() {
+            ~Client() {
                 // reset and close Connection
                 reset();
                 sock.close();
@@ -695,15 +698,24 @@ namespace suil {
         };
 
         template <typename Proto = TcpSock>
-        struct redisdb : LOGGER(REDIS) {
+        struct RedisDb : LOGGER(REDIS) {
             template <typename... Args>
-            redisdb(const char *host, int port, Args... args)
+            RedisDb(const char *host, int port, Args... args)
                 : addr(ipremote(host, port, 0, utils::after(3000)))
             {
                 utils::apply_config(config, args...);
             }
 
-            client<Proto> connect(const char *passwd = nullptr, int db = 0) {
+            RedisDb()
+            {}
+
+            template <typename Opts>
+            void configure(const char *host, int port, Opts& opts) {
+                addr = ipremote(host, port, 0, utils::after(3000));
+                utils::apply_options(Ego.config, opts);
+            }
+
+            Client<Proto> connect(int db = 0) {
                 Proto proto;
                 trace("opening redis Connection");
                 if (!proto.connect(addr, config.timeout)) {
@@ -711,11 +723,11 @@ namespace suil {
                             ipstr(addr), "' failed: ", errno_s);
                 }
                 trace("connected to redis server");
-                client<Proto> cli(std::move(proto), config);
+                Client<Proto> cli(std::move(proto), config);
 
-                if (passwd != nullptr) {
+                if (!config.passwd.empty()) {
                     // authenticate
-                    if (!cli.auth(passwd)) {
+                    if (!cli.auth(config.passwd.c_str())) {
                         throw Exception::create("redis - authorizing client failed");
                     }
                 }
@@ -740,7 +752,7 @@ namespace suil {
                 return std::move(cli);
             }
 
-            const server_info& getinfo(client<Proto>& cli, bool refresh = true) {
+            const ServerInfo& getinfo(Client<Proto>& cli, bool refresh = true) {
                 if (refresh || !srvinfo.version) {
                     if (!cli.info(srvinfo)) {
                         ierror("retrieving server information failed");
@@ -751,12 +763,12 @@ namespace suil {
 
         private:
 
-            ipaddr  addr;
+            ipaddr         addr;
             redisdb_config config{1500, ""};
-            server_info    srvinfo;
+            ServerInfo     srvinfo;
         };
 
-        struct transaction : LOGGER(REDIS) {
+        struct Transaction : LOGGER(REDIS) {
             template <typename... Params>
             bool operator()(const char *cmd, Params... params) {
                 if (Ego.in_multi) {
@@ -773,13 +785,13 @@ namespace suil {
 
             bool multi();
 
-            transaction(base_client& client);
+            Transaction(BaseClient& client);
 
-            virtual ~transaction();
+            virtual ~Transaction();
 
         private:
             Response             cachedresp;
-            base_client&         client;
+            BaseClient&          client;
             bool                 in_multi{false};
         };
     }

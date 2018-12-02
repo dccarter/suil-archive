@@ -119,6 +119,7 @@ namespace suil {
         }
 
         void JwtAuthorization::before(Request& req, Response& resp, Context& ctx) {
+            ctx.jwtAuth = this;
             if (req.route().AUTHORIZE) {
                 String tkhdr;
                 if (use.use == JwtUse::HEADER) {
@@ -130,7 +131,7 @@ namespace suil {
                     }
                     /* temporary dup of the token */
                     tkhdr = String(auth.data(), auth.size(), false);
-                    ctx.actual_token = String(&auth[7], auth.size() - 7, false);
+                    ctx.actualToken = String(&auth[7], auth.size() - 7, false);
                 }
                 else {
                     // token
@@ -141,15 +142,15 @@ namespace suil {
                         authrequest(resp);
                     }
                     tkhdr = auth;
-                    ctx.actual_token = auth;
+                    ctx.actualToken = auth;
                 }
 
-                if (ctx.actual_token.empty()) {
+                if (ctx.actualToken.empty()) {
                     /* no need to proceed, token is invalid */
                     authrequest(resp);
                 }
 
-                String token(ctx.actual_token.dup());
+                String token(ctx.actualToken.dup());
 
                 bool valid{false};
                 try {
@@ -166,58 +167,44 @@ namespace suil {
                 }
 
                 if (!req.route().AUTHORIZE.check(ctx.jwt.roles())) {
-                    /* token does not have permission to access resouce */
+                    /* token does not have permission to access resource */
                     authrequest(resp, "Access to resource denied.");
                 }
 
-                ctx.token_hdr = tkhdr;
-                ctx.send_tok = 1;
+                ctx.tokenHdr = tkhdr;
             }
         }
 
         void JwtAuthorization::after(Request&, http::Response& resp, Context& ctx) {
             /* if authorized token should have been set */
-            if (ctx.send_tok) {
-                String tok{nullptr}, tok2{nullptr};
-                /* send token in header */
-                if (ctx.encode) {
-                    /* encode the current json web-token*/
-                    ctx.jwt.exp(time(nullptr) + expiry);
-                    String encoded(ctx.jwt.encode(key));
-                    tok = utils::catstr("Bearer ", encoded);
-                    tok2 = std::move(encoded);
-                }
-                else {
-                    /* move header from Request */
-                    tok = std::move(ctx.token_hdr);
-                }
+            if (ctx.sendTok) {
+                /* append token to request */
+                String tok{nullptr};
+                /* encode the current json web-token*/
+                tok = utils::catstr("Bearer ", ctx.actualToken);
+                resp << tok;
 
                 if (use.use == JwtUse::HEADER) {
+                    /* token is sent in header */
                     resp.header(use.key.peek(), std::move(tok));
                 }
                 else {
+                    // send token in cookie
                     Cookie cookie(use.key.data());
                     cookie.domain(domain.peek());
                     cookie.path(path.peek());
-                    if (tok2) {
-                        cookie.value(std::move(tok2));
-                    } else {
-                        cookie.value(std::move(tok));
-                    }
+                    cookie.value(ctx.actualToken.dup());
                     cookie.expires(time(nullptr) + expiry);
                     resp.cookie(cookie);
                 }
-            } else if(!ctx.logout_url.empty()) {
-                resp.redirect(Status::FOUND, ctx.logout_url.data());
-                if (use.use == JwtUse::COOKIE) {
-                    // delete cookie
-                    delete_cookie(resp);
-                }
-            } else if (ctx.request_auth) {
+            } else if(!ctx.redirectUrl.empty()) {
+                resp.redirect(Status::FOUND, ctx.redirectUrl.data());
+                deleteCookie(resp);
+            } else if (ctx.requestAuth) {
                 /* send authentication Request */
                 resp.header("WWW-Authenticate", authenticate);
-                if (ctx.token_hdr) {
-                    throw Error::unauthorized(ctx.token_hdr.data());
+                if (ctx.tokenHdr) {
+                    throw Error::unauthorized(ctx.tokenHdr.data());
                 }
                 else {
                     throw Error::unauthorized();

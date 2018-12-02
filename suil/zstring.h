@@ -364,7 +364,42 @@ namespace suil {
         template <typename T>
         explicit inline operator T() const;
 
+        char operator[](int index) {
+            if (index >= 0 && index < m_len)
+                return m_cstr[index];
+            throw Exception::indexOutOfBounds("index '", index, "' out of bounds");
+        }
+
         ~String();
+
+        struct iterator {
+            iterator(const String &s, size_t pos = 0)
+                : str(s),
+                  pos(pos)
+            {}
+            iterator operator++() { pos++; return Ego; }
+            bool operator!=(const iterator &other) {
+                return Ego.pos != other.pos;
+            }
+
+            char operator*() const {
+                return pos<str.size()? str[pos] : '\0';
+            }
+
+        private:
+            const String& str;
+            size_t        pos{0};
+        };
+
+        using const_iterator = const iterator;
+
+        iterator begin() { return iterator(Ego); }
+
+        iterator end() { return iterator(Ego, m_len); }
+
+        const_iterator begin() const { return const_iterator(Ego); }
+
+        const_iterator end() const { return const_iterator(Ego, m_len); }
 
     private suil_ut:
         /**

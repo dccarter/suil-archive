@@ -411,7 +411,7 @@ namespace suil {
             {
                 unsigned rule_index{};
                 std::array<unsigned, (int)suil::detail::ParamType::MAX> param_childrens{};
-                std::unordered_map<std::string, unsigned> children;
+                std::unordered_map<std::string, unsigned> children{};
 
                 bool issimple() const
                 {
@@ -421,6 +421,10 @@ namespace suil {
                                     std::begin(param_childrens),
                                     std::end(param_childrens),
                                     [](unsigned x){ return !x; });
+                }
+
+                ~node_t() {
+                    children.clear();
                 }
             };
 

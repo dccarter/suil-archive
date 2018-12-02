@@ -583,6 +583,7 @@ namespace suil {
             body_read = 0;
             body_error = 0;
             offload_error = 0;
+            body_offset = 0;
 
             cookied = false;
             if (formed) {
@@ -593,8 +594,9 @@ namespace suil {
             params.clear();
         }
 
-        RequestForm::RequestForm(const Request &req)
-            : req(req)
+        RequestForm::RequestForm(const Request &req, std::vector<suil::String>&& fields)
+            : req(req),
+              required{std::move(fields)}
         {}
 
         void RequestForm::operator|(form_data_it_t f) {

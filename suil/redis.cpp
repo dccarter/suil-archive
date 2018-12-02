@@ -6,11 +6,11 @@
 namespace suil {
     namespace redis {
 
-        transaction::transaction(base_client &client)
+        Transaction::Transaction(BaseClient &client)
             : client(client)
         {}
 
-        Response& transaction::exec() {
+        Response& Transaction::exec() {
             // send MULTI command
             if (!in_multi) {
                 iwarn("EXEC not support outside of MULTI transaction");
@@ -28,7 +28,7 @@ namespace suil {
             return cachedresp;
         }
 
-        bool transaction::discard()
+        bool Transaction::discard()
         {
             if (!in_multi) {
                 iwarn("DISCARD not supported outside MULTI");
@@ -46,7 +46,7 @@ namespace suil {
             return cachedresp;
         }
 
-        bool transaction::multi()
+        bool Transaction::multi()
         {
             if (in_multi) {
                 iwarn("MULTI not supported within a MULTI block");
@@ -64,12 +64,12 @@ namespace suil {
             return cachedresp;
         }
 
-        transaction::~transaction() {
+        Transaction::~Transaction() {
             if (in_multi)
                 discard();
         }
 
-        Response base_client::dosend(Commmand &cmd, size_t nrps) {
+        Response BaseClient::dosend(Commmand &cmd, size_t nrps) {
             // send the command to the server
             String data = cmd.prepared();
             size_t size = adaptor.send(data.data(), data.size(), config.timeout);
@@ -93,7 +93,7 @@ namespace suil {
             return std::move(resp);
         }
 
-        String base_client::commit(Response &resp) {
+        String BaseClient::commit(Response &resp) {
             // send all the commands at once and read all the responses in one go
             Commmand *last = batched.back();
             batched.pop_back();
@@ -115,7 +115,7 @@ namespace suil {
             return String{nullptr};
         }
 
-        bool base_client::recvresp(OBuffer& out, std::vector<Reply>& stagging) {
+        bool BaseClient::recvresp(OBuffer& out, std::vector<Reply>& stagging) {
             size_t rxd{1}, offset{out.size()};
             char prefix;
             if (!adaptor.read(&prefix, rxd, config.timeout)) {
@@ -191,7 +191,7 @@ namespace suil {
             }
         }
 
-        bool base_client::readlen(int64_t &len) {
+        bool BaseClient::readlen(int64_t &len) {
             OBuffer out{16};
             if (!readline(out)) {
                 return false;
@@ -202,7 +202,7 @@ namespace suil {
             return true;
         }
 
-        bool base_client::readline(OBuffer &out) {
+        bool BaseClient::readline(OBuffer &out) {
             out.reserve(255);
             size_t cap{out.capacity()};
             do {
@@ -229,7 +229,7 @@ namespace suil {
             return true;
         }
 
-        bool base_client::info(server_info& out) {
+        bool BaseClient::info(ServerInfo& out) {
             Commmand cmd("INFO");
             Response resp = send(cmd);
             if (!resp) {

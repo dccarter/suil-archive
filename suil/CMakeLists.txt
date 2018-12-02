@@ -3,7 +3,7 @@ project(libsuil C CXX)
 
 set(LIB_SUIL_BASE_SOURCES
         base.cpp
-        wire.cpp
+        base64.cpp
         buffer.cpp
         channel.cpp
         cmdl.cpp
@@ -11,16 +11,17 @@ set(LIB_SUIL_BASE_SOURCES
         config.cpp
         console.cpp
         email.cpp
-        base64.cpp
         file.cpp
         init.cpp
         json.cpp
+        mustache.cpp
         logging.cpp
         net.cpp
         process.cpp
         redis.cpp
         sock.cpp
         utils.cpp
+        wire.cpp
         varint.cpp
         zstring.cpp)
 
@@ -29,12 +30,14 @@ set(LIB_SUIL_HTTP_SOURCES
         http/client.cpp
         http/cors.cpp
         http/fserver.cpp
+        http/middlewares.cpp
         http/parser.cpp
         http/qstring.cpp
         http/request.cpp
         http/response.cpp
         http/routing.cpp
-        http/wsock.cpp)
+        http/wsock.cpp
+        http/validators.cpp)
 
 set(LIB_SUIL_SQL_SOURCES
         sql/pgsql.cpp)

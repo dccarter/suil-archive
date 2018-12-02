@@ -38,12 +38,16 @@ namespace suil {
     }
 
     OBuffer& OBuffer::operator=(OBuffer &&other) noexcept {
-        m_size = other.m_size;
-        m_data = other.m_data;
-        m_offset = other.m_offset;
-        other.m_data = nullptr;
-        other.m_offset = other.m_size = 0;
+        if (this != &other) {
+            if (m_data != nullptr)
+                ::free(m_data);
 
+            m_size = other.m_size;
+            m_data = other.m_data;
+            m_offset = other.m_offset;
+            other.m_data = nullptr;
+            other.m_offset = other.m_size = 0;
+        }
         return *this;
     }
 

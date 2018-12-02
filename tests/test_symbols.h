@@ -11,6 +11,7 @@
 #define tsym(v) tvar(v)
 #define topt(o, v) tvar(o) = v
 #define ton(ev) test::s::_on_##ev
+#define tprop(o, v) topt(o, v)()
 
 namespace test {
 

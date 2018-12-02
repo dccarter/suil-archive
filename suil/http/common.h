@@ -21,7 +21,7 @@ namespace suil {
         Auth(A... a)
             : enabled(true)
         {
-            add_roles(a...);
+            addRoles(std::forward<A>(a)...);
         }
 
         Auth(bool en)
@@ -63,9 +63,6 @@ namespace suil {
         bool check(const std::vector<String>& rs) const {
             if (roles.empty()) {
                 return true;
-            } else if (std::find(rs.begin(),
-                                 rs.end(), "System")
-                       != rs.end()){;
             }
 
             for (auto& r: roles) {
@@ -76,14 +73,29 @@ namespace suil {
             }
         }
 
-    private:
-        void add_roles(const char* r) {
-            roles.emplace_back(std::move(String(r).dup()));
+        bool check(const json::Object& rs) const {
+
+            if (roles.empty()) {
+                /* not roles setup */
+                return true;
+            }
+
+            for (auto& r: roles) {
+                /* check if any of the roles is present */
+                for (const auto [_, role] : rs)
+                    /* roles must be strings */
+                    if (((String)rs).compare(r, true))
+                        return true;
+            };
+            return false;
         }
+
+    private:
         template <typename... A>
-        void add_roles(const char* r, A&... a) {
-            add_roles(r);
-            add_roles(a...);
+        void addRoles(const char *r, A... a) {
+            roles.emplace_back(String{r}.dup());
+            if constexpr (sizeof...(a))
+                addRoles(std::forward<A>(a)...);
         }
 
         bool  enabled{true};

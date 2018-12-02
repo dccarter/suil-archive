@@ -93,8 +93,9 @@ namespace suil {
                 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
                 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
             };
-            size_t sz = size;
+            size_t sz = size, pos{0};
             const uint8_t *it = in;
+            char *data = ob.data();
 
             while (sz > 4) {
                 if (ASCII_LOOKUP[it[0]] == 64 ||
@@ -106,9 +107,9 @@ namespace suil {
                     throw Exception::invalidArguments("utils::base64::decode - invalid base64 encoded string passed");
                 }
 
-                ob.append((uint8_t)(ASCII_LOOKUP[it[0]] << 2 | ASCII_LOOKUP[it[1]] >> 4));
-                ob.append((uint8_t)(ASCII_LOOKUP[it[1]] << 4 | ASCII_LOOKUP[it[2]] >> 2));
-                ob.append((uint8_t)(ASCII_LOOKUP[it[2]] << 6 | ASCII_LOOKUP[it[3]]));
+                data[pos++] = ((uint8_t)(ASCII_LOOKUP[it[0]] << 2 | ASCII_LOOKUP[it[1]] >> 4));
+                data[pos++] = ((uint8_t)(ASCII_LOOKUP[it[1]] << 4 | ASCII_LOOKUP[it[2]] >> 2));
+                data[pos++] = ((uint8_t)(ASCII_LOOKUP[it[2]] << 6 | ASCII_LOOKUP[it[3]]));
                 sz -= 4;
                 it += 4;
             }
@@ -121,14 +122,16 @@ namespace suil {
             sz -= 4-i;
 
             if (sz > 1) {
-                ob.append((uint8_t)(ASCII_LOOKUP[it[0]] << 2 | ASCII_LOOKUP[it[1]] >> 4));
+                data[pos++] = ((uint8_t)(ASCII_LOOKUP[it[0]] << 2 | ASCII_LOOKUP[it[1]] >> 4));
             }
             if (sz > 2) {
-                ob.append((uint8_t)(ASCII_LOOKUP[it[1]] << 4 | ASCII_LOOKUP[it[2]] >> 2));
+                data[pos++] = ((uint8_t)(ASCII_LOOKUP[it[1]] << 4 | ASCII_LOOKUP[it[2]] >> 2));
             }
             if (sz > 3) {
-                ob.append((uint8_t)(ASCII_LOOKUP[it[2]] << 6 | ASCII_LOOKUP[it[3]]));
+                data[pos++] = ((uint8_t)(ASCII_LOOKUP[it[2]] << 6 | ASCII_LOOKUP[it[3]]));
             }
+
+            ob.seek(pos);
         }
     }
 }

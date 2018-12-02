@@ -622,6 +622,8 @@ namespace suil {
             return utils::sha256((const uint8_t *) data.data(), data.size(), b64);
         }
 
+        String AES_Encrypt(String &key, const uint8_t *buf, size_t size, bool b64 = true);
+
         template<typename __C, typename __Opts>
         inline void apply_options(__C& o, __Opts& opts) {
             /* the target object here is also an sio*/

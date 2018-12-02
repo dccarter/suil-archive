@@ -405,7 +405,7 @@ public:                                     \
 
         template <typename... Args>
         static inline Exception keyNotFound(Args... args) {
-            return create(KeyNotFound, "KeyNotFoundError: ",std::forward<Args>(args)...);
+            return create(KeyNotFound, "KeyNotFoundError: ", std::forward<Args>(args)...);
         }
 
         /**

@@ -380,9 +380,11 @@ namespace suil {
                             case PGRES_COPY_IN:
                             case PGRES_COPY_BOTH:
                             case PGRES_NONFATAL_ERROR:
+                                PQclear(result);
                                 break;
                             case PGRES_COMMAND_OK:
-                                trace("ASYNC QUERY: continue waiting for results");
+                                trace("ASYNC QUERY: continue waiting for results")
+                                PQclear(result);
                                 break;
                             case PGRES_TUPLES_OK:
 #if PG_VERSION_NUM >= 90200
@@ -394,6 +396,7 @@ namespace suil {
                             default:
                                 ierror("ASYNC QUERY: %s failed: %s",
                                       stmt(), PQerrorMessage(conn));
+                                PQclear(result);
                                 err = true;
                         }
                     }
@@ -485,8 +488,12 @@ namespace suil {
                 return !results.failed();
             }
 
-            inline bool size() const {
+            inline size_t size() const {
                 return results.results.size();
+            }
+
+            inline bool empty() const {
+                return results.empty();
             }
 
         private:
@@ -1008,15 +1015,18 @@ namespace suil {
             bool          async{false};
             int64_t       keep_alive{-1};
             int64_t       timeout{-1};
-            Channel<bool>   notify{false};
+            Channel<bool> notify{false};
             bool          cleaning{false};
-            String      conn_str;
-            String      dbname{"public"};
+            String        conn_str;
+            String        dbname{"public"};
         };
 
         namespace mw {
             using Postgres = sql::Middleware<PgSqlDb>;
         }
+
+        template <typename T>
+        using PgsqlOrm = Orm<PgSqlConnection, T>;
     }
 }
 #endif //SUIL_PGSQL_HPP

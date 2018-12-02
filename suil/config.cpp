@@ -36,7 +36,7 @@ namespace suil {
         if (luaL_loadfile(config.L, path) || lua_pcall(config.L, 0, 0, 0)) {
             // loading configuration file failed
             throw Exception::create(
-                    "loading configuration file '", path, "' failed", lua_tostring(config.L, -1));
+                    "loading configuration file '", path, "' failed - ", lua_tostring(config.L, -1));
         }
 
         return std::move(config);
@@ -94,23 +94,53 @@ namespace suil {
         lua_pop(Ego.L, Ego.level);
     }
 
-    String Config::get(const char *key, int &out)
+    json::Object Config::operator[](const char *key)
+    {
+        auto what = loadValue(key);
+        if (what) {
+            unloadValue();
+            throw Exception::keyNotFound(what());
+        }
+
+        json::Object tmp;
+        switch (lua_type(L, -1)) {
+            case LUA_TBOOLEAN:
+                tmp = json::Object(lua_toboolean(L, -1));
+                break;
+            case LUA_TNUMBER:
+                tmp = json::Object(lua_tonumber(L, -1));
+                break;
+            case LUA_TSTRING:
+                tmp = json::Object(lua_tostring(L, -1));
+                break;
+            case LUA_TNIL:
+            case LUA_TNONE:
+                break;
+            default:
+                unloadValue();
+                throw Exception::create("unsupported typed found at key '", key, "'");
+        }
+        unloadValue();
+        return tmp;
+    }
+
+    String Config::getValue(const char *key, int &out)
     {
         if (!lua_isnumber(L, -1)) {
             out = 0;
             return utils::catstr("'", key, "' is not a number");
         }
-        out = lua_tonumber(L, -1);
+        out = (int) lua_tonumber(L, -1);
         return nullptr;
     }
 
-    String Config::get(const char *key, bool &out)
+    String Config::getValue(const char *key, bool &out)
     {
         out = (bool) lua_toboolean(Ego.L, -1);
         return nullptr;
     }
 
-    String Config::get(const char *key, double &out)
+    String Config::getValue(const char *key, double &out)
     {
         if (!lua_isnumber(L, -1)) {
             out = 0;
@@ -120,17 +150,17 @@ namespace suil {
         return nullptr;
     }
 
-    String Config::get(const char *key, suil::String &out)
+    String Config::getValue(const char *key, suil::String &out)
     {
         if (!lua_isstring(L, -1)) {
             out = nullptr;
             return utils::catstr("'", key, "' is not a string");
         }
-        out = String{lua_tostring(L, -1)}.dup();
+        out = String{lua_tostring(L, -1)};
         return nullptr;
     }
 
-    String Config::get(const char *key, std::string &out)
+    String Config::getValue(const char *key, std::string &out)
     {
         if (!lua_isstring(L, -1)) {
             out = nullptr;

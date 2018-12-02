@@ -5,13 +5,12 @@
 #ifndef SUIL_BLOB_H
 #define SUIL_BLOB_H
 
-#include <suil/utils.h>
 #include <suil/base64.h>
 
 namespace suil {
 
     template <size_t N>
-    struct Blob: iod::jsonvalue, std::array<uint8_t, N> {
+    struct Blob: std::array<uint8_t, N> {
         Blob()
             : Blob(true)
         {}
@@ -27,30 +26,6 @@ namespace suil {
             if (l.size() > N)
                 throw std::out_of_range("the size of the int list cannot be greater than array size");
             memcpy(Ego.begin(), l.begin(), l.size());
-        }
-
-        inline String base64() const {
-            return utils::base64::encode(Ego.begin(), N);
-        }
-
-        inline String hexstr() const {
-            return utils::hexstr(Ego.begin(), N);
-        }
-
-        inline String str() const { return Ego.hexstr(); }
-
-        inline void fromhex(const String& hex) {
-            utils::bytes(hex, Ego.begin(), MIN(hex.size()/2, N));
-        }
-
-        template <typename S>
-        void encjv(S& ss) const {
-            ss << '"';
-            const uint8_t *p = (uint8_t *) Ego.begin();
-            for (int i=0; i < N; i++) {
-                ss << utils::i2c(p[i]>>4) << utils::i2c((uint8_t) (p[i]&0xF));
-            }
-            ss << '"';
         }
 
         template<size_t NN>
@@ -99,20 +74,8 @@ namespace suil {
             }
         }
 
-        static void decjv(iod::jdecit& jit, Blob<N>& ba) {
-            auto *bap = (uint8_t *) ba.begin();
-            char c, c1;
-            jit.eat('"');
-            for (int i = 0; i < N; i++) {
-                if ((c = jit.next('"')) == '\0') break;
-                c1 = jit.next('"');
-                bap[i] = (uint8_t) ((utils::c2i(c)<<4) | utils::c2i(c1));
-            }
-            jit.eat('"');
-        }
-
         template <size_t S=0, size_t C=N>
-        inline bool isnill() const {
+        inline bool nil() const {
             static_assert((C<=N)&&((C+S)<=N), "null check range ins invalid");
             size_t offset{S};
             for(; offset < S+C; offset++)

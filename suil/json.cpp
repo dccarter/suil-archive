@@ -1,841 +1,2246 @@
-/* Copyright (c) 2013 Dropbox, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+/*
+  Copyright (C) 2011 Joseph A. Adams (joeyadams3.14159@gmail.com)
+  All rights reserved.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
 
 #include "json.h"
-#include <cassert>
-#include <cmath>
-#include <cstdlib>
-#include <cstdio>
-#include <limits>
 
-namespace suil {
-
-    namespace json {
-
-#define v2s(v) string((v).data(), (v).size())
-        static const int max_depth = 200;
-
-        using std::string;
-        using std::vector;
-        using std::map;
-        using std::make_shared;
-        using std::initializer_list;
-        using std::move;
-
-/* Helper for representing null - just a do-nothing struct, plus comparison
- * operators so the helpers in JsonValue work. We can't use nullptr_t because
- * it may not be orderable.
- */
-        struct NullStruct {
-            bool operator==(NullStruct) const { return true; }
-
-            bool operator<(NullStruct) const { return false; }
-        };
-
-/* * * * * * * * * * * * * * * * * * * *
- * Serialization
- */
-
-        static void dump(NullStruct, iod::encode_stream &out) {
-            out << "null";
-        }
-
-        static void dump(double value, iod::encode_stream &out) {
-            if (std::isfinite(value)) {
-                char buf[32];
-                snprintf(buf, sizeof buf, "%.17g", value);
-                out << buf;
-            } else {
-                out << "null";
-            }
-        }
-
-        static void dump(int value, iod::encode_stream &out) {
-            char buf[32];
-            snprintf(buf, sizeof buf, "%d", value);
-            out << buf;
-        }
-
-        static void dump(bool value, iod::encode_stream &out) {
-            out << (value? "true" : "false");
-        }
-
-        static void dump(const string &value, iod::encode_stream &out) {
-            out << '"';
-            for (size_t i = 0; i < value.length(); i++) {
-                const char ch = value[i];
-                if (ch == '\\') {
-                    out << "\\\\";
-                } else if (ch == '"') {
-                    out << "\\\"";
-                } else if (ch == '\b') {
-                    out << "\\b";
-                } else if (ch == '\f') {
-                    out << "\\f";
-                } else if (ch == '\n') {
-                    out << "\\n";
-                } else if (ch == '\r') {
-                    out << "\\r";
-                } else if (ch == '\t') {
-                    out << "\\t";
-                } else if (static_cast<uint8_t>(ch) <= 0x1f) {
-                    char buf[8];
-                    snprintf(buf, sizeof buf, "\\u%04x", ch);
-                    out << buf;
-                } else if (static_cast<uint8_t>(ch) == 0xe2 && static_cast<uint8_t>(value[i + 1]) == 0x80
-                           && static_cast<uint8_t>(value[i + 2]) == 0xa8) {
-                    out << "\\u2028";
-                    i += 2;
-                } else if (static_cast<uint8_t>(ch) == 0xe2 && static_cast<uint8_t>(value[i + 1]) == 0x80
-                           && static_cast<uint8_t>(value[i + 2]) == 0xa9) {
-                    out << "\\u2029";
-                    i += 2;
-                } else {
-                    out << ch;
-                }
-            }
-            out << '"';
-        }
-
-        static void dump(const Object::array &values, iod::encode_stream &out) {
-            bool first = true;
-            out << '[';
-            for (const auto &value : values) {
-                if (!first)
-                    out << ", ";
-                value.dump(out);
-                first = false;
-            }
-            out << ']';
-        }
-
-        static void dump(const Object::object &values, iod::encode_stream &out) {
-            bool first = true;
-            out << '{';
-            for (const auto &kv : values) {
-                if (!first)
-                    out << ", ";
-                dump(kv.first, out);
-                out << ": ";
-                kv.second.dump(out);
-                first = false;
-            }
-            out << '}';
-        }
-
-        void Object::dump(iod::encode_stream &out) const {
-            m_ptr->dump(out);
-        }
-
-/* * * * * * * * * * * * * * * * * * * *
- * Value wrappers
- */
-
-        template<Object::Type tag, typename T>
-        class Value : public JsonValue {
-        protected:
-
-            // Constructors
-            explicit Value(const T &value) : m_value(value) {}
-
-            explicit Value(T &&value) : m_value(move(value)) {}
-
-            // Get type tag
-            Object::Type type() const override {
-                return tag;
-            }
-
-            // Comparisons
-            bool equals(const JsonValue *other) const override {
-                return m_value == static_cast<const Value<tag, T> *>(other)->m_value;
-            }
-
-            bool less(const JsonValue *other) const override {
-                return m_value < static_cast<const Value<tag, T> *>(other)->m_value;
-            }
-
-            const T m_value;
-
-            void dump(iod::encode_stream &out) const override { json::dump(m_value, out); }
-        };
-
-        class JsonDouble final : public Value<Object::NUMBER, double> {
-            double number_value() const override { return m_value; }
-
-            int int_value() const override { return static_cast<int>(m_value); }
-
-            bool equals(const JsonValue *other) const override { return m_value == other->number_value(); }
-
-            bool less(const JsonValue *other) const override { return m_value < other->number_value(); }
-
-        public:
-            explicit JsonDouble(double value) : Value(value) {}
-        };
-
-        class JsonInt final : public Value<Object::NUMBER, int> {
-            double number_value() const override { return m_value; }
-
-            int int_value() const override { return m_value; }
-
-            bool equals(const JsonValue *other) const override { return m_value == other->number_value(); }
-
-            bool less(const JsonValue *other) const override { return m_value < other->number_value(); }
-
-        public:
-            explicit JsonInt(int value) : Value(value) {}
-        };
-
-        class JsonBoolean final : public Value<Object::BOOL, bool> {
-            bool bool_value() const override { return m_value; }
-
-        public:
-            explicit JsonBoolean(bool value) : Value(value) {}
-        };
-
-        class JsonString final : public Value<Object::STRING, string> {
-            const string &string_value() const override { return m_value; }
-
-        public:
-            explicit JsonString(const string &value) : Value(value) {}
-
-            explicit JsonString(string &&value) : Value(move(value)) {}
-        };
-
-        class JsonArray final : public Value<Object::ARRAY, Object::array> {
-            const Object::array &array_items() const override { return m_value; }
-
-            const Object &operator[](size_t i) const override;
-
-        public:
-            explicit JsonArray(const Object::array &value) : Value(value) {}
-
-            explicit JsonArray(Object::array &&value) : Value(move(value)) {}
-        };
-
-        class JsonObject final : public Value<Object::OBJECT, Object::object> {
-            const Object::object &object_items() const override { return m_value; }
-
-            const Object &operator[](const string &key) const override;
-
-        public:
-            explicit JsonObject(const Object::object &value) : Value(value) {}
-
-            explicit JsonObject(Object::object &&value) : Value(move(value)) {}
-        };
-
-        class JsonNull final : public Value<Object::NUL, NullStruct> {
-        public:
-            JsonNull() : Value({}) {}
-        };
-
-/* * * * * * * * * * * * * * * * * * * *
- * Static globals - static-init-safe
- */
-        struct Statics {
-            const std::shared_ptr<JsonValue> null = make_shared<JsonNull>();
-            const std::shared_ptr<JsonValue> t = make_shared<JsonBoolean>(true);
-            const std::shared_ptr<JsonValue> f = make_shared<JsonBoolean>(false);
-            const string empty_string;
-            const vector<Object> empty_vector;
-            const map<string, Object> empty_map;
-
-            Statics() {}
-        };
-
-        static const Statics &statics() {
-            static const Statics s{};
-            return s;
-        }
-
-        static const Object &static_null() {
-            // This has to be separate, not in Statics, because Json() accesses statics().null.
-            static const Object json_null;
-            return json_null;
-        }
-
-/* * * * * * * * * * * * * * * * * * * *
- * Constructors
- */
-
-        Object::Object() noexcept                  : m_ptr(statics().null) {}
-
-        Object::Object(std::nullptr_t) noexcept    : m_ptr(statics().null) {}
-
-        Object::Object(double value) : m_ptr(make_shared<JsonDouble>(value)) {}
-
-        Object::Object(int value) : m_ptr(make_shared<JsonInt>(value)) {}
-
-        Object::Object(bool value) : m_ptr(value ? statics().t : statics().f) {}
-
-        Object::Object(const string &value) : m_ptr(make_shared<JsonString>(value)) {}
-
-        Object::Object(string &&value) : m_ptr(make_shared<JsonString>(move(value))) {}
-
-        Object::Object(const char *value) : m_ptr(make_shared<JsonString>(value)) {}
-
-        Object::Object(const Object::array &values) : m_ptr(make_shared<JsonArray>(values)) {}
-
-        Object::Object(Object::array &&values) : m_ptr(make_shared<JsonArray>(move(values))) {}
-
-        Object::Object(const Object::object &values) : m_ptr(make_shared<JsonObject>(values)) {}
-
-        Object::Object(Object::object &&values) : m_ptr(make_shared<JsonObject>(move(values))) {}
-
-/* * * * * * * * * * * * * * * * * * * *
- * Accessors
- */
-
-        Object::Type Object::type() const { return m_ptr->type(); }
-
-        double Object::number_value() const { return m_ptr->number_value(); }
-
-        int Object::int_value() const { return m_ptr->int_value(); }
-
-        bool Object::bool_value() const { return m_ptr->bool_value(); }
-
-        const string &Object::string_value() const { return m_ptr->string_value(); }
-
-        const vector<Object> &Object::array_items() const { return m_ptr->array_items(); }
-
-        const map<string, Object> &Object::object_items() const { return m_ptr->object_items(); }
-
-        const Object &Object::operator[](size_t i) const { return (*m_ptr)[i]; }
-
-        const Object &Object::operator[](const string &key) const { return (*m_ptr)[key]; }
-
-        double JsonValue::number_value() const { return 0; }
-
-        int JsonValue::int_value() const { return 0; }
-
-        bool JsonValue::bool_value() const { return false; }
-
-        const string &JsonValue::string_value() const { return statics().empty_string; }
-
-        const vector<Object> &JsonValue::array_items() const { return statics().empty_vector; }
-
-        const map<string, Object> &JsonValue::object_items() const { return statics().empty_map; }
-
-        const Object &JsonValue::operator[](size_t) const { return static_null(); }
-
-        const Object &JsonValue::operator[](const string &) const { return static_null(); }
-
-        const Object &JsonObject::operator[](const string &key) const {
-            auto iter = m_value.find(key);
-            return (iter == m_value.end()) ? static_null() : iter->second;
-        }
-
-        const Object &JsonArray::operator[](size_t i) const {
-            if (i >= m_value.size()) return static_null();
-            else return m_value[i];
-        }
-
-/* * * * * * * * * * * * * * * * * * * *
- * Comparison
- */
-
-        bool Object::operator==(const Object &other) const {
-            if (m_ptr == other.m_ptr)
-                return true;
-            if (m_ptr->type() != other.m_ptr->type())
-                return false;
-
-            return m_ptr->equals(other.m_ptr.get());
-        }
-
-        bool Object::operator<(const Object &other) const {
-            if (m_ptr == other.m_ptr)
-                return false;
-            if (m_ptr->type() != other.m_ptr->type())
-                return m_ptr->type() < other.m_ptr->type();
-
-            return m_ptr->less(other.m_ptr.get());
-        }
-
-/* * * * * * * * * * * * * * * * * * * *
- * Parsing
- */
-
-/* esc(c)
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define out_of_memory() do {                    \
+		fprintf(stderr, "Out of memory.\n");    \
+		exit(EXIT_FAILURE);                     \
+	} while (0)
+
+/* Sadly, strdup is not portable. */
+#define json_strdup(str) strdup(str)
+
+/* String buffer */
+
+typedef struct
+{
+	char *cur;
+	char *end;
+	char *start;
+} SB;
+
+static void sb_init(SB *sb)
+{
+	sb->start = (char*) malloc(17);
+	if (sb->start == nullptr)
+		throw suil::Exception::allocationFailure("json::Object sb_init");
+	sb->cur = sb->start;
+	sb->end = sb->start + 16;
+}
+
+/* sb and need may be evaluated multiple times. */
+#define sb_need(sb, need) do {                  \
+		if ((sb)->end - (sb)->cur < (need))     \
+			sb_grow(sb, need);                  \
+	} while (0)
+
+static void sb_grow(SB *sb, int need)
+{
+	size_t length = sb->cur - sb->start;
+	size_t alloc = sb->end - sb->start;
+	
+	do {
+		alloc *= 2;
+	} while (alloc < length + need);
+	
+	sb->start = (char*) realloc(sb->start, alloc + 1);
+	if (sb->start == nullptr)
+		out_of_memory();
+	sb->cur = sb->start + length;
+	sb->end = sb->start + alloc;
+}
+
+static char *sb_finish(SB *sb)
+{
+	*sb->cur = 0;
+	assert(sb->start <= sb->cur && strlen(sb->start) == (size_t)(sb->cur - sb->start));
+	return sb->start;
+}
+
+static void sb_free(SB *sb)
+{
+	free(sb->start);
+}
+
+/*
+ * Unicode helper functions
  *
- * Format char c suitable for printing in an error message.
+ * These are taken from the ccan/charset module and customized a bit.
+ * Putting them here means the compiler can (choose to) inline them,
+ * and it keeps ccan/json from having a dependency.
  */
-        static inline string esc(char c) {
-            char buf[12];
-            if (static_cast<uint8_t>(c) >= 0x20 && static_cast<uint8_t>(c) <= 0x7f) {
-                snprintf(buf, sizeof buf, "'%c' (%d)", c, c);
-            } else {
-                snprintf(buf, sizeof buf, "(%d)", c);
-            }
-            return string(buf);
-        }
 
-        static inline bool in_range(long x, long lower, long upper) {
-            return (x >= lower && x <= upper);
-        }
+/*
+ * Type for Unicode codepoints.
+ * We need our own because wchar_t might be 16 bits.
+ */
+typedef uint32_t uchar_t;
 
-        namespace {
-/* JsonParser
+/*
+ * Validate a single UTF-8 character starting at @s.
+ * The string must be null-terminated.
  *
- * Object that tracks all state of an in-progress parse.
+ * If it's valid, return its length (1 thru 4).
+ * If it's invalid or clipped, return 0.
+ *
+ * This function implements the syntax given in RFC3629, which is
+ * the same as that given in The Unicode Standard, Version 6.0.
+ *
+ * It has the following properties:
+ *
+ *  * All codepoints U+0000..U+10FFFF may be encoded,
+ *    except for U+D800..U+DFFF, which are reserved
+ *    for UTF-16 surrogate pair encoding.
+ *  * UTF-8 byte sequences longer than 4 bytes are not permitted,
+ *    as they exceed the range of Unicode.
+ *  * The sixty-six Unicode "non-characters" are permitted
+ *    (namely, U+FDD0..U+FDEF, U+xxFFFE, and U+xxFFFF).
  */
-            struct JsonParser final {
+static int utf8_validate_cz(const char *s)
+{
+	unsigned char c = *s++;
+	
+	if (c <= 0x7F) {        /* 00..7F */
+		return 1;
+	} else if (c <= 0xC1) { /* 80..C1 */
+		/* Disallow overlong 2-byte sequence. */
+		return 0;
+	} else if (c <= 0xDF) { /* C2..DF */
+		/* Make sure subsequent byte is in the range 0x80..0xBF. */
+		if (((unsigned char)*s++ & 0xC0) != 0x80)
+			return 0;
+		
+		return 2;
+	} else if (c <= 0xEF) { /* E0..EF */
+		/* Disallow overlong 3-byte sequence. */
+		if (c == 0xE0 && (unsigned char)*s < 0xA0)
+			return 0;
+		
+		/* Disallow U+D800..U+DFFF. */
+		if (c == 0xED && (unsigned char)*s > 0x9F)
+			return 0;
+		
+		/* Make sure subsequent bytes are in the range 0x80..0xBF. */
+		if (((unsigned char)*s++ & 0xC0) != 0x80)
+			return 0;
+		if (((unsigned char)*s++ & 0xC0) != 0x80)
+			return 0;
+		
+		return 3;
+	} else if (c <= 0xF4) { /* F0..F4 */
+		/* Disallow overlong 4-byte sequence. */
+		if (c == 0xF0 && (unsigned char)*s < 0x90)
+			return 0;
+		
+		/* Disallow codepoints beyond U+10FFFF. */
+		if (c == 0xF4 && (unsigned char)*s > 0x8F)
+			return 0;
+		
+		/* Make sure subsequent bytes are in the range 0x80..0xBF. */
+		if (((unsigned char)*s++ & 0xC0) != 0x80)
+			return 0;
+		if (((unsigned char)*s++ & 0xC0) != 0x80)
+			return 0;
+		if (((unsigned char)*s++ & 0xC0) != 0x80)
+			return 0;
+		
+		return 4;
+	} else {                /* F5..FF */
+		return 0;
+	}
+}
 
-                /* State
-                 */
-                const strview &str;
-                size_t i;
-                string &err;
-                bool failed;
-                const JsonParse strategy;
+/* Validate a null-terminated UTF-8 string. */
+static bool utf8_validate(const char *s)
+{
+	int len;
+	
+	for (; *s != 0; s += len) {
+		len = utf8_validate_cz(s);
+		if (len == 0)
+			return false;
+	}
+	
+	return true;
+}
 
-                /* fail(msg, err_ret = Json())
-                 *
-                 * Mark this parse as failed.
-                 */
-                Object fail(string &&msg) {
-                    return fail(std::move(msg), Object());
-                }
+/*
+ * Read a single UTF-8 character starting at @s,
+ * returning the length, in bytes, of the character read.
+ *
+ * This function assumes input is valid UTF-8,
+ * and that there are enough characters in front of @s.
+ */
+static int utf8_read_char(const char *s, uchar_t *out)
+{
+	const auto *c = (const unsigned char*) s;
+	
+	if (!utf8_validate_cz(s))
+	    throw suil::Exception::create("string '", s, "' is not a valid utf8 string");
 
-                template<typename T>
-                T fail(string &&msg, const T err_ret) {
-                    if (!failed)
-                        err = std::move(msg);
-                    failed = true;
-                    return err_ret;
-                }
+	if (c[0] <= 0x7F) {
+		/* 00..7F */
+		*out = c[0];
+		return 1;
+	} else if (c[0] <= 0xDF) {
+		/* C2..DF (unless input is invalid) */
+		*out = ((uchar_t)c[0] & 0x1F) << 6 |
+		       ((uchar_t)c[1] & 0x3F);
+		return 2;
+	} else if (c[0] <= 0xEF) {
+		/* E0..EF */
+		*out = ((uchar_t)c[0] &  0xF) << 12 |
+		       ((uchar_t)c[1] & 0x3F) << 6  |
+		       ((uchar_t)c[2] & 0x3F);
+		return 3;
+	} else {
+		/* F0..F4 (unless input is invalid) */
+		*out = ((uchar_t)c[0] &  0x7) << 18 |
+		       ((uchar_t)c[1] & 0x3F) << 12 |
+		       ((uchar_t)c[2] & 0x3F) << 6  |
+		       ((uchar_t)c[3] & 0x3F);
+		return 4;
+	}
+}
 
-                /* consume_whitespace()
-                 *
-                 * Advance until the current character is non-whitespace.
-                 */
-                void consume_whitespace() {
-                    while (str[i] == ' ' || str[i] == '\r' || str[i] == '\n' || str[i] == '\t')
-                        i++;
-                }
+/*
+ * Write a single UTF-8 character to @s,
+ * returning the length, in bytes, of the character written.
+ *
+ * @unicode must be U+0000..U+10FFFF, but not U+D800..U+DFFF.
+ *
+ * This function will write up to 4 bytes to @out.
+ */
+static int utf8_write_char(uchar_t unicode, char *out)
+{
+	unsigned char *o = (unsigned char*) out;
+	
+	if (!(unicode <= 0x10FFFF && !(unicode >= 0xD800 && unicode <= 0xDFFF)))
+	    throw suil::Exception::create("'", unicode, "' is not a valid unicode character");
 
-                /* consume_comment()
-                 *
-                 * Advance comments (c-style inline and multiline).
-                 */
-                bool consume_comment() {
-                    bool comment_found = false;
-                    if (str[i] == '/') {
-                        i++;
-                        if (i == str.size())
-                            return fail("unexpected end of input after start of comment", false);
-                        if (str[i] == '/') { // inline comment
-                            i++;
-                            // advance until next line, or end of input
-                            while (i < str.size() && str[i] != '\n') {
-                                i++;
-                            }
-                            comment_found = true;
-                        } else if (str[i] == '*') { // multiline comment
-                            i++;
-                            if (i > str.size() - 2)
-                                return fail("unexpected end of input inside multi-line comment", false);
-                            // advance until closing tokens
-                            while (!(str[i] == '*' && str[i + 1] == '/')) {
-                                i++;
-                                if (i > str.size() - 2)
-                                    return fail(
-                                            "unexpected end of input inside multi-line comment", false);
-                            }
-                            i += 2;
-                            comment_found = true;
-                        } else
-                            return fail("malformed comment", false);
-                    }
-                    return comment_found;
-                }
+	if (unicode <= 0x7F) {
+		/* U+0000..U+007F */
+		*o++ = unicode;
+		return 1;
+	} else if (unicode <= 0x7FF) {
+		/* U+0080..U+07FF */
+		*o++ = 0xC0 | unicode >> 6;
+		*o++ = 0x80 | (unicode & 0x3F);
+		return 2;
+	} else if (unicode <= 0xFFFF) {
+		/* U+0800..U+FFFF */
+		*o++ = 0xE0 | unicode >> 12;
+		*o++ = 0x80 | (unicode >> 6 & 0x3F);
+		*o++ = 0x80 | (unicode & 0x3F);
+		return 3;
+	} else {
+		/* U+10000..U+10FFFF */
+		*o++ = 0xF0 | unicode >> 18;
+		*o++ = 0x80 | (unicode >> 12 & 0x3F);
+		*o++ = 0x80 | (unicode >> 6 & 0x3F);
+		*o++ = 0x80 | (unicode & 0x3F);
+		return 4;
+	}
+}
 
-                /* consume_garbage()
-                 *
-                 * Advance until the current character is non-whitespace and non-comment.
-                 */
-                void consume_garbage() {
-                    consume_whitespace();
-                    if (strategy == JsonParse::COMMENTS) {
-                        bool comment_found = false;
-                        do {
-                            comment_found = consume_comment();
-                            if (failed) return;
-                            consume_whitespace();
-                        } while (comment_found);
-                    }
-                }
+/*
+ * Compute the Unicode codepoint of a UTF-16 surrogate pair.
+ *
+ * @uc should be 0xD800..0xDBFF, and @lc should be 0xDC00..0xDFFF.
+ * If they aren't, this function returns false.
+ */
+static bool from_surrogate_pair(uint16_t uc, uint16_t lc, uchar_t *unicode)
+{
+	if (uc >= 0xD800 && uc <= 0xDBFF && lc >= 0xDC00 && lc <= 0xDFFF) {
+		*unicode = 0x10000 + ((((uchar_t)uc & 0x3FF) << 10) | (lc & 0x3FF));
+		return true;
+	} else {
+		return false;
+	}
+}
 
-                /* get_next_token()
-                 *
-                 * Return the next non-whitespace character. If the end of the input is reached,
-                 * flag an error and return 0.
-                 */
-                char get_next_token() {
-                    consume_garbage();
-                    if (failed) return (char) 0;
-                    if (i == str.size())
-                        return fail("unexpected end of input", (char) 0);
+/*
+ * Construct a UTF-16 surrogate pair given a Unicode codepoint.
+ *
+ * @unicode must be U+10000..U+10FFFF.
+ */
+static void to_surrogate_pair(uchar_t unicode, uint16_t *uc, uint16_t *lc)
+{
+	uchar_t n;
+	
+	if (!(unicode >= 0x10000 && unicode <= 0x10FFFF))
+        throw suil::Exception::create("'", unicode, "' is not a valid unicode character");
+	
+	n = unicode - 0x10000;
+	*uc = ((n >> 10) & 0x3FF) | 0xD800;
+	*lc = (n & 0x3FF) | 0xDC00;
+}
 
-                    return str[i++];
-                }
+#define is_space(c) ((c) == '\t' || (c) == '\n' || (c) == '\r' || (c) == ' ')
+#define is_digit(c) ((c) >= '0' && (c) <= '9')
 
-                /* encode_utf8(pt, out)
-                 *
-                 * Encode pt as UTF-8 and add it to out.
-                 */
-                void encode_utf8(long pt, string &out) {
-                    if (pt < 0)
-                        return;
+static bool parse_value     (const char **sp, JsonNode        **out);
+static bool parse_string    (const char **sp, char            **out);
+static bool parse_number    (const char **sp, double           *out);
+static bool parse_array     (const char **sp, JsonNode        **out);
+static bool parse_object    (const char **sp, JsonNode        **out);
+static bool parse_hex16     (const char **sp, uint16_t         *out);
 
-                    if (pt < 0x80) {
-                        out += static_cast<char>(pt);
-                    } else if (pt < 0x800) {
-                        out += static_cast<char>((pt >> 6) | 0xC0);
-                        out += static_cast<char>((pt & 0x3F) | 0x80);
-                    } else if (pt < 0x10000) {
-                        out += static_cast<char>((pt >> 12) | 0xE0);
-                        out += static_cast<char>(((pt >> 6) & 0x3F) | 0x80);
-                        out += static_cast<char>((pt & 0x3F) | 0x80);
-                    } else {
-                        out += static_cast<char>((pt >> 18) | 0xF0);
-                        out += static_cast<char>(((pt >> 12) & 0x3F) | 0x80);
-                        out += static_cast<char>(((pt >> 6) & 0x3F) | 0x80);
-                        out += static_cast<char>((pt & 0x3F) | 0x80);
-                    }
-                }
+static bool expect_literal  (const char **sp, const char *str);
+static void skip_space      (const char **sp);
 
-                /* parse_string()
-                 *
-                 * Parse a string, starting at the current position.
-                 */
-                string parse_string() {
-                    string out;
-                    long last_escaped_codepoint = -1;
-                    while (true) {
-                        if (i == str.size())
-                            return fail("unexpected end of input in string", "");
+static void emit_value              (iod::encode_stream& out, const JsonNode *node);
+static void emit_value_indented     (iod::encode_stream& out, const JsonNode *node, const char *space, int indent_level);
+static void emit_string             (iod::encode_stream& out, const char *str);
+static void emit_number             (iod::encode_stream& out, double num);
+static void emit_array              (iod::encode_stream& out, const JsonNode *array);
+static void emit_array_indented     (iod::encode_stream& out, const JsonNode *array, const char *space, int indent_level);
+static void emit_object             (iod::encode_stream& out, const JsonNode *object);
+static void emit_object_indented    (iod::encode_stream& out, const JsonNode *object, const char *space, int indent_level);
 
-                        char ch = str[i++];
+static int write_hex16(iod::encode_stream& out, uint16_t val);
 
-                        if (ch == '"') {
-                            encode_utf8(last_escaped_codepoint, out);
-                            return out;
-                        }
+static JsonNode *mknode(JsonTag tag);
+static void append_node(JsonNode *parent, JsonNode *child);
+static void prepend_node(JsonNode *parent, JsonNode *child);
+static void append_member(JsonNode *object, char *key, JsonNode *value);
 
-                        if (in_range(ch, 0, 0x1f))
-                            return fail("unescaped " + esc(ch) + " in string", "");
+/* Assertion-friendly validity checks */
+static bool tag_is_valid(unsigned int tag);
+static bool number_is_valid(const char *num);
 
-                        // The usual case: non-escaped characters
-                        if (ch != '\\') {
-                            encode_utf8(last_escaped_codepoint, out);
-                            last_escaped_codepoint = -1;
-                            out += ch;
-                            continue;
-                        }
+static void json_delete(JsonNode *node);
 
-                        // Handle escapes
-                        if (i == str.size())
-                            return fail("unexpected end of input in string", "");
+static JsonNode *json_decode(const char *json)
+{
+	const char *s = json;
+	JsonNode *ret;
 
-                        ch = str[i++];
+	skip_space(&s);
+	if (!parse_value(&s, &ret))
+		return nullptr;
 
-                        if (ch == 'u') {
-                            // Extract 4-byte escape sequence
-                            auto esc = str.substr(i, 4);
-                            // Explicitly check length of the substring. The following loop
-                            // relies on std::string returning the terminating NUL when
-                            // accessing str[length]. Checking here reduces brittleness.
-                            if (esc.length() < 4) {
-                                return fail(string{"bad \\u escape: "} + string{esc.data(), esc.size()}, "");
-                            }
-                            for (size_t j = 0; j < 4; j++) {
-                                if (!in_range(esc[j], 'a', 'f') && !in_range(esc[j], 'A', 'F')
-                                    && !in_range(esc[j], '0', '9'))
-                                    return fail(string{"bad \\u escape: "} + string{esc.data(), esc.size()}, "");
-                            }
+	skip_space(&s);
+	if (*s != 0) {
+		json_delete(ret);
+		return nullptr;
+	}
 
-                            long codepoint = strtol(esc.data(), nullptr, 16);
+	return ret;
+}
 
-                            // JSON specifies that characters outside the BMP shall be encoded as a pair
-                            // of 4-hex-digit \u escapes encoding their surrogate pair components. Check
-                            // whether we're in the middle of such a beast: the previous codepoint was an
-                            // escaped lead (high) surrogate, and this is a trail (low) surrogate.
-                            if (in_range(last_escaped_codepoint, 0xD800, 0xDBFF)
-                                && in_range(codepoint, 0xDC00, 0xDFFF)) {
-                                // Reassemble the two surrogate pairs into one astral-plane character, per
-                                // the UTF-16 algorithm.
-                                encode_utf8((((last_escaped_codepoint - 0xD800) << 10)
-                                             | (codepoint - 0xDC00)) + 0x10000, out);
-                                last_escaped_codepoint = -1;
-                            } else {
-                                encode_utf8(last_escaped_codepoint, out);
-                                last_escaped_codepoint = codepoint;
-                            }
+static void json_delete(JsonNode *node)
+{
+	if (node != nullptr) {
+		json_remove_from_parent(node);
 
-                            i += 4;
-                            continue;
-                        }
+		switch (node->tag) {
+			case JSON_STRING:
+				free(node->string_);
+				break;
+			case JSON_ARRAY:
+			case JSON_OBJECT:
+			{
+				JsonNode *child, *next;
+				for (child = node->children.head; child != nullptr; child = next) {
+					next = child->next;
+					json_delete(child);
+				}
+				break;
+			}
+			default:;
+		}
+		free(node);
+	}
+}
 
-                        encode_utf8(last_escaped_codepoint, out);
-                        last_escaped_codepoint = -1;
+bool json_validate(const char *json)
+{
+	const char *s = json;
 
-                        if (ch == 'b') {
-                            out += '\b';
-                        } else if (ch == 'f') {
-                            out += '\f';
-                        } else if (ch == 'n') {
-                            out += '\n';
-                        } else if (ch == 'r') {
-                            out += '\r';
-                        } else if (ch == 't') {
-                            out += '\t';
-                        } else if (ch == '"' || ch == '\\' || ch == '/') {
-                            out += ch;
-                        } else {
-                            return fail("invalid escape character " + esc(ch), "");
-                        }
-                    }
-                }
+	skip_space(&s);
+	if (!parse_value(&s, nullptr))
+		return false;
 
-                /* parse_number()
-                 *
-                 * Parse a double.
-                 */
-                Object parse_number() {
-                    size_t start_pos = i;
+	skip_space(&s);
+	if (*s != 0)
+		return false;
 
-                    if (str[i] == '-')
-                        i++;
+	return true;
+}
 
-                    // Integer part
-                    if (str[i] == '0') {
-                        i++;
-                        if (in_range(str[i], '0', '9'))
-                            return fail("leading 0s not permitted in numbers");
-                    } else if (in_range(str[i], '1', '9')) {
-                        i++;
-                        while (in_range(str[i], '0', '9'))
-                            i++;
-                    } else {
-                        return fail("invalid " + esc(str[i]) + " in number");
-                    }
+JsonNode *json_find_element(JsonNode *array, int index)
+{
+	JsonNode *element;
+	int i = 0;
 
-                    if (str[i] != '.' && str[i] != 'e' && str[i] != 'E'
-                        && (i - start_pos) <= static_cast<size_t>(std::numeric_limits<int>::digits10)) {
-                        return std::atoi(str.data() + start_pos);
-                    }
+	if (array == nullptr || array->tag != JSON_ARRAY)
+		return nullptr;
 
-                    // Decimal part
-                    if (str[i] == '.') {
-                        i++;
-                        if (!in_range(str[i], '0', '9'))
-                            return fail("at least one digit required in fractional part");
+	json_foreach(element, array) {
+		if (i == index)
+			return element;
+		i++;
+	}
 
-                        while (in_range(str[i], '0', '9'))
-                            i++;
-                    }
+	return nullptr;
+}
 
-                    // Exponent part
-                    if (str[i] == 'e' || str[i] == 'E') {
-                        i++;
+JsonNode *json_find_member(JsonNode *object, const char *name)
+{
+	JsonNode *member;
 
-                        if (str[i] == '+' || str[i] == '-')
-                            i++;
+	if (object == nullptr || object->tag != JSON_OBJECT)
+		return nullptr;
 
-                        if (!in_range(str[i], '0', '9'))
-                            return fail("at least one digit required in exponent");
+	json_foreach(member, object)
+		if (strcmp(member->key, name) == 0)
+			return member;
 
-                        while (in_range(str[i], '0', '9'))
-                            i++;
-                    }
+	return nullptr;
+}
 
-                    return std::strtod(str.data() + start_pos, nullptr);
-                }
+JsonNode *json_find_member(JsonNode *object, const char *key, size_t keyLen)
+{
+	JsonNode *member;
 
-                /* expect(str, res)
-                 *
-                 * Expect that 'str' starts at the character that was just read. If it does, advance
-                 * the input and return res. If not, flag an error.
-                 */
-                Object expect(const string &expected, Object res) {
-                    assert(i != 0);
-                    i--;
-                    if (str.compare(i, expected.length(), expected) == 0) {
-                        i += expected.length();
-                        return res;
-                    } else {
-                        return fail("parse error: expected " + expected + ", got " + str.substr(i, expected.length()).data());
-                    }
-                }
+	if (object == nullptr || object->tag != JSON_OBJECT)
+		return nullptr;
 
-                /* parse_json()
-                 *
-                 * Parse a JSON object.
-                 */
-                Object parse_json(int depth) {
-                    if (depth > max_depth) {
-                        return fail("exceeded maximum nesting depth");
-                    }
+	json_foreach(member, object)
+		if (strncmp(member->key, key, keyLen) == 0)
+			return member;
 
-                    char ch = get_next_token();
-                    if (failed)
-                        return Object();
+	return nullptr;
+}
 
-                    if (ch == '-' || (ch >= '0' && ch <= '9')) {
-                        i--;
-                        return parse_number();
-                    }
+JsonNode *json_first_child(const JsonNode *node)
+{
+	if (node != nullptr && (node->tag == JSON_ARRAY || node->tag == JSON_OBJECT))
+		return node->children.head;
+	return nullptr;
+}
 
-                    if (ch == 't')
-                        return expect("true", true);
+static JsonNode *mknode(JsonTag tag)
+{
+	JsonNode *ret = (JsonNode*) calloc(1, sizeof(JsonNode));
+	if (ret == nullptr)
+		out_of_memory();
+	ret->tag = tag;
+	return ret;
+}
 
-                    if (ch == 'f')
-                        return expect("false", false);
+JsonNode *json_mknull(void)
+{
+	return mknode(JSON_NULL);
+}
 
-                    if (ch == 'n')
-                        return expect("null", Object());
+JsonNode *json_mkbool(bool b)
+{
+	JsonNode *ret = mknode(JSON_BOOL);
+	ret->bool_ = b;
+	return ret;
+}
 
-                    if (ch == '"')
-                        return parse_string();
+static JsonNode *mkstring(char *s)
+{
+	JsonNode *ret = mknode(JSON_STRING);
+	ret->string_ = s;
+	return ret;
+}
 
-                    if (ch == '{') {
-                        map<string, Object> data;
-                        ch = get_next_token();
-                        if (ch == '}')
-                            return data;
+JsonNode *json_mkstring(const char *s)
+{
+	return mkstring(json_strdup(s));
+}
 
-                        while (1) {
-                            if (ch != '"')
-                                return fail("expected '\"' in object, got " + esc(ch));
+JsonNode *json_mknstring(const char *s, size_t size)
+{
+    return mkstring(strndup(s, size));
+}
 
-                            string key = parse_string();
-                            if (failed)
-                                return Object();
+JsonNode *json_mknumber(double n)
+{
+	JsonNode *node = mknode(JSON_NUMBER);
+	node->number_ = n;
+	return node;
+}
 
-                            ch = get_next_token();
-                            if (ch != ':')
-                                return fail("expected ':' in object, got " + esc(ch));
+JsonNode *json_mkarray(void)
+{
+	return mknode(JSON_ARRAY);
+}
 
-                            data[std::move(key)] = parse_json(depth + 1);
-                            if (failed)
-                                return Object();
+JsonNode *json_mkobject(void)
+{
+	return mknode(JSON_OBJECT);
+}
 
-                            ch = get_next_token();
-                            if (ch == '}')
-                                break;
-                            if (ch != ',')
-                                return fail("expected ',' in object, got " + esc(ch));
+static void append_node(JsonNode *parent, JsonNode *child)
+{
+	child->parent = parent;
+	child->prev = parent->children.tail;
+	child->next = nullptr;
 
-                            ch = get_next_token();
-                        }
-                        return data;
-                    }
+	if (parent->children.tail != nullptr)
+		parent->children.tail->next = child;
+	else
+		parent->children.head = child;
+	parent->children.tail = child;
+}
 
-                    if (ch == '[') {
-                        vector<Object> data;
-                        ch = get_next_token();
-                        if (ch == ']')
-                            return data;
+static void prepend_node(JsonNode *parent, JsonNode *child)
+{
+	child->parent = parent;
+	child->prev = nullptr;
+	child->next = parent->children.head;
 
-                        while (1) {
-                            i--;
-                            data.push_back(parse_json(depth + 1));
-                            if (failed)
-                                return Object();
+	if (parent->children.head != nullptr)
+		parent->children.head->prev = child;
+	else
+		parent->children.tail = child;
+	parent->children.head = child;
+}
 
-                            ch = get_next_token();
-                            if (ch == ']')
-                                break;
-                            if (ch != ',')
-                                return fail("expected ',' in list, got " + esc(ch));
+static void append_member(JsonNode *object, char *key, JsonNode *value)
+{
+	value->key = key;
+	append_node(object, value);
+}
 
-                            ch = get_next_token();
-                            (void) ch;
-                        }
-                        return data;
-                    }
+void json_append_element(JsonNode *array, JsonNode *element)
+{
+	assert(array->tag == JSON_ARRAY);
+	assert(element->parent == nullptr);
 
-                    return fail("expected value, got " + esc(ch));
-                }
-            };
-        }//namespace {
+	append_node(array, element);
+}
 
-        size_t Object::parse(Object& out, const strview &in, string &err, JsonParse strategy) {
-            JsonParser parser{in, 0, err, false, strategy};
-            Object result = parser.parse_json(0);
+void json_prepend_element(JsonNode *array, JsonNode *element)
+{
+	assert(array->tag == JSON_ARRAY);
+	assert(element->parent == nullptr);
 
-            // Check for any trailing garbage
-            parser.consume_garbage();
-            if (parser.failed)
-                out = Object();
-            out = std::move(result);
-            return parser.i;
+	prepend_node(array, element);
+}
+
+void json_append_member(JsonNode *object, const char *key, JsonNode *value)
+{
+	assert(object->tag == JSON_OBJECT);
+	assert(value->parent == nullptr);
+
+	append_member(object, json_strdup(key), value);
+}
+
+void json_prepend_member(JsonNode *object, const char *key, JsonNode *value)
+{
+	assert(object->tag == JSON_OBJECT);
+	assert(value->parent == nullptr);
+
+	value->key = json_strdup(key);
+	prepend_node(object, value);
+}
+
+void json_remove_from_parent(JsonNode *node)
+{
+	JsonNode *parent = node->parent;
+
+	if (parent != nullptr) {
+		if (node->prev != nullptr)
+			node->prev->next = node->next;
+		else
+			parent->children.head = node->next;
+		if (node->next != nullptr)
+			node->next->prev = node->prev;
+		else
+			parent->children.tail = node->prev;
+
+		free(node->key);
+
+		node->parent = nullptr;
+		node->prev = node->next = nullptr;
+		node->key = nullptr;
+	}
+}
+
+static bool parse_value(const char **sp, JsonNode **out)
+{
+	const char *s = *sp;
+
+	switch (*s) {
+		case 'n':
+			if (expect_literal(&s, "null")) {
+				if (out)
+					*out = json_mknull();
+				*sp = s;
+				return true;
+			}
+			return false;
+
+		case 'f':
+			if (expect_literal(&s, "false")) {
+				if (out)
+					*out = json_mkbool(false);
+				*sp = s;
+				return true;
+			}
+			return false;
+
+		case 't':
+			if (expect_literal(&s, "true")) {
+				if (out)
+					*out = json_mkbool(true);
+				*sp = s;
+				return true;
+			}
+			return false;
+
+		case '"': {
+			char *str;
+			if (parse_string(&s, out ? &str : nullptr)) {
+				if (out)
+					*out = mkstring(str);
+				*sp = s;
+				return true;
+			}
+			return false;
+		}
+
+		case '[':
+			if (parse_array(&s, out)) {
+				*sp = s;
+				return true;
+			}
+			return false;
+
+		case '{':
+			if (parse_object(&s, out)) {
+				*sp = s;
+				return true;
+			}
+			return false;
+
+		default: {
+			double num;
+			if (parse_number(&s, out ? &num : nullptr)) {
+				if (out)
+					*out = json_mknumber(num);
+				*sp = s;
+				return true;
+			}
+			return false;
+		}
+	}
+}
+
+static bool parse_array(const char **sp, JsonNode **out)
+{
+	const char *s = *sp;
+	JsonNode *ret = out ? json_mkarray() : nullptr;
+	JsonNode *element;
+
+	if (*s++ != '[')
+		goto failure;
+	skip_space(&s);
+
+	if (*s == ']') {
+		s++;
+		goto success;
+	}
+
+	for (;;) {
+		if (!parse_value(&s, out ? &element : nullptr))
+			goto failure;
+		skip_space(&s);
+
+		if (out)
+			json_append_element(ret, element);
+
+		if (*s == ']') {
+			s++;
+			goto success;
+		}
+
+		if (*s++ != ',')
+			goto failure;
+		skip_space(&s);
+	}
+
+success:
+	*sp = s;
+	if (out)
+		*out = ret;
+	return true;
+
+failure:
+	json_delete(ret);
+	return false;
+}
+
+static bool parse_object(const char **sp, JsonNode **out)
+{
+	const char *s = *sp;
+	JsonNode *ret = out ? json_mkobject() : nullptr;
+	char *key;
+	JsonNode *value;
+
+	if (*s++ != '{')
+		goto failure;
+	skip_space(&s);
+
+	if (*s == '}') {
+		s++;
+		goto success;
+	}
+
+	for (;;) {
+		if (!parse_string(&s, out ? &key : nullptr))
+			goto failure;
+		skip_space(&s);
+
+		if (*s++ != ':')
+			goto failure_free_key;
+		skip_space(&s);
+
+		if (!parse_value(&s, out ? &value : nullptr))
+			goto failure_free_key;
+		skip_space(&s);
+
+		if (out)
+			append_member(ret, key, value);
+
+		if (*s == '}') {
+			s++;
+			goto success;
+		}
+
+		if (*s++ != ',')
+			goto failure;
+		skip_space(&s);
+	}
+
+success:
+	*sp = s;
+	if (out)
+		*out = ret;
+	return true;
+
+failure_free_key:
+	if (out)
+		free(key);
+failure:
+	json_delete(ret);
+	return false;
+}
+
+bool parse_string(const char **sp, char **out)
+{
+	const char *s = *sp;
+	SB sb;
+	char throwaway_buffer[4];
+		/* enough space for a UTF-8 character */
+	char *b;
+
+	if (*s++ != '"')
+		return false;
+
+	if (out) {
+		sb_init(&sb);
+		sb_need(&sb, 4);
+		b = sb.cur;
+	} else {
+		b = throwaway_buffer;
+	}
+
+	while (*s != '"') {
+		unsigned char c = *s++;
+
+		/* Parse next character, and write it to b. */
+		if (c == '\\') {
+			c = *s++;
+			switch (c) {
+				case '"':
+				case '\\':
+				case '/':
+					*b++ =  c;
+					break;
+				case 'b':
+					*b++ =  '\b';
+					break;
+				case 'f':
+					*b++ =  '\f';
+					break;
+				case 'n':
+					*b++ =  '\n';
+					break;
+				case 'r':
+					*b++ =  '\r';
+					break;
+				case 't':
+					*b++ =  '\t';
+					break;
+				case 'u':
+				{
+					uint16_t uc, lc;
+					uchar_t unicode;
+
+					if (!parse_hex16(&s, &uc))
+						goto failed;
+
+					if (uc >= 0xD800 && uc <= 0xDFFF) {
+						/* Handle UTF-16 surrogate pair. */
+						if (*s++ != '\\' || *s++ != 'u' || !parse_hex16(&s, &lc))
+							goto failed; /* Incomplete surrogate pair. */
+						if (!from_surrogate_pair(uc, lc, &unicode))
+							goto failed; /* Invalid surrogate pair. */
+					} else if (uc == 0) {
+						/* Disallow "\u0000". */
+						goto failed;
+					} else {
+						unicode = uc;
+					}
+
+					b += utf8_write_char(unicode, b);
+					break;
+				}
+				default:
+					/* Invalid escape */
+					goto failed;
+			}
+		} else if (c <= 0x1F) {
+			/* Control characters are not allowed in string literals. */
+			goto failed;
+		} else {
+			/* Validate and echo a UTF-8 character. */
+			int len;
+
+			s--;
+			len = utf8_validate_cz(s);
+			if (len == 0)
+				goto failed; /* Invalid UTF-8 character. */
+
+			while (len--)
+				*b++ =  *s++;
+		}
+
+		/*
+		 * Update sb to know about the new bytes,
+		 * and set up b to write another character.
+		 */
+		if (out) {
+			sb.cur = b;
+			sb_need(&sb, 4);
+			b = sb.cur;
+		} else {
+			b = throwaway_buffer;
+		}
+	}
+	s++;
+
+	if (out)
+		*out = sb_finish(&sb);
+	*sp = s;
+	return true;
+
+failed:
+	if (out)
+		sb_free(&sb);
+	return false;
+}
+
+/*
+ * The JSON spec says that a number shall follow this precise pattern
+ * (spaces and quotes added for readability):
+ *	 '-'? (0 | [1-9][0-9]*) ('.' [0-9]+)? ([Ee] [+-]? [0-9]+)?
+ *
+ * However, some JSON parsers are more liberal.  For instance, PHP accepts
+ * '.5' and '1.'.  JSON.parse accepts '+3'.
+ *
+ * This function takes the strict approach.
+ */
+bool parse_number(const char **sp, double *out)
+{
+	const char *s = *sp;
+
+	/* '-'? */
+	if (*s == '-')
+		s++;
+
+	/* (0 | [1-9][0-9]*) */
+	if (*s == '0') {
+		s++;
+	} else {
+		if (!is_digit(*s))
+			return false;
+		do {
+			s++;
+		} while (is_digit(*s));
+	}
+
+	/* ('.' [0-9]+)? */
+	if (*s == '.') {
+		s++;
+		if (!is_digit(*s))
+			return false;
+		do {
+			s++;
+		} while (is_digit(*s));
+	}
+
+	/* ([Ee] [+-]? [0-9]+)? */
+	if (*s == 'E' || *s == 'e') {
+		s++;
+		if (*s == '+' || *s == '-')
+			s++;
+		if (!is_digit(*s))
+			return false;
+		do {
+			s++;
+		} while (is_digit(*s));
+	}
+
+	if (out)
+		*out = strtod(*sp, nullptr);
+
+	*sp = s;
+	return true;
+}
+
+static void skip_space(const char **sp)
+{
+	const char *s = *sp;
+	while (is_space(*s))
+		s++;
+	*sp = s;
+}
+
+static void emit_value(iod::encode_stream& out, const JsonNode *node)
+{
+	assert(tag_is_valid(node->tag));
+	switch (node->tag) {
+		case JSON_NULL:
+			out << "null";
+			break;
+		case JSON_BOOL:
+			out << (node->bool_ ? "true" : "false");
+			break;
+		case JSON_STRING:
+			emit_string(out, node->string_);
+			break;
+		case JSON_NUMBER:
+			emit_number(out, node->number_);
+			break;
+		case JSON_ARRAY:
+			emit_array(out, node);
+			break;
+		case JSON_OBJECT:
+			emit_object(out, node);
+			break;
+		default:
+			assert(false);
+	}
+}
+
+void emit_value_indented(iod::encode_stream& out, const JsonNode *node, const char *space, int indent_level)
+{
+	assert(tag_is_valid(node->tag));
+	switch (node->tag) {
+		case JSON_NULL:
+			out << "null";
+			break;
+		case JSON_BOOL:
+			out << (node->bool_ ? "true" : "false");
+			break;
+		case JSON_STRING:
+			emit_string(out, node->string_);
+			break;
+		case JSON_NUMBER:
+			emit_number(out, node->number_);
+			break;
+		case JSON_ARRAY:
+			emit_array_indented(out, node, space, indent_level);
+			break;
+		case JSON_OBJECT:
+			emit_object_indented(out, node, space, indent_level);
+			break;
+		default:
+			assert(false);
+	}
+}
+
+static void emit_array(iod::encode_stream& out, const JsonNode *array)
+{
+	const JsonNode *element;
+
+	out << '[';
+	json_foreach(element, array) {
+		emit_value(out, element);
+		if (element->next != nullptr)
+			out << ',';
+	}
+	out << ']';
+}
+
+static void emit_array_indented(iod::encode_stream& out, const JsonNode *array, const char *space, int indent_level)
+{
+	const JsonNode *element = array->children.head;
+	int i;
+
+	if (element == nullptr) {
+		out << "[]";
+		return;
+	}
+
+	out << "[\n";
+	while (element != nullptr) {
+		for (i = 0; i < indent_level + 1; i++)
+			out << space;
+		emit_value_indented(out, element, space, indent_level + 1);
+
+		element = element->next;
+		out << (element != nullptr ? ",\n" : "\n");
+	}
+	for (i = 0; i < indent_level; i++)
+		out << space;
+	out << ']';
+}
+
+static void emit_object(iod::encode_stream& out, const JsonNode *object)
+{
+	const JsonNode *member;
+
+	out << '{';
+	json_foreach(member, object) {
+		emit_string(out, member->key);
+		out << ':';
+		emit_value(out, member);
+		if (member->next != nullptr)
+			out << ',';
+	}
+	out << '}';
+}
+
+static void emit_object_indented(iod::encode_stream& out, const JsonNode *object, const char *space, int indent_level)
+{
+	const JsonNode *member = object->children.head;
+	int i;
+
+	if (member == nullptr) {
+		out << "{}";
+		return;
+	}
+
+	out << "{\n";
+	while (member != nullptr) {
+		for (i = 0; i < indent_level + 1; i++)
+			out << space;
+		emit_string(out, member->key);
+		out << ": ";
+		emit_value_indented(out, member, space, indent_level + 1);
+
+		member = member->next;
+		out << (member != nullptr ? ",\n" : "\n");
+	}
+	for (i = 0; i < indent_level; i++)
+		out << space;
+	out << '}';
+}
+
+void emit_string(iod::encode_stream& out, const char *str)
+{
+	bool escape_unicode = false;
+	const char *s = str;
+
+	if (!utf8_validate(str))
+		throw suil::Exception::create("'", str, "' is not a valid utf8 string");
+
+	out << '"';
+	while (*s != 0) {
+		unsigned char c = *s++;
+
+		/* Encode the next character, and write it to b. */
+		switch (c) {
+			case '"':
+				out <<  '\\';
+				out <<  '"';
+				break;
+			case '\\':
+				out <<  '\\';
+				out <<  '\\';
+				break;
+			case '\b':
+				out <<  '\\';
+				out <<  'b';
+				break;
+			case '\f':
+				out <<  '\\';
+				out <<  'f';
+				break;
+			case '\n':
+				out <<  '\\';
+				out <<  'n';
+				break;
+			case '\r':
+				out <<  '\\';
+				out <<  'r';
+				break;
+			case '\t':
+				out <<  '\\';
+				out <<  't';
+				break;
+			default: {
+				int len;
+
+				s--;
+				len = utf8_validate_cz(s);
+
+				if (len == 0) {
+					/*
+					 * Handle invalid UTF-8 character gracefully in production
+					 * by writing a replacement character (U+FFFD)
+					 * and skipping a single byte.
+					 *
+					 * This should never happen when assertions are enabled
+					 * due to the assertion at the beginning of this function.
+					 */
+					assert(false);
+					if (escape_unicode) {
+						out << "\\uFFFD";
+					} else {
+						out <<  0xEF;
+						out <<  0xBF;
+						out <<  0xBD;
+					}
+					s++;
+				} else if (c < 0x1F || (c >= 0x80 && escape_unicode)) {
+					/* Encode using \u.... */
+					uint32_t unicode;
+
+					s += utf8_read_char(s, &unicode);
+
+					if (unicode <= 0xFFFF) {
+						out <<  '\\';
+						out <<  'u';
+						write_hex16(out, unicode);
+					} else {
+						/* Produce a surrogate pair. */
+						uint16_t uc, lc;
+						if (unicode > 0x10FFFF)
+						    throw suil::Exception::create("'...", s, "' is not a valid unicode string");
+						to_surrogate_pair(unicode, &uc, &lc);
+						out <<  '\\';
+						out <<  'u';
+						write_hex16(out, uc);
+						out <<  '\\';
+						out <<  'u';
+						write_hex16(out, lc);
+					}
+				} else {
+					/* Write the character directly. */
+					while (len--)
+						out << *s++;
+				}
+
+				break;
+			}
+		}
+	}
+	out <<  '"';
+}
+
+static void emit_number(iod::encode_stream& out, double num)
+{
+	/*
+	 * This isn't exactly how JavaScript renders numbers,
+	 * but it should produce valid JSON for reasonable numbers
+	 * preserve precision well enough, and avoid some oddities
+	 * like 0.3 -> 0.299999999999999988898 .
+	 */
+	char buf[64];
+	sprintf(buf, "%.16g", num);
+	
+	if (number_is_valid(buf))
+		out << num;
+	else
+		out << "null";
+}
+
+static bool tag_is_valid(unsigned int tag)
+{
+	return (/* tag >= JSON_NULL && */ tag <= JSON_OBJECT);
+}
+
+static bool number_is_valid(const char *num)
+{
+	return (parse_number(&num, nullptr) && *num == '\0');
+}
+
+static bool expect_literal(const char **sp, const char *str)
+{
+	const char *s = *sp;
+	
+	while (*str != '\0')
+		if (*s++ != *str++)
+			return false;
+	
+	*sp = s;
+	return true;
+}
+
+/*
+ * Parses exactly 4 hex characters (capital or lowercase).
+ * Fails if any input chars are not [0-9A-Fa-f].
+ */
+static bool parse_hex16(const char **sp, uint16_t *out)
+{
+	const char *s = *sp;
+	uint16_t ret = 0;
+	uint16_t i;
+	uint16_t tmp;
+	char c;
+
+	for (i = 0; i < 4; i++) {
+		c = *s++;
+		if (c >= '0' && c <= '9')
+			tmp = c - '0';
+		else if (c >= 'A' && c <= 'F')
+			tmp = c - 'A' + 10;
+		else if (c >= 'a' && c <= 'f')
+			tmp = c - 'a' + 10;
+		else
+			return false;
+
+		ret <<= 4;
+		ret += tmp;
+	}
+	
+	if (out)
+		*out = ret;
+	*sp = s;
+	return true;
+}
+
+/*
+ * Encodes a 16-bit number into hexadecimal,
+ * writing exactly 4 hex chars.
+ */
+static int write_hex16(iod::encode_stream& out, uint16_t val)
+{
+	const char *hex = "0123456789ABCDEF";
+	
+	out.append(hex[(val >> 12) & 0xF]);
+	out.append(hex[(val >> 8)  & 0xF]);
+	out.append(hex[(val >> 4)  & 0xF]);
+	out.append(hex[ val        & 0xF]);
+	
+	return 4;
+}
+
+bool json_check(const JsonNode *node, char errmsg[256])
+{
+	#define problem(...) do { \
+			if (errmsg != nullptr) \
+				snprintf(errmsg, 256, __VA_ARGS__); \
+			return false; \
+		} while (0)
+	
+	if (node->key != nullptr && !utf8_validate(node->key))
+		problem("key contains invalid UTF-8");
+	
+	if (!tag_is_valid(node->tag))
+		problem("tag is invalid (%u)", node->tag);
+	
+	if (node->tag == JSON_BOOL) {
+		if (node->bool_ != false && node->bool_ != true)
+			problem("bool_ is neither false (%d) nor true (%d)", (int)false, (int)true);
+	} else if (node->tag == JSON_STRING) {
+		if (node->string_ == nullptr)
+			problem("string_ is nullptr");
+		if (!utf8_validate(node->string_))
+			problem("string_ contains invalid UTF-8");
+	} else if (node->tag == JSON_ARRAY || node->tag == JSON_OBJECT) {
+		JsonNode *head = node->children.head;
+		JsonNode *tail = node->children.tail;
+		
+		if (head == nullptr || tail == nullptr) {
+			if (head != nullptr)
+				problem("tail is nullptr, but head is not");
+			if (tail != nullptr)
+				problem("head is nullptr, but tail is not");
+		} else {
+			JsonNode *child;
+			JsonNode *last = nullptr;
+			
+			if (head->prev != nullptr)
+				problem("First child's prev pointer is not nullptr");
+			
+			for (child = head; child != nullptr; last = child, child = child->next) {
+				if (child == node)
+					problem("node is its own child");
+				if (child->next == child)
+					problem("child->next == child (cycle)");
+				if (child->next == head)
+					problem("child->next == head (cycle)");
+				
+				if (child->parent != node)
+					problem("child does not point back to parent");
+				if (child->next != nullptr && child->next->prev != child)
+					problem("child->next does not point back to child");
+				
+				if (node->tag == JSON_ARRAY && child->key != nullptr)
+					problem("Array element's key is not nullptr");
+				if (node->tag == JSON_OBJECT && child->key == nullptr)
+					problem("Object member's key is nullptr");
+				
+				if (!json_check(child, errmsg))
+					return false;
+			}
+			
+			if (last != tail)
+				problem("tail does not match pointer found by starting at head and following next links");
+		}
+	}
+	
+	return true;
+	
+	#undef problem
+}
+
+
+namespace suil::json {
+
+    Object::Object()
+        : mNode(mknode(JsonTag::JSON_NULL))
+    {}
+
+    Object::Object(bool b)
+        : mNode(json_mkbool(b))
+    {}
+
+    Object::Object(double d)
+        : mNode(json_mknumber(d))
+    {}
+
+    Object::Object(const char *str)
+        : mNode(json_mkstring(str))
+    {}
+
+    Object::Object(const suil::String &str)
+        : mNode(json_mknstring(str.data(), str.size()))
+    {}
+
+    Object::Object(const std::string &str)
+        : mNode(json_mknstring(str.data(), str.size()))
+    {}
+
+    Object::Object(suil::json::Array_t)
+        : mNode(json_mkarray())
+    {}
+
+    Object::Object(suil::json::Object_t)
+        : mNode(json_mkobject())
+    {}
+
+    void Object::push(suil::json::Object &&o) {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_ARRAY)
+            throw Exception::create("json::Object::push - object is not a JSON array");
+        json_append_element(mNode, o.mNode);
+        o.ref = true;
+    }
+
+    void Object::set(const char *key, suil::json::Object &&o) {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
+            throw Exception::create("json::Object::set - object is not a JSON object");
+        json_append_member(mNode, key, o.mNode);
+        o.ref = true;
+    }
+
+    Object Object::operator[](int index) const {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_ARRAY)
+            throw Exception::create("json::Object::[index] - object is not a JSON array");
+        Object obj(json_find_element(mNode, index));
+        return obj;
+    }
+
+    Object Object::operator[](const char *key) const {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
+            throw Exception::create("json::Object::[index] - object is not a JSON object");
+        Object obj(json_find_member(mNode, key));
+        return obj;
+    }
+
+    Object Object::operator[](const suil::String &&key) const {
+		if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
+			throw Exception::create("json::Object::[index] - object is not a JSON object");
+		Object obj(json_find_member(mNode, key.data(), key.size()));
+		return obj;
+    }
+
+    Object::operator bool()   const {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_BOOL)
+            return false;
+        return mNode->bool_;
+    }
+
+    Object::operator double()   const {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_NUMBER)
+            throw Exception::create("json::Object - object is not a number");
+        return mNode->number_;
+    }
+
+    Object::operator const char*()   const {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_STRING)
+            throw Exception::create("json::Object - object is not a string");
+        return mNode->string_;
+    }
+
+    bool Object::empty() const {
+        if (mNode == nullptr || mNode->tag == JsonTag::JSON_NULL) return true;
+        if (mNode->tag == JsonTag::JSON_STRING)
+            return mNode->string_? strlen(mNode->string_) == 0 : true;
+        if (mNode->tag == JsonTag::JSON_BOOL)
+			return !mNode->bool_;
+        if (mNode->tag == JsonTag::JSON_OBJECT || mNode->tag == JsonTag::JSON_ARRAY)
+            return mNode->children.head == nullptr;
+
+        return false;
+    }
+
+    bool Object::isNull() const {
+        return mNode == nullptr || mNode->tag == JsonTag::JSON_NULL;
+    }
+
+    bool Object::isBool() const {
+        return mNode != nullptr && mNode->tag == JsonTag::JSON_BOOL;
+    }
+
+    bool Object::isNumber() const {
+        return mNode != nullptr && mNode->tag == JsonTag::JSON_NUMBER;
+    }
+
+    bool Object::isString() const {
+        return mNode != nullptr && mNode->tag == JsonTag::JSON_STRING;
+    }
+
+    bool Object::isArray() const {
+        return mNode != nullptr && mNode->tag == JsonTag::JSON_ARRAY;
+    }
+
+    bool Object::isObject() const {
+        return mNode != nullptr && mNode->tag == JsonTag::JSON_OBJECT;
+    }
+
+    JsonTag Object::type() const { return mNode? mNode->tag : JsonTag::JSON_BOOL; }
+
+    Object Object::push(const suil::json::Array_t &) {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_ARRAY)
+            /* valid node */
+            throw Exception::create("json::Object::push - object is not a JSON array");
+        /* create array node and append it */
+        Object o(json::Arr);
+        json_append_element(mNode, o.mNode);
+        o.ref = true;
+        return o;
+    }
+
+    Object Object::push(const suil::json::Object_t&) {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_ARRAY)
+            /* valid node */
+            throw Exception::create("json::Object::push - object is not a JSON array");
+
+        /* create array node and append it */
+        Object o(json::Obj);
+        json_append_element(mNode, o.mNode);
+        o.ref = true;
+        return o;
+    }
+
+    Object Object::set(const char *key, const suil::json::Object_t &) {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
+            /* valid node */
+            throw Exception::create("json::Object::push - object is not a JSON object");
+        /* create array node and append it */
+        Object o(json::Obj);
+        json_append_element(mNode, o.mNode);
+        o.ref = true;
+        return o;
+    }
+
+    Object Object::set(const char *key, const suil::json::Array_t &) {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
+            /* valid node */
+            throw Exception::create("json::Object::push - object is not a JSON object");
+        /* create array node and append it */
+        Object o(json::Arr);
+        json_append_element(mNode, o.mNode);
+        o.ref = true;
+        return o;
+    }
+
+    void Object::encode(iod::encode_stream &ss) const {
+        /* encode json object */
+        emit_value(ss, mNode);
+    }
+
+    Object Object::decode(const char *str, size_t& sz) {
+        JsonNode *ret;
+        const char *s = str;
+        skip_space(&s);
+        if (!parse_value(&s, &ret)) {
+            /* parsing json string failed */
+            throw Exception::create("json::Object::decode invalid json string at ", (s-str));
         }
 
-// Documented in json11.hpp
-        vector<Object> Object::parse_multi(const strview &in,
-                                       std::string::size_type &parser_stop_pos,
-                                       string &err,
-                                       JsonParse strategy) {
-            JsonParser parser{in, 0, err, false, strategy};
-            parser_stop_pos = 0;
-            vector<Object> json_vec;
-            while (parser.i != in.size() && !parser.failed) {
-                json_vec.push_back(parser.parse_json(0));
-                if (parser.failed)
-                    break;
+        skip_space(&s);
+        sz = s-str;
+        return Object(ret, false);
+    }
 
-                // Check for another object
-                parser.consume_garbage();
-                if (parser.failed)
-                    break;
-                parser_stop_pos = parser.i;
-            }
-            return json_vec;
-        }
-
-        void Object::decjv(iod::jdecit &it, Object &out) {
-            strview view{it.start(), it.remaining()};
-            std::string err{};
-            size_t consumed = Object::parse(out, view, err);
-            it.consume(consumed);
-        }
-
-        /* * * * * * * * * * * * * * * * * * * *
-         * Shape-checking
-         */
-        bool Object::has_shape(const shape &types, string &err) const {
-            if (!is_object()) {
-                err = "expected JSON object, got " + dump();
-                return false;
-            }
-
-            for (auto &item : types) {
-                if ((*this)[item.first].type() != item.second) {
-                    err = "bad type for " + item.first + " in " + dump();
-                    return false;
-                }
-            }
-
-            return true;
+    void Object::operator|(suil::json::Object::ArrayEnumerator f) const {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_ARRAY)
+            /* valid node */
+            throw Exception::create("json::Object::enumerate - object is not a JSON array");
+        JsonNode *node{nullptr};
+        json_foreach(node, mNode) {
+            if (f(Object(node, true)))
+                break;
         }
     }
-} // namespace suil
+
+    void Object::operator|(suil::json::Object::ObjectEnumerator f) const {
+        if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
+            /* valid node */
+            throw Exception::create("json::Object::enumerate - object is not a JSON object");
+
+        JsonNode *node{nullptr};
+        json_foreach(node, mNode) {
+            if (f(node->key, Object(node, true)))
+                break;
+        }
+    }
+
+    Object::iterator Object::iterator::operator++() {
+    	if (mNode)
+    		mNode = mNode->next;
+    	return Ego;
+    }
+
+    const std::pair<const char*,Object> Object::iterator::operator*() const {
+    	return std::make_pair(mNode? mNode->key:nullptr, Object(mNode));
+    }
+
+    Object::iterator Object::begin() {
+    	if (Ego.isArray() || Ego.isObject())
+    		return iterator(mNode->children.head);
+    	return end();
+    }
+
+    Object::const_iterator Object::begin() const {
+		if (Ego.isArray() || Ego.isObject())
+			return const_iterator(mNode->children.head);
+		return end();
+    }
+
+    Object& Object::operator=(suil::json::Object &&o) noexcept {
+		if (this != &o) {
+			if (mNode && !ref)
+				json_delete(mNode);
+			mNode = o.mNode;
+			ref = o.ref;
+			o.mNode = nullptr;
+		}
+		return Ego;
+	}
+
+    Object::~Object() {
+        if (mNode && !ref)
+            json_delete(mNode);
+        mNode = nullptr;
+    }
+}
+
+#ifdef unit_test
+#include <catch/catch.hpp>
+#include "tests/test_symbols.h"
+
+using namespace suil;
+
+TEST_CASE("suil::json::Object", "[json][Object]")
+{
+    SECTION("Constructing a JSON Object") {
+        // test constucting a json::Object
+        json::Object nl{};
+        REQUIRE(nl.mNode->tag == JsonTag::JSON_NULL);
+        REQUIRE_FALSE(nl.ref);
+
+        json::Object num((uint8_t) 6);
+        REQUIRE(num.mNode->tag == JsonTag::JSON_NUMBER);
+        REQUIRE_FALSE(num.ref);
+        REQUIRE(6 == num.mNode->number_);
+
+        json::Object num2((int) 12);
+        REQUIRE(num2.mNode->tag == JsonTag::JSON_NUMBER);
+        REQUIRE_FALSE(num2.ref);
+        REQUIRE(12 == num2.mNode->number_);
+
+        json::Object num3(33.89);
+        REQUIRE(num3.mNode->tag == JsonTag::JSON_NUMBER);
+        REQUIRE_FALSE(num3.ref);
+        REQUIRE(33.89 == num3.mNode->number_);
+
+        json::Object b(true);
+        REQUIRE(b.mNode->tag == JsonTag::JSON_BOOL);
+        REQUIRE_FALSE(b.ref);
+        REQUIRE(b.mNode->bool_);
+
+        json::Object s("Hello World");
+        REQUIRE(s.mNode->tag == JsonTag::JSON_STRING);
+        REQUIRE_FALSE(s.ref);
+        REQUIRE(strcmp("Hello World", s.mNode->string_) == 0);
+
+        json::Object s2("");
+        REQUIRE(s2.mNode->tag == JsonTag::JSON_STRING);
+        REQUIRE_FALSE(s2.ref);
+        REQUIRE(strlen(s2.mNode->string_) == 0);
+
+        json::Object arr(json::Arr);
+        REQUIRE(arr.mNode->tag == JsonTag::JSON_ARRAY);
+        REQUIRE_FALSE(arr.ref);
+        REQUIRE(arr.mNode->children.head == nullptr);
+
+        json::Object arr2(json::Arr, 1, 2, "Carter", true, json::Object(json::Arr, "Hello", 4, "Worlds"));
+        REQUIRE(arr2.mNode->tag == JsonTag::JSON_ARRAY);
+        REQUIRE_FALSE(arr2.ref);
+        REQUIRE_FALSE(arr2.mNode->children.head == nullptr);
+
+        json::Object arr3(json::Arr, std::vector<int>{1, 2, 4});
+        REQUIRE(arr3.mNode->tag == JsonTag::JSON_ARRAY);
+        REQUIRE_FALSE(arr3.ref);
+        REQUIRE_FALSE(arr3.mNode->children.head == nullptr);
+
+        json::Object obj(json::Obj);
+        REQUIRE(obj.mNode->tag == JsonTag::JSON_OBJECT);
+        REQUIRE_FALSE(obj.ref);
+        REQUIRE(obj.mNode->children.head == nullptr);
+
+        json::Object obj2(json::Obj, "name", "Carter", "age", 29);
+        REQUIRE(obj2.mNode->tag == JsonTag::JSON_OBJECT);
+        REQUIRE_FALSE(obj2.ref);
+        REQUIRE_FALSE(obj2.mNode->children.head == nullptr);
+    }
+
+    SECTION("assigning/moving json objects") {
+        /* test assignment operators and moving object */
+        json::Object j1;
+        REQUIRE((j1.mNode != nullptr && j1.mNode->tag == JsonTag::JSON_NULL));
+        JsonNode *node = j1.mNode;
+
+        WHEN("implicit assigning to Object") {
+            /* assigning to object with implicit cast */
+            j1 = 68.63;
+            REQUIRE_FALSE(j1.mNode == nullptr);
+            REQUIRE_FALSE(j1.mNode == node);
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(j1.mNode->number_ == 68.63);
+            node = j1.mNode;
+
+            j1 = 69;
+            REQUIRE_FALSE(j1.mNode == nullptr);
+            REQUIRE_FALSE(j1.mNode == node);
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(j1.mNode->number_ == 69);
+            node = j1.mNode;
+
+            j1 = "Worlds of Great";
+            REQUIRE_FALSE(j1.mNode == nullptr);
+            REQUIRE_FALSE(j1.mNode == node);
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_STRING);
+            REQUIRE(strcmp(j1.mNode->string_, "Worlds of Great") == 0);
+            node = j1.mNode;
+
+            j1 = String{"Hello World"};
+            REQUIRE_FALSE(j1.mNode == nullptr);
+            REQUIRE_FALSE(j1.mNode == node);
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_STRING);
+            REQUIRE(strcmp(j1.mNode->string_, "Hello World") == 0);
+            node = j1.mNode;
+
+            j1 = json::Object(json::Arr, 1, 4);
+            REQUIRE_FALSE(j1.mNode == nullptr);
+            REQUIRE_FALSE(j1.mNode == node);
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_ARRAY);
+            REQUIRE_FALSE(j1.mNode->children.head == nullptr);
+            node = j1.mNode;
+
+            j1 = json::Object(json::Arr);
+            REQUIRE_FALSE(j1.mNode == nullptr);
+            REQUIRE_FALSE(j1.mNode == node);
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_ARRAY);
+            REQUIRE(j1.mNode->children.head == nullptr);
+            node = j1.mNode;
+
+            j1 = json::Object(json::Obj, "One", 1);
+            REQUIRE_FALSE(j1.mNode == nullptr);
+            REQUIRE_FALSE(j1.mNode == node);
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_OBJECT);
+            REQUIRE_FALSE(j1.mNode->children.head == nullptr);
+        }
+
+        WHEN("copying or moving JSON object") {
+            /* test copying or moving json Object
+             * !!!NOTE!!! always move, do not copy
+             */
+            j1 = json::Object(9);   // move assignment
+            REQUIRE(j1.mNode->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(j1.mNode->number_ == 9);
+            REQUIRE_FALSE(j1.ref);
+
+            json::Object j2(std::move(j1)); // move constructor
+            REQUIRE(j2.mNode->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(j2.mNode->number_ == 9);
+            REQUIRE_FALSE(j2.ref);
+            REQUIRE(j1.mNode == nullptr);
+
+            json::Object j3(j2);    // copy constructor
+            REQUIRE(j3.mNode->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(j3.mNode->number_ == 9);
+            REQUIRE(j3.ref);
+            REQUIRE_FALSE(j2.mNode == nullptr);
+            REQUIRE_FALSE(j2.ref);  // after copy, j2 still owns the object, j3 should be a weak copy
+
+            json::Object j4 = std::move(j2);    // move assignment
+            REQUIRE(j4.mNode->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(j4.mNode->number_ == 9);
+            REQUIRE_FALSE(j4.ref);
+            REQUIRE(j2.mNode == nullptr); // nove j2 has been moved
+            REQUIRE(j3.mNode == j4.mNode); // although j3 is still a valid reference
+            REQUIRE(j3.ref);
+        }
+    }
+
+    SECTION("casting to native values") {
+        /* test reading native values */
+        json::Object j1(true);
+        REQUIRE((bool) j1);
+        j1 = false;
+        REQUIRE_FALSE((bool) j1);
+        REQUIRE_THROWS((String) j1);
+        REQUIRE_THROWS((int) j1);
+
+        j1 = 4;
+        REQUIRE(4 == (int) j1);
+        j1 = 67.09;
+        REQUIRE(67.09f == (float) j1);
+        REQUIRE_THROWS((const char*) j1);
+        float f = j1;
+        REQUIRE(f == 67.09f);
+
+        j1 = "Cali";
+        REQUIRE(strcmp("Cali", (const char *)j1) == 0);
+        REQUIRE(String{"Cali"} == (String) j1);
+        REQUIRE("Cali" == (std::string) j1);
+        REQUIRE_THROWS((int) j1);
+    }
+
+    SECTION("adding values to arrays/objects") {
+        /* test adding values to arrays or objects */
+        WHEN("adding values to an array") {
+            /* initializing and adding values to arrays */
+            JsonNode *node{nullptr};
+            json::Object arr(json::Arr);
+            arr.push(1);
+            node = json_first_child(arr.mNode);
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(node->number_ == 1);
+
+            arr.push(true, 67.9, "Cali", json::Object(json::Arr), json::Object(json::Obj));
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_BOOL);
+            REQUIRE(node->bool_);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(node->number_ == 67.9);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_STRING);
+            REQUIRE(strcmp(node->string_, "Cali") == 0);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_ARRAY);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_OBJECT);
+            REQUIRE(node->next == nullptr);
+            arr = json::Object(json::Arr, 1, json::Object(json::Arr, 10, true));
+            node = json_first_child(arr.mNode);
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(node->number_ == 1);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_ARRAY);
+            node = json_first_child(node);
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(node->number_ == 10);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_BOOL);
+            REQUIRE(node->bool_);
+
+            /* can only push into arrays*/
+            arr = json::Object();
+            REQUIRE_THROWS(arr.push(6));
+            arr = json::Object(json::Obj);
+            REQUIRE_THROWS(arr.push(6));
+            arr = json::Object(8);
+            REQUIRE_THROWS(arr.push(6));
+            arr = json::Object("Cali");
+            REQUIRE_THROWS(arr.push(6));
+        }
+
+        WHEN("adding values to an object") {
+            /* test adding values to an object */
+            JsonNode *node{nullptr};
+            json::Object obj(json::Obj);
+            obj.set("one", 1);
+            node = json_first_child(obj.mNode);
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(strcmp(node->key, "one") == 0);
+            REQUIRE(node->number_ == 1);
+            obj.set("two", 2, "bool", true, "str", "Cali", "arr", json::Object(json::Arr), "obj", json::Object(json::Obj));
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(strcmp(node->key, "two") == 0);
+            REQUIRE(node->number_ == 2);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_BOOL);
+            REQUIRE(strcmp(node->key, "bool") == 0);
+            REQUIRE(node->bool_);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_STRING);
+            REQUIRE(strcmp(node->key, "str") == 0);
+            REQUIRE(strcmp(node->string_, "Cali") == 0);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_ARRAY);
+            REQUIRE(strcmp(node->key, "arr") == 0);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_OBJECT);
+            REQUIRE(strcmp(node->key, "obj") == 0);
+            REQUIRE(node->next == nullptr);
+            obj = json::Object(json::Obj, "one", 1, "bool", true, "obj", json::Object(json::Obj, "two", 2, "str", "Cali"));
+            node = json_first_child(obj.mNode);
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(strcmp(node->key, "one") == 0);
+            REQUIRE(node->number_ == 1);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_BOOL);
+            REQUIRE(strcmp(node->key, "bool") == 0);
+            REQUIRE(node->bool_);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_OBJECT);
+            REQUIRE(strcmp(node->key, "obj") == 0);
+            node = json_first_child(node);
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_NUMBER);
+            REQUIRE(strcmp(node->key, "two") == 0);
+            REQUIRE(node->number_ == 2);
+            node = node->next;
+            REQUIRE_FALSE(node == nullptr);
+            REQUIRE(node->tag == JsonTag::JSON_STRING);
+            REQUIRE(strcmp(node->key, "str") == 0);
+            REQUIRE(strcmp(node->string_, "Cali") == 0);
+            REQUIRE(node->next == nullptr);
+
+            obj = json::Object();
+            REQUIRE_THROWS(obj.push(5)); // cannot insert into a json object
+            obj = json::Object(json::Arr);
+            REQUIRE_THROWS(obj.set("five", 5));
+            obj = json::Object(6);
+            REQUIRE_THROWS(obj.set("five", 5));
+            obj = json::Object("Cali");
+            REQUIRE_THROWS(obj.set("five", 5));
+        }
+    }
+
+    SECTION("index access operators on arrays/objects") {
+    	/* tests the index operators on objects and array*/
+    	WHEN("accessing array elements by index") {
+			/* array JSON objects support the [int] operator*/
+			json::Object arr(json::Arr, 1, true, "Cali", json::Object(json::Arr, 2, false, "Cali"));
+			REQUIRE(arr[-1].mNode == nullptr);
+			REQUIRE(arr[4].mNode == nullptr);
+
+			auto tmp = arr[0];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(1 == (int) tmp);
+			tmp = arr[1];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE((bool) tmp);
+			tmp = arr[2];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(strcmp(tmp.mNode->string_, "Cali") == 0);
+			auto arr1 = arr[3];
+			REQUIRE_FALSE(arr1.mNode == nullptr);
+			REQUIRE(arr1.ref);
+			REQUIRE(arr1.mNode->tag == JsonTag::JSON_ARRAY);
+
+			tmp = arr1[0];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(2 == (int) tmp);
+			tmp = arr1[1];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE_FALSE((bool) tmp);
+			tmp = arr1[2];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(strcmp(tmp.mNode->string_, "Cali") == 0);
+			/* array of arrays works like magic */
+			REQUIRE(arr[3][1].mNode == arr1[1].mNode);
+
+			/* index operator is only supported on arrays*/
+			arr = json::Object();
+			REQUIRE_THROWS(arr[0]);
+			arr = json::Object(true);
+			REQUIRE_THROWS(arr[0]);
+			arr = json::Object("Cali");
+			REQUIRE_THROWS(arr[0]);
+			arr = json::Object(json::Obj);
+			REQUIRE_THROWS(arr[0]);
+		}
+
+    	WHEN("accessing object elements by index") {
+    		/* objects elements can be accessed via string index */
+    		json::Object obj(json::Obj, "one", 1, "bool", true, "str", "Cali", "obj",
+    				json::Object(json::Obj, "two", 2, "bool", false, "str", "Cali"));
+			REQUIRE(obj["no_key"].mNode == nullptr);
+			auto tmp = obj["one"];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(1 == (int) tmp);
+			tmp = obj["bool"];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE((bool) tmp);
+			tmp = obj["str"];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(strcmp(tmp.mNode->string_, "Cali") == 0);
+			auto obj1 = obj["obj"];
+			REQUIRE_FALSE(obj1.mNode == nullptr);
+			REQUIRE(obj1.ref);
+			REQUIRE(obj1.mNode->tag == JsonTag::JSON_OBJECT);
+
+			tmp = obj1["two"];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(2 == (int) tmp);
+			tmp = obj1["bool"];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE_FALSE((bool) tmp);
+			tmp = obj1["str"];
+			REQUIRE_FALSE(tmp.mNode == nullptr);
+			REQUIRE(tmp.ref);
+			REQUIRE(strcmp(tmp.mNode->string_, "Cali") == 0);
+			/* object of objects works like magic */
+			REQUIRE(obj["obj"]["two"].mNode == obj1["two"].mNode);
+
+			/* index operator is only supported on object */
+			obj = json::Object();
+			REQUIRE_THROWS(obj["null"]);
+			obj = json::Object(true);
+			REQUIRE_THROWS(obj["bool"]);
+			obj = json::Object("Cali");
+			REQUIRE_THROWS(obj["str"]);
+			obj = json::Object(json::Arr);
+			REQUIRE_THROWS(obj["arr"]);
+    	}
+    }
+
+    SECTION("enumerating arrays and objects") {
+		/* test enumerating arrays and objects */
+		WHEN("using callback enumerators") {
+			/* testing enumerating using | operator */
+			json::Object arr(json::Arr, 1, true, "Cali", json::Object(json::Arr, 2, false, "Cali"));
+			int count{0};
+			arr | [&count](json::Object tmp) -> bool {
+				switch (count) {
+					case 0:
+						REQUIRE(1 == (int) tmp);
+						break;
+					case 1:
+						REQUIRE((bool) tmp);
+						break;
+					case 2:
+						REQUIRE((tmp.isString() && (strcmp(tmp.mNode->string_, "Cali") == 0)));
+						break;
+					case 3:
+						REQUIRE(tmp.isArray());
+						break;
+					default:
+						REQUIRE(false);
+						break;
+				}
+				count++;
+				return false;
+			};
+			REQUIRE(count == 4);
+			/* test breaking the loop */
+			count = 0;
+			arr | [&count](json::Object tmp) -> bool {
+				return ++count % 2 == 0;    /* break out of loop early */
+			};
+			REQUIRE(count == 2);
+
+			/*iterating obects works as iterating arrays*/
+			json::Object obj(json::Obj, "one", 1, "bool", true, "str", "Cali", "obj",
+							 json::Object(json::Obj, "two", 2, "bool", false, "str", "Cali"));
+			count = 0;
+			obj | [&count](const char *key, json::Object tmp) {
+				REQUIRE(utils::strmatchany(key, "one", "bool", "str", "obj"));
+				REQUIRE(utils::strmatchany(tmp.mNode->key, "one", "bool", "str", "obj"));
+				count++;
+				return false;
+			};
+			REQUIRE(count == 4);
+		}
+
+		WHEN("enumerating using iterators/range loop") {
+			/* tests enumeration using for loop */
+			json::Object arr(json::Arr, 1, true, "Cali", json::Object(json::Arr, 2, false, "Cali"));
+			int count{0};
+			for(const auto [_,tmp] : arr) {
+				/* basically for an array the first return is always null */
+				REQUIRE(_ == nullptr);
+				switch (count) {
+					case 0:
+						REQUIRE(1 == (int) tmp);
+						break;
+					case 1:
+						REQUIRE((bool) tmp);
+						break;
+					case 2:
+						REQUIRE((tmp.isString() && (strcmp(tmp.mNode->string_, "Cali") == 0)));
+						break;
+					case 3:
+						REQUIRE(tmp.isArray());
+						break;
+					default:
+						REQUIRE(false);
+						break;
+				}
+				count++;
+			}
+			REQUIRE(count == 4);
+
+			/*iterating obects works as iterating arrays*/
+			json::Object obj(json::Obj, "one", 1, "bool", true, "str", "Cali", "obj",
+							 json::Object(json::Obj, "two", 2, "bool", false, "str", "Cali"));
+			count = 0;
+			for (const auto [key, val] : obj) {
+				/* for objects key is the value's key */
+				REQUIRE(utils::strmatchany(key, "one", "bool", "str", "obj"));
+				REQUIRE(utils::strmatchany(val.mNode->key, "one", "bool", "str", "obj"));
+				count++;
+			}
+			REQUIRE(count == 4);
+
+			// Other types are not enumerable
+			count = 0;
+			json::Object a("C");
+			for(const auto [_,__] : a) count++;
+			REQUIRE(count == 0);
+			a = json::Object(1);
+			for(const auto [_,__] : a) count++;
+			REQUIRE(count == 0);
+		}
+	}
+
+	SECTION("encoding/decoding json object") {
+    	/* tests encoding decoding json object
+    	 * !!! NOTE !!! since this is clone from ccan/json, I'm only
+    	 * validating my editions */
+        String str = R"({"one":1,"bool":true,"str":"Cali","obj":{"two":2,"bool":false,"str":"Cali"},"arr":[1,true,"Cali"]})";
+        String str2 = R"({"data":{"one":1,"bool":true,"str":"Cali","obj":{"two":2,"bool":false,"str":"Cali"},"arr":[1,true,"Cali"]},"msg":"Hello Carter"})";
+    	WHEN("decoding json strings") {
+			auto size{str.size()};
+			auto obj = json::Object::decode(str.data(), size); // decode json object
+			REQUIRE(size == str.size());
+            auto tmp = obj["one"];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE(1 == (int) tmp);
+            tmp = obj["bool"];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE((bool) tmp);
+            tmp = obj["str"];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE(strcmp(tmp.mNode->string_, "Cali") == 0);
+            auto obj1 = obj["obj"];
+            REQUIRE_FALSE(obj1.mNode == nullptr);
+            REQUIRE(obj1.ref);
+            REQUIRE(obj1.mNode->tag == JsonTag::JSON_OBJECT);
+
+            tmp = obj1["two"];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE(2 == (int) tmp);
+            tmp = obj1["bool"];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE_FALSE((bool) tmp);
+            tmp = obj1["str"];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE(strcmp(tmp.mNode->string_, "Cali") == 0);
+
+            auto arr = obj["arr"];
+            REQUIRE_FALSE(arr.mNode == nullptr);
+            tmp = arr[0];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE(1 == (int) tmp);
+            tmp = arr[1];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE((bool) tmp);
+            tmp = arr[2];
+            REQUIRE_FALSE(tmp.mNode == nullptr);
+            REQUIRE(tmp.ref);
+            REQUIRE(strcmp(tmp.mNode->string_, "Cali") == 0);
+
+            /* !!!NOTE!!! this is really important */
+            size = str2.size()-9;
+            REQUIRE_NOTHROW((obj = json::Object::decode(&str2.data()[8], size)));
+            REQUIRE(size == str.size());
+		}
+
+		WHEN("encoding JSON object") {
+    	    /*encoding with wrapper functions */
+            json::Object obj(json::Obj, "one", 1, "bool", true, "str", "Cali", "obj",
+                             json::Object(json::Obj, "two", 2, "bool", false, "str", "Cali"), "arr",
+                             json::Object(json::Arr, 1, true, "Cali"));
+            auto s1 = json::encode(obj);
+            REQUIRE(String(s1) == str);
+    	}
+    }
+
+    SECTION("other JSON Object properties") {
+        /* some miscellaneous tests */
+        WHEN("checking type") {
+            /* check type checking API's */
+            json::Object j{};
+            REQUIRE(j.isNull());
+            j = json::Object(nullptr);
+            REQUIRE(j.isNull());
+            j = '5';
+            REQUIRE(j.isNumber());
+            j = true;
+            REQUIRE(j.isBool());
+            j = json::Arr;
+            REQUIRE(j.isArray());
+            j = json::Obj;
+            REQUIRE(j.isObject());
+        }
+
+        WHEN("checking if object is empty") {
+            /* test empty method */
+
+            /* null object is always empty */
+            json::Object j{};
+            REQUIRE(j.empty());
+            /* numbers boolean's can never be empty */
+            j = 5;
+            REQUIRE_FALSE(j.empty());
+            j = true;
+            REQUIRE_FALSE(j.empty());
+
+            /* for string, we check the actual string */
+            j = "";
+            REQUIRE(j.empty());
+            j = "Hello";
+            REQUIRE_FALSE(j.empty());
+            /* arrays and objects are empty when ther is no elements or members */
+            j = json::Arr;
+            REQUIRE(j.empty());
+            j.push(1, true, "Cali");
+            REQUIRE_FALSE(j.empty());
+
+            j = json::Obj;
+            REQUIRE(j.empty());
+            j.set("name", "Cali");
+            REQUIRE_FALSE(j.empty());
+        }
+
+        WHEN("using JSON Object with IOD") {
+            /* the main reason for adding json::Object was to have
+             * a dynamic JSON object within iod object */
+            typedef decltype(iod::D(
+                tprop(a,        int),
+                tprop(b,        String),
+                tprop(c,        json::Object)
+            )) Type;
+            String s1 = R"({"a":5,"b":"Cali","c":{"one":1,"bool":true,"str":"Cali"}})";
+            Type obj;
+            json::decode(s1, obj);
+            REQUIRE(obj.a == 5);
+            REQUIRE(obj.b == "Cali");
+            REQUIRE(1 == (int)obj.c["one"]);
+            REQUIRE((bool) obj.c["bool"]);
+            REQUIRE(String{"Cali"} == (String) obj.c["str"]);
+
+            auto s2 = json::encode(obj);
+            REQUIRE(String(s2) == s1);
+        }
+    }
+}
+
+#endif
+

@@ -23,17 +23,28 @@ namespace suil {
 
         struct Request;
         struct RequestForm {
-            RequestForm(const Request& req);
+            RequestForm(const Request& req, std::vector<String>&& required = {});
             void operator|(form_data_it_t f);
             void operator|(form_file_it_t f);
             const String operator[](const char*);
             const UploadedFile&operator()(const char*);
             template <typename O>
-            void operator>>(O& o);
+            String operator>>(O& o);
         private:
+
+            template <typename T>
+            inline static void cast(const String& s, T& v) {
+                utils::cast(s, v);
+            }
+
+            template <typename T>
+            inline static void cast(const String& s, std::vector<T>& v) {
+            }
+
             bool find(String& out, const char *name);
 
             const Request& req;
+            std::vector<suil::String> required{};
         };
 
         struct Request : public parser, LOGGER(HTTP_REQ) {
@@ -195,16 +206,37 @@ namespace suil {
         };
 
         template <typename O>
-        void RequestForm::operator>>(O& o) {
+        String RequestForm::operator>>(O& o) {
+            OBuffer ob{127};
             iod::foreach2(o) |
             [&](auto& m) {
                 String name{m.symbol().name()};
+                bool isRequired = std::find(required.begin(), required.end(), name) != required.end();
                 auto it = req.form.find(name);
                 if (it != req.form.end()) {
-                    // cast value to correct type
-                    utils::cast(it->second, m.value());
+                    // for has value
+                    if (isRequired && it->second.empty()) {
+                        /* required field cannot be empty */
+                        ob << (ob.empty()? "" : "\n") << "Required field '" << name << "' cannot be empty";
+                    }
+                    else {
+                        /* parse value */
+                        try {
+                            RequestForm::cast(it->second, m.value());
+                        }
+                        catch (...) {
+                            /* unhandled error, parsing failed */
+                            ob << (ob.empty() ? "" : "\n") << "Field '" << name << "' has unsupported value.";
+                        }
+                    }
+                }
+                else if(isRequired) {
+                    /* required field missing */
+                    ob << (ob.empty() ? "" : "\n") << "Required field '" << name << "' was not provided";
                 }
             };
+
+            return ob.empty()? nullptr : String(ob);
         }
     }
 

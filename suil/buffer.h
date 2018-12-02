@@ -40,7 +40,7 @@ namespace suil {
              * @param raw the buffer that the formatter will write into
              * @return must written the size of data written into the buffer \param raw
              */
-            virtual size_t fmt(char *raw) { return 0; };
+            virtual size_t fmt(char *raw) const { return 0; };
 
         private suil_ut:
             friend struct OBuffer;
@@ -726,6 +726,9 @@ namespace suil {
          */
         uint8_t& operator[](size_t index);
 
+        template <typename... T>
+        OBuffer&operator<<(const iod::sio<T...>& o);
+
     private suil_ut:
         void grow(uint32_t);
         uint8_t         *m_data{nullptr};
@@ -744,7 +747,7 @@ namespace suil {
                       val(t),
                       fs(fs) {}
 
-            virtual size_t fmt(char *raw) {
+            virtual size_t fmt(char *raw) const {
                 return (size_t) snprintf(raw, 32, fs, val);
             }
 

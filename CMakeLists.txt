@@ -35,7 +35,7 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes -fpermissive -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result -Wno-format-security")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-write-strings -Wno-attributes -fpermissive -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result -Wno-format-security")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -Wno-expansion-to-defined -Wno-implicit-fallthrough -Wno-unused-result")
 set(CMAKE_CXX_FLAGS_DEBUG   "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")

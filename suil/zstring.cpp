@@ -67,15 +67,21 @@ namespace suil {
     }
 
     String &String::operator=(String &&s) noexcept {
-        m_str = s.m_str;
-        m_len = s.m_len;
-        m_own = s.m_own;
-        m_hash = s.m_hash;
+        if (this != &s) {
 
-        s.m_str = nullptr;
-        s.m_len = 0;
-        s.m_own = false;
-        s.m_hash = 0;
+            if (m_str && m_own) {
+                ::free(m_str);
+            }
+
+            m_str = s.m_str;
+            m_len = s.m_len;
+            m_own = s.m_own;
+            m_hash = s.m_hash;
+            s.m_str = nullptr;
+            s.m_len = 0;
+            s.m_own = false;
+            s.m_hash = 0;
+        }
 
         return *this;
     }
@@ -87,10 +93,16 @@ namespace suil {
               m_hash(s.m_hash) {}
 
     String& String::operator=(const String &s) {
-        m_str = s.m_own ? strndup(s.m_str, s.m_len) : s.m_str;
-        m_len = s.m_len;
-        m_own = s.m_own;
-        m_hash = s.m_hash;
+        if (this != &s) {
+            if (m_str && m_own) {
+                ::free(m_str);
+            }
+
+            m_str  = s.m_own ? strndup(s.m_str, s.m_len) : s.m_str;
+            m_len  = s.m_len;
+            m_own  = s.m_own;
+            m_hash = s.m_hash;
+        }
         return *this;
     }
 

@@ -2343,7 +2343,7 @@ namespace suil {
                 p->url = strndup(url.data(), url.size());
                 if (pos != sv.size()) {
                     strview tmp((sv.data() + pos), sv.length() - pos);
-                    //p->qps = QueryString(tmp);
+                    p->qps = QueryString(tmp);
                 }
             }
 

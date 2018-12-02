@@ -239,9 +239,9 @@ namespace suil {
                 return sock.send(str.data(), str.size(), timeout) == str.size();
             }
 
-            template <typename... __P>
-            inline ssize_t sendline(int64_t timeout, const String data, __P... p) {
-                if (send_data(timeout, data) && sendline(timeout, p...)) {
+            template <typename... P>
+            inline ssize_t sendline(int64_t timeout, const String data, P... p) {
+                if (send_data(timeout, data) && sendline(timeout, std::forward<P>(p)...)) {
                     return sendflush(timeout);
                 }
                 return false;
@@ -269,6 +269,12 @@ namespace suil {
               sender(proto)
         {}
 
+        Stmp()
+            : server{nullptr},
+              port(0),
+              sender(proto)
+        {}
+
         template <typename ...Params>
         inline void send(Email& msg, Email::Address from, Params... params) {
             if (!proto.isopen()) {
@@ -280,12 +286,18 @@ namespace suil {
         }
 
         template <typename... Params>
-        inline void login(const String username, const String passwd, Params... params) {
+        inline bool login(const String username, const String passwd, Params... params) {
             if (proto.isopen()) {
-                throw Exception::create("Already logged into mailserver");
+                throw Exception::create("Already logged into mail-server");
             }
             auto opts = iod::D(params...);
-            do_login(username, passwd, opts);
+            return do_login(username, passwd, opts);
+        }
+
+
+        inline void setup(String&& server, int port) {
+            Ego.server = std::move(server);
+            Ego.port   = port;
         }
 
     private:
