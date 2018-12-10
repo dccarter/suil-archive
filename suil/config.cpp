@@ -99,7 +99,7 @@ namespace suil {
         auto what = loadValue(key);
         if (what) {
             unloadValue();
-            throw Exception::keyNotFound(what());
+            return json::Object(nullptr);
         }
 
         json::Object tmp;
@@ -118,7 +118,8 @@ namespace suil {
                 break;
             default:
                 unloadValue();
-                throw Exception::create("unsupported typed found at key '", key, "'");
+                idebug("unsupported typed found at key '", key, "'");
+                return json::Object(nullptr);
         }
         unloadValue();
         return tmp;

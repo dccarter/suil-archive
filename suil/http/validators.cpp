@@ -12,10 +12,19 @@ namespace suil::http::validators {
         return utils::regex::match(emailRegex, addr.data(), addr.size());
     }
 
+    bool Email::operator()(OBuffer& out, const String& addr) {
+        if (!Ego(addr)) {
+            out << "Invalid email address provided '" << addr << "'";
+            return false;
+        }
+        return true;
+    }
+
 #define isspecial(a) (((a) > 31 && (a) < 48) || ((a) > 58 && (a) < 65) || ((a) > 90 && (a) < 97) || ((a) > 123 && (a) < 127))
 
     bool Password::operator()(const suil::String &passwd) {
-
+        OBuffer ob;
+        return Ego(ob, passwd);
     }
 
     bool Password::operator()(suil::OBuffer &ob, const suil::String &passwd) {
@@ -50,6 +59,20 @@ namespace suil::http::validators {
             ob << (ob.empty()? "":"\n") << "Password invalid, requires at least '" << lower << "' digits";
 
         return !ob.empty();
+    }
+
+    bool Time::operator()(OBuffer& out, const suil::String &tstr) {
+        struct tm _{};
+        auto ep = strptime(tstr(), fmt, &_);
+        if (ep == nullptr || (ep-tstr()) < tstr.size()) {
+            /* invalid date/time string */
+            out.reserve(128);
+            out << "invalid date/time string '" << tstr << "', supported format '"
+                << fmt << "'";
+            return false;
+        }
+
+        return true;
     }
 
 #undef isspecial

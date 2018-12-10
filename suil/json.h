@@ -269,6 +269,21 @@ namespace suil {
                 return (T) ((double) Ego);
             }
 
+            template <typename T>
+            inline T operator ||(T&& t) {
+                if (Ego.empty())
+                    return std::forward<T>(t);
+                else
+                    return (T) Ego;
+            }
+
+            inline String operator ||(String&& s) {
+                if (Ego.empty())
+                    return std::move(s);
+                else
+                    return ((String) Ego).dup();
+            }
+
             bool empty() const;
 
             bool isBool() const;
