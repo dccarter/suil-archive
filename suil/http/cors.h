@@ -37,7 +37,7 @@ namespace suil {
 
         private:
             std::string    allow_origin{"*"};
-            std::string    allow_headers{"Origin, X-Requested-With, Content-Type, Accept"};
+            std::string    allow_headers{"Origin, X-Requested-With, Content-Type, Accept, Authorization"};
         };
     }
 }
