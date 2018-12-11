@@ -150,7 +150,7 @@ namespace suil {
         };
 
         constexpr unsigned find_closing_tag(const_str s, unsigned p) {
-            return s[p] == '>' ? p : find_closing_tag(s, p + 1);
+            return s[p] == '}' ? p : find_closing_tag(s, p + 1);
         }
 
         constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0) {
@@ -159,9 +159,9 @@ namespace suil {
                     ? f == 0 :
                     f < 0 || f >= 2
                     ? false :
-                    s[i] == '<'
+                    s[i] == '{'
                     ? is_valid(s, i + 1, f + 1) :
-                    s[i] == '>'
+                    s[i] == '}'
                     ? is_valid(s, i + 1, f - 1) :
                     is_valid(s, i + 1, f);
         }
@@ -191,25 +191,25 @@ namespace suil {
         }
 
         constexpr bool is_int(const_str s, unsigned i) {
-            return is_equ_n(s, i, "<int>", 0, 5);
+            return is_equ_n(s, i, "{int}", 0, 5);
         }
 
         constexpr bool is_uint(const_str s, unsigned i) {
-            return is_equ_n(s, i, "<uint>", 0, 6);
+            return is_equ_n(s, i, "{uint}", 0, 6);
         }
 
         constexpr bool is_float(const_str s, unsigned i) {
-            return is_equ_n(s, i, "<float>", 0, 7) ||
-                   is_equ_n(s, i, "<double>", 0, 8);
+            return is_equ_n(s, i, "{float}", 0, 7) ||
+                   is_equ_n(s, i, "{double}", 0, 8);
         }
 
         constexpr bool is_str(const_str s, unsigned i) {
-            return is_equ_n(s, i, "<str>", 0, 5) ||
-                   is_equ_n(s, i, "<string>", 0, 8);
+            return is_equ_n(s, i, "{str}", 0, 5) ||
+                   is_equ_n(s, i, "{string}", 0, 8);
         }
 
         constexpr bool is_path(const_str s, unsigned i) {
-            return is_equ_n(s, i, "<path>", 0, 6);
+            return is_equ_n(s, i, "{path}", 0, 6);
         }
 
         template<typename T>
@@ -279,8 +279,8 @@ namespace suil {
         static inline unsigned find_closing_tag_runtime(const char *s, unsigned p) {
             return
                     s[p] == 0
-                    ? throw std::runtime_error("unmatched tag <") :
-                    s[p] == '>'
+                    ? throw std::runtime_error("unmatched tag {") :
+                    s[p] == '}'
                     ? p : find_closing_tag_runtime(s, p + 1);
         }
 
@@ -288,18 +288,18 @@ namespace suil {
             return
                     s[p] == 0
                     ? 0 :
-                    s[p] == '<' ? (
-                            std::strncmp(s + p, "<int>", 5) == 0
+                    s[p] == '{' ? (
+                            std::strncmp(s + p, "{int}", 5) == 0
                             ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 1 :
-                            std::strncmp(s + p, "<uint>", 6) == 0
+                            std::strncmp(s + p, "{uint}", 6) == 0
                             ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 2 :
-                            (std::strncmp(s + p, "<float>", 7) == 0 ||
-                             std::strncmp(s + p, "<double>", 8) == 0)
+                            (std::strncmp(s + p, "{float}", 7) == 0 ||
+                             std::strncmp(s + p, "{double}", 8) == 0)
                             ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 3 :
-                            (std::strncmp(s + p, "<str>", 5) == 0 ||
-                             std::strncmp(s + p, "<string>", 8) == 0)
+                            (std::strncmp(s + p, "{str}", 5) == 0 ||
+                             std::strncmp(s + p, "{string}", 8) == 0)
                             ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 4 :
-                            std::strncmp(s + p, "<path>", 6) == 0
+                            std::strncmp(s + p, "{path}", 6) == 0
                             ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 5 :
                             throw std::runtime_error("invalid parameter type")
                     ) :
@@ -310,7 +310,7 @@ namespace suil {
             return
                     p == s.size()
                     ? 0 :
-                    s[p] == '<' ? (
+                    s[p] == '{' ? (
                             is_int(s, p)
                             ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
                             is_uint(s, p)

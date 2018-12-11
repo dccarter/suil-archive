@@ -137,7 +137,6 @@ namespace suil {
                 router.validate();
 
                 trace("starting server...");
-
                 return basesrv_t::run();
             }
 
@@ -184,6 +183,10 @@ namespace suil {
 
             const HttpConfig& getConfig() const {
                 return Ego.config;
+            }
+
+            inline void dump() {
+                router.debug_print();
             }
 
         private:

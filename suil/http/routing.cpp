@@ -188,7 +188,7 @@ namespace suil {
             for(unsigned i = 0; i < url.size(); i ++)
             {
                 char c = url[i];
-                if (c == '<')
+                if (c == '{')
                 {
                     static struct ParamTraits
                     {
@@ -196,13 +196,13 @@ namespace suil {
                         std::string name;
                     } paramTraits[] =
                     {
-                            { suil::detail::ParamType::INT, "<int>" },
-                            { suil::detail::ParamType::UINT, "<uint>" },
-                            { suil::detail::ParamType::DOUBLE, "<float>" },
-                            { suil::detail::ParamType::DOUBLE, "<double>" },
-                            { suil::detail::ParamType::STRING, "<str>" },
-                            { suil::detail::ParamType::STRING, "<string>" },
-                            { suil::detail::ParamType::PATH, "<path>" },
+                            { suil::detail::ParamType::INT, "{int}" },
+                            { suil::detail::ParamType::UINT, "{uint}" },
+                            { suil::detail::ParamType::DOUBLE, "{float}" },
+                            { suil::detail::ParamType::DOUBLE, "{double}" },
+                            { suil::detail::ParamType::STRING, "{str}" },
+                            { suil::detail::ParamType::STRING, "{string}" },
+                            { suil::detail::ParamType::PATH, "{path}" },
                     };
 
                     for(auto& x:paramTraits)
@@ -244,22 +244,22 @@ namespace suil {
                 if (n->param_childrens[i]) {
                     switch ((suil::detail::ParamType) i) {
                         case suil::detail::ParamType::INT:
-                            dbpr.append("<int>\n");
+                            dbpr.append("{int}\n");
                             break;
                         case suil::detail::ParamType::UINT:
-                            dbpr.append("<uint>\n");
+                            dbpr.append("{uint}\n");
                             break;
                         case suil::detail::ParamType::DOUBLE:
-                            dbpr.append("<float>\n");
+                            dbpr.append("{float}\n");
                             break;
                         case suil::detail::ParamType::STRING:
-                            dbpr.append("<str>\n");
+                            dbpr.append("{str}\n");
                             break;
                         case suil::detail::ParamType::PATH:
                             dbpr.append("<path>\n");
                             break;
                         default:
-                            dbpr.append("<ERROR>\n");
+                            dbpr.append("{ERROR}\n");
                             break;
                     }
 
