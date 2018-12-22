@@ -1,0 +1,18 @@
+ident           : /[a-zA-Z_][a-zA-Z0-9_]*/ | /[a-zA-Z_]/;
+attrib          : <ident> ("::" <ident>)* ;
+type            : <ident> ("::" <ident>)* ;
+generic         : (<type> '<' <generic> (',' <generic>)* '>') | <type> ;
+attribs         : "[[" <attrib> (',' <attrib>)* "]]" ;
+field           : <attribs>* <generic> <ident>;
+fieldDcls       : (<field> ';')+ ;
+param           : <generic> <ident> ;
+paramDcls       : <param> (',' <param>)* ;
+func            : <generic> <ident> '(' <paramDcls>? ')' ;
+funcDcls        : (<func> ';')+ ;
+meta            : "meta" <attribs>* <ident> '{' <fieldDcls> '}' ;
+rpc             : ("suilrpc" | "jsonrpc") <attribs>* <ident> '{' <funcDcls> '}' ;
+scc             : (<meta> | <rpc>) ';' ;
+include         : "#include" (('"' /(\\.|[^"])+/ '"')|('<' /(\\.|[^>])+/ '>')) ;
+includes        : <include>*;
+namespace       : "namespace" <type> ;
+program         : <generic> ;

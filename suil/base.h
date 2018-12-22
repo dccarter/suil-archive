@@ -124,6 +124,10 @@ inline unsigned operator ""_hr(unsigned long long s) { return (unsigned) (s * 60
  */
 #define sizeofcstr(ch)   (sizeof(ch)-1)
 
+#define meta struct
+
+#define rpc  struct
+
 
 namespace suil {
     /**

@@ -26,6 +26,21 @@ SuilApp(suiltps
         INSTALL   ON
         DEPENDS   suil)
 
+set(scc_SOURCES
+        scc/main.cpp
+        scc/mpc.c
+        scc/compiler.cpp
+        scc/meta_builder.cpp)
+
+SuilApp(scc
+        SOURCES    ${scc_SOURCES}
+        VERSION    ${tools_VERSION}
+        DEFINES    ${tools_DEFINES} "-DBASE_PATH=\"${SUIL_BASE_PATH}\""
+        INSTALL    ON
+        DEPENDS    suil)
+configure_file(scc/parser.grammar
+        ${CMAKE_CURRENT_BINARY_DIR}/parser.grammar COPYONLY)
+
 set(suilapp_SOURCES
         sapp/cmd_init.cpp
         sapp/main.cc)
