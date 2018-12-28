@@ -312,9 +312,9 @@ function(SuilApp name)
         # install targets
         message(STATUS "target '${name} install target")
         install(TARGETS ${name}
-                ARCHIVE DESTINATION ${${name}_ARTIFACTS_DIR}
-                LIBRARY DESTINATION ${${name}_ARTIFACTS_DIR}
-                RUNTIME DESTINATION ${${name}_ARTIFACTS_DIR})
+                ARCHIVE DESTINATION ${${name}_ARTIFACTS_DIR}/lib
+                LIBRARY DESTINATION ${${name}_ARTIFACTS_DIR}/lib
+                RUNTIME DESTINATION ${${name}_ARTIFACTS_DIR}/bin)
 
         # install directories
         set(${name}_INSTALL_DIRS ${SUIL_APP_INSTALL_DIRS})

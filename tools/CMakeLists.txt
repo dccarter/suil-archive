@@ -22,6 +22,7 @@ SuilApp(suiltps
         VERSION   ${tools_VERSION}
         DEFINES   ${tools_DEFINES}
         INSTALL   ON
+        ARTIFACTS_DIR /usr/local
         DEPENDS   suil)
 
 set(scc_SOURCES
@@ -35,6 +36,7 @@ SuilApp(scc
         VERSION    ${tools_VERSION}
         DEFINES    ${tools_DEFINES} "-DGRAMMAR_DIR=\"${CMAKE_CURRENT_LIST_DIR}\""
         INSTALL    ON
+        ARTIFACTS_DIR /usr/local
         DEPENDS    suil)
 
 set(suilapp_SOURCES
@@ -46,6 +48,7 @@ SuilApp(suilapp
         VERSION    ${tools_VERSION}
         DEFINES    ${tools_DEFINES} "-DBASE_PATH=\"${SUIL_BASE_PATH}\""
         INSTALL    ON
+        ARTIFACTS_DIR /usr/local
         DEPENDS    suil)
 
 if (SUIL_BUILD_DOCKER)
@@ -63,6 +66,7 @@ if (SUIL_BUILD_DOCKER)
             VERSION    ${tools_VERSION}
             DEFINES    ${tools_DEFINES}
             INSTALL    ON
+            ARTIFACTS_DIR /usr/local
             TPSCHEMA   ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json
             DEPENDS    suiltps)
     set(sdocker_HEADERS
