@@ -58,6 +58,11 @@ function(suil_iod_symbols name)
     endif()
 endfunction()
 
+function(SuilListJoin VALUES GLUE OUTPUT)
+    string(REPLACE ";" "${GLUE}" _TMP_STR "${VALUES}")
+    set (${OUTPUT} "${_TMP_STR}" PARENT_SCOPE)
+endfunction()
+
 function(suil_gen_types name)
     set(options "")
     set(kvargs  BINARY OUTPUT PROJECT)
@@ -145,7 +150,7 @@ function(suil_scc name)
                 ${${name}_OUTDIR}/${__temp}.cpp)
     endforeach()
 
-    list(JOIN SUIL_SCC_SOURCES "," ${name}_SOURCES)
+    SuilListJoin(${${name}_SOURCES} "," ${name}_SOURCES)
     message(STATUS "${name} scc sources: ${${name}_SOURCES}")
     message(STATUS "${name} scc outputs: ${${name}_OUTPUTS}")
 
