@@ -364,7 +364,7 @@ namespace suil {
         template <typename T>
         explicit inline operator T() const;
 
-        char operator[](int index) {
+        const char& operator[](int index) const {
             if (index >= 0 && index < m_len)
                 return m_cstr[index];
             throw Exception::indexOutOfBounds("index '", index, "' out of bounds");
@@ -383,7 +383,7 @@ namespace suil {
             }
 
             char operator*() const {
-                return pos<str.size()? str[pos] : '\0';
+                return (char) (pos < str.size() ? str[pos] : '\0');
             }
 
         private:
