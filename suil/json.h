@@ -353,8 +353,11 @@ namespace suil {
             template <typename T>
             operator iod::Nullable<T>() const {
                 iod::Nullable<T> ret;
-                if (!Ego.isNull() && !Ego.empty())
-                    Ego.copyOut<T>(ret, Ego);
+                if (!Ego.isNull() && !Ego.empty()) {
+                    T tmp;
+                    Ego.copyOut<T>(tmp, Ego);
+                    ret = std::move(tmp);
+                }
                 return std::move(ret);
             }
 
