@@ -76,6 +76,7 @@ namespace suil {
         va_list args;
         va_start(args, fmt);
         printf(fmt, args); printf("\n");
+        printf("\n");
         va_end(args);
     }
 
@@ -83,6 +84,7 @@ namespace suil {
         va_list args;
         va_start(args, fmt);
         cprintv(console::GREEN, 0, fmt, args);
+        printf("\n");
         va_end(args);
     }
 
@@ -90,6 +92,7 @@ namespace suil {
         va_list args;
         va_start(args, fmt);
         cprintv(console::RED, 0, fmt, args);
+        printf("\n");
         va_end(args);
     }
 
@@ -97,6 +100,7 @@ namespace suil {
         va_list args;
         va_start(args, fmt);
         cprintv(console::YELLOW, 0, fmt, args);
+        printf("\n");
         va_end(args);
     }
 }

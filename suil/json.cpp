@@ -1485,10 +1485,10 @@ namespace suil::json {
     Object Object::set(const char *key, const suil::json::Object_t &) {
         if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
             /* valid node */
-            throw Exception::create("json::Object::push - object is not a JSON object");
+            throw Exception::create("json::Object::set - object is not a JSON object");
         /* create array node and append it */
         Object o(json::Obj);
-        json_append_element(mNode, o.mNode);
+        json_append_member(mNode, key, o.mNode);
         o.ref = true;
         return o;
     }
@@ -1496,10 +1496,10 @@ namespace suil::json {
     Object Object::set(const char *key, const suil::json::Array_t &) {
         if (mNode == nullptr || mNode->tag != JsonTag::JSON_OBJECT)
             /* valid node */
-            throw Exception::create("json::Object::push - object is not a JSON object");
+            throw Exception::create("json::Object::set - object is not a JSON object");
         /* create array node and append it */
         Object o(json::Arr);
-        json_append_element(mNode, o.mNode);
+        json_append_member(mNode, key, o.mNode);
         o.ref = true;
         return o;
     }
@@ -2169,6 +2169,73 @@ TEST_CASE("suil::json::Object", "[json][Object]")
                              json::Object(json::Arr, 1, true, "Cali"));
             auto s1 = json::encode(obj);
             REQUIRE(String(s1) == str);
+    	}
+    }
+
+    SECTION("converting IOD serializable and JSON object") {
+    	// we should be able to easily convert between IOD and JSON object
+        typedef decltype(iod::D(
+                tprop(a(var(json_skip)),        bool),
+                tprop(b(var(optional)),         String),
+                tprop(c,           iod::Nullable<std::vector<int>>)
+        )) IodInner;
+        typedef decltype(iod::D(
+                tprop(a,           std::string),
+                tprop(b,           std::vector<int>),
+                tprop(c,           iod::Nullable<IodInner>)
+        )) IodType;
+
+    	WHEN("Converting from IOD to json::Object") {
+    	    // should be able to cast/assign from IOD to json::Object
+    	    IodType iodValue{};
+    	    iodValue.a  = "Hello";
+    	    for(int i = 0; i < 10; i++)
+    	        iodValue.b.push_back(i);
+    	    json::Object j1(iodValue);
+    	    REQUIRE(j1.isObject());
+    	    REQUIRE(iodValue.a == (std::string) j1["a"]);
+    	    REQUIRE(j1["c"].isNull());
+    	    auto v1 = j1["b"];
+    	    for (int i = 0; i < 10; i++) {
+    	        // verify vector
+                REQUIRE(i == (int)v1[i]);
+    	    }
+    	    // assign value to inner type
+    	    iodValue.c = IodInner{};
+    	    auto& innerType = *iodValue.c;
+    	    innerType.a = true;
+    	    innerType.b = "World";
+    	    json::Object j2(iodValue);
+    	    REQUIRE(j2["c"].isObject());
+    	    REQUIRE(j2["c"]["a"].isNull());
+    	    REQUIRE(innerType.b == (String)j2["c"]["b"]);
+    	    REQUIRE(j2["c"]["c"].isNull());
+
+    	    innerType.c = std::vector<int>{1, 2};
+    	    json::Object j3(iodValue);
+    	    REQUIRE(j3["c"]["c"].isArray());
+            REQUIRE(1 == (int) j3["c"]["c"][0]);
+            REQUIRE(2 == (int) j3["c"]["c"][1]);
+    	}
+
+    	WHEN("Converting from json::Object to IOD") {
+    	    // should be able to convert IOD's from JSON object
+    	    json::Object j1(json::Obj, "a", "Hello",
+    	                               "b", std::vector<int>{1, 2, 3});
+    	    auto it1 = (IodType) j1;
+    	    REQUIRE(it1.a == "Hello");
+    	    REQUIRE(it1.b.size() == 3);
+    	    REQUIRE(it1.b[0] == 1);
+            REQUIRE(it1.b[1] == 2);
+            REQUIRE(it1.b[2] == 3);
+            REQUIRE(it1.c.isNull);
+            j1.set("c", json::Object(json::Obj, "a", true, "c", std::vector<int>{1, 2}));
+            auto it2 = (IodType) j1;
+            REQUIRE_FALSE(it2.c.isNull);
+            REQUIRE_FALSE(it2.c->a);
+            REQUIRE(it2.c->c->size() == 2);
+            REQUIRE((*(it2.c->c))[0] == 1);
+            REQUIRE((*(it2.c->c))[1] == 2);
     	}
     }
 

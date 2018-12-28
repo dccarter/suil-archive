@@ -124,6 +124,17 @@ bool json_check(const JsonNode *node, char errmsg[256]);
 
 namespace suil {
     namespace json {
+        template <typename T>
+        struct CopyOut {
+            CopyOut(CopyOut&&) = delete;
+            CopyOut(const CopyOut&) = delete;
+            CopyOut& operator=(CopyOut&&) = delete;
+            CopyOut& operator=(const CopyOut&) = delete;
+            CopyOut(T& ref)
+                : val(ref)
+            {}
+            T& val;
+        };
 
         struct Object_t {};
         static const Object_t Obj{};
@@ -172,6 +183,18 @@ namespace suil {
                 Ego.set(std::forward<Values>(values)...);
             }
 
+            template <typename ...T>
+            Object(const iod::sio<T...>& obj)
+                : Object(json::Obj)
+            {
+                Ego.set(obj);
+            }
+
+            template <typename ...T>
+            Object(const iod::sio<T...>&& obj)
+                : Object(obj)
+            {}
+
             Object(Array_t);
 
             template<typename... Values>
@@ -215,6 +238,23 @@ namespace suil {
 
             Object push(const Array_t &);
 
+            template <typename ...T>
+            void push(const iod::sio<T...>& obj) {
+                Ego.push(json::Obj).set(obj);
+            }
+
+            template <typename T>
+            void push(const std::vector<T>& v) {
+                for(auto& a: v)
+                    Ego.push(a);
+            }
+
+            template <typename T>
+            void push(const iod::Nullable<T>& a) {
+                if (!a.isNull)
+                    Ego.push(*a);
+            }
+
             template<typename T, typename... Values>
             void push(T t, Values... values) {
                 if constexpr (std::is_same<json::Object, T>::value)
@@ -223,6 +263,29 @@ namespace suil {
                     push(Object(t));
                 if constexpr (sizeof...(values))
                     push(std::forward<Values>(values)...);
+            }
+
+            template <typename ...T>
+            void set(const iod::sio<T...>& obj) {
+                iod::foreach(obj)|[&](auto& m) {
+                    if (!m.attributes().has(iod::_json_skip)) {
+                        // only set non-skipped values
+                        Ego.set(m.symbol().name(), m.value());
+                    }
+                };
+            }
+
+            template <typename T>
+            void set(const char *key, const std::vector<T>& v) {
+                Ego.set(key, json::Arr).push(v);
+            }
+
+            template <typename T>
+            void set(const char *key, const iod::Nullable<T>& a) {
+                if (a.isNull)
+                    Ego.set(key, nullptr);
+                else
+                    Ego.set(key, *a);
             }
 
             void set(const char *key, Object &&);
@@ -267,6 +330,66 @@ namespace suil {
             template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
             inline operator T() const {
                 return (T) ((double) Ego);
+            }
+
+            template <typename T>
+            operator std::vector<T>() const {
+                if (Ego.isNull() || Ego.empty())
+                    return std::vector<T>{};
+                if (!Ego.isArray())
+                    throw Exception::create("JSON object is not an array");
+                std::vector<T> out;
+                Ego|[&](suil::json::Object obj) {
+                    // cast to vector's value type
+                    T tmp;
+                    Ego.copyOut<T>(tmp, obj);
+                    out.push_back(std::move(tmp));
+                    return false;
+                };
+
+                return std::move(out);
+            }
+
+            template <typename T>
+            operator iod::Nullable<T>() const {
+                iod::Nullable<T> ret;
+                if (!Ego.isNull() && !Ego.empty())
+                    Ego.copyOut<T>(ret, Ego);
+                return std::move(ret);
+            }
+
+            template <typename ...T>
+            operator iod::sio<T...>() const {
+                iod::sio<T...> ret{};
+                if (Ego.empty())
+                    return std::move(ret);
+                iod::foreach(ret) | [&](auto& m) {
+                    // find all properties
+                    using _Tp = typename std::remove_reference<decltype(m.value())>::type;
+                    if (!m.attributes().has(iod::_json_skip)) {
+                        // find attribute in current object
+                        auto obj = Ego[m.symbol().name()];
+                        if (obj.isNull()) {
+                            if (!iod::isNullable(m.value())  && !m.attributes().has(iod::_optional))
+                                // value cannot be null
+                                throw Exception::create("property '", m.symbol().name(), "' cannot be null");
+                            else
+                                return;
+                        }
+
+                        copyOut<_Tp>(m.value(), obj);
+                    }
+                };
+
+                return std::move(ret);
+            }
+
+            template <typename T>
+            inline void copyOut(T& out, const Object& obj) const {
+                if constexpr (std::is_same<T, suil::String>::value)
+                    out = ((String) obj).dup();
+                else
+                    out = (T) obj;
             }
 
             template <typename T>
@@ -323,7 +446,6 @@ namespace suil {
             bool ref{false};
         };
     }
-
 } // namespace suil
 
 namespace iod {
@@ -414,9 +536,7 @@ namespace iod {
 
         template <typename S>
         inline void json_encode_(const suil::json::Object& o, S &ss) {
-            if (!o.empty()) {
-                o.encode(ss);
-            }
+            o.encode(ss);
         }
     }
 

@@ -111,6 +111,63 @@ function(suil_gen_types name)
     endif()
 endfunction()
 
+function(suil_scc name)
+    set(options "")
+    set(kvargs  BINARY OUTDIR PROJECT)
+    set(kvvargs DEPENDS SOURCES)
+
+    cmake_parse_arguments(SUIL_SCC "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
+
+    # locate binary to use
+    set(suilscc scc)
+    if (SUIL_SCC_BINARY)
+        set(suilscc ${SUIL_SCC_BINARY})
+    endif()
+
+    # locate symbols file
+    set(${name}_SOURCES ${SUIL_SCC_SOURCES})
+    if (NOT SUIL_SCC_SOURCES)
+        set(${name}_SOURCES ${CMAKE_SOURCE_DIR}/${name}.scc)
+    endif()
+
+    # set output directory
+    set(${name}_OUTDIR ${CMAKE_CURRENT_BINARY_DIR}/.generated)
+    if (SUIL_SCC_OUTDIR)
+        set(${name}_OUTDIR ${SUIL_SCC_OUTDIR})
+    endif()
+
+    # get outputs
+    set(${name}_OUTPUTS)
+    foreach(__${name}_SOURCE ${${name}_SOURCES})
+        get_filename_component(__temp ${__${name}_SOURCE} NAME)
+        list(APPEND ${name}_OUTPUTS
+                ${${name}_OUTDIR}/${__temp}.h
+                ${${name}_OUTDIR}/${__temp}.cpp)
+    endforeach()
+
+    list(JOIN SUIL_SCC_SOURCES "," ${name}_SOURCES)
+    message(STATUS "${name} scc sources: ${${name}_SOURCES}")
+    message(STATUS "${name} scc outputs: ${${name}_OUTPUTS}")
+
+    add_custom_command(OUTPUT ${${name}_OUTPUTS}
+            COMMAND ${suilscc} "gen" "-i" ${${name}_SOURCES} "-O" ${${name}_OUTDIR}
+            WORKING_DIRECTORY  ${CMAKE_BINARY_DIR}
+            DEPENDS            ${${name}_SOURCES})
+    # add symbol generation target
+    add_custom_target(${name}-scc
+            DEPENDS ${${name}_OUTPUTS}
+            COMMENT "Generating types/services used by ${name}")
+    message(STATUS "${suilscc} ${${name}_SOURCES} ${${name}_OUTDIR}")
+
+    if (SUIL_SCC_DEPENDS)
+        add_dependencies(${name}-scc ${SUIL_SCC_DEPENDS})
+    endif()
+
+    if (NOT SUIL_SCC_PROJECT)
+        add_dependencies(${name} ${name}-scc)
+    endif()
+endfunction()
+
 ##
 # @brief Check to ensure that a system library exists in the system
 # @param {name:string:required} the name of the library

@@ -36,7 +36,7 @@ function(SuilProject name)
                 "A project instance has already been created: ${SUIL_APP_PROJECT_NAME}")
     else ()
         set(options "")
-        set(kvargs  VERSION_MAJOR VERSION_MINOR VERSION_PATCH TYPE_SCHEMA IOD_BIN GENTPS_BIN)
+        set(kvargs  VERSION_MAJOR VERSION_MINOR VERSION_PATCH TYPE_SCHEMA SCC_SOURCES SCC_BIN IOD_BIN GENTPS_BIN)
         set(kvvargs STATIC_LINK LINK_DIRS SYMBOLS)
         cmake_parse_arguments(SUIL_PROJECT "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
@@ -94,7 +94,7 @@ function(SuilProject name)
             set(SUIL_PROJECT_GENSYMS ON PARENT_SCOPE)
         endif()
 
-        # add symbols target for current project
+        # add types target for current project
         if (SUIL_PROJECT_GENTPS_BIN)
             set(SUIL_gentps_BINARY ${SUIL_PROJECT_GENTPS_BIN} PARENT_SCOPE)
         elseif(SUIL_BASE_PATH)
@@ -111,6 +111,25 @@ function(SuilProject name)
                     SCHEMA  ${SUIL_PROJECT_TYPE_SCHEMA}
                     OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${name}.types.h)
             set(SUIL_PROJECT_GENTYPES ON PARENT_SCOPE)
+        endif()
+
+        # add scc target for current project
+        if (SUIL_PROJECT_SCC_BIN)
+            set(SUIL_scc_BINARY ${SUIL_PROJECT_SCC_BIN} PARENT_SCOPE)
+        elseif(SUIL_BASE_PATH)
+            set(SUIL_scc_BINARY ${SUIL_BASE_PATH}/bin/scc PARENT_SCOPE)
+        else()
+            set(SUIL_scc_BINARY scc PARENT_SCOPE)
+        endif()
+
+        if (SUIL_PROJECT_TYPES)
+            message(STATUS "defining project types target ${SUIL_PROJECT_TYPES}")
+            suil_scc(${name}
+                    PROJECT  ON
+                    BINARY   ${SUIL_scc_BINARY}
+                    SOURCES  ${SUIL_PROJECT_SCC_SOURCES}
+                    OUTDIR   ${CMAKE_CURRENT_SOURCE_DIR})
+            set(SUIL_PROJECT_SCC ON PARENT_SCOPE)
         endif()
     endif()
 endfunction()
@@ -140,8 +159,8 @@ function(SuilApp name)
 
     # parse function arguments
     set(options DEBUG)
-    set(kvargs TPSCHEMA)
-    set(kvvargs LIBRARY DEPENDS INSTALL VERSION SOURCES TEST DEFINES SYMBOLS
+    set(kvargs  TPSCHEMA SCC_SOURCES)
+    set(kvvargs LIBRARY DEPENDS INSTALL VERSION SOURCES TEST DEFINES SYMBOLS SCC_OUTDIR
                 EXTRA_SYMS LIBRARIES INCLUDES INSTALL_FILES INSTALL_DIRS ARTIFACTS_DIR)
     cmake_parse_arguments(SUIL_APP "${options}" "${kvargs}" "${kvvargs}" ${ARGN})
 
@@ -224,6 +243,22 @@ function(SuilApp name)
                 BINARY  ${SUIL_gentps_BINARY}
                 SCHEMAS ${${name}_TPSCHEMA}
                 OUTPUT  ${${name}_TPSCHEMA_ODIR}/${${name}_TPSCHEMA_OUTPUT}.h)
+    endif()
+
+    set(${name}_SCC_OUTDIR ${SUIL_APP_SCC_OUTDIR})
+    if (NOT SUIL_APP_SCC_OUTDIR)
+        set(${name}_SCC_OUTDIR ${CMAKE_CURRENT_SOURCE_DIR})
+    endif()
+
+    # generate scc types/services
+    if (SUIL_APP_SCC_SOURCES)
+        set(${name}_SCC_SOURCES ${SUIL_APP_SCC_SOURCES})
+        message(STATUS "using scc sources: ${SUIL_scc_BINARY} ${${name}_SCC_SOURCES}")
+        # generate scc if used py project
+        suil_scc(${name}
+                BINARY  ${SUIL_scc_BINARY}
+                SOURCES ${${name}_SCC_SOURCES}
+                OUTDIR  ${${name}_SCC_OUTDIR})
     endif()
 
     if (SUIL_APP_DEPENDS)

@@ -42,7 +42,7 @@ namespace suil {
             Cmd&operator<<(Arg&&arg);
             Cmd&operator()(std::function<void(Cmd&)> handler) {
                 if (Ego.handler != nullptr) {
-                    throw Exception::create("command '", name,
+                    throw Exception::create("command '", name(),
                                              "' already assigned a handler");
                 }
                 Ego.handler = handler;
@@ -104,7 +104,7 @@ namespace suil {
                 Arg *_;
                 if (!check(_, name, NOSF)) {
                     throw Exception::create("passed parameter '",
-                            name, "' is not an argument");
+                            name(), "' is not an argument");
                 }
                 V tmp = def;
                 String zstr = Ego[name];
@@ -117,9 +117,13 @@ namespace suil {
         private:
             friend struct Parser;
 
+            inline void setvalue(String& out, String& from) {
+                out = std::move(from);
+            }
+
             template <typename V>
             inline void setvalue(V& out, String& from) {
-                utils::cast(from, out);
+                utils::cast(from, out.trim(' '));
             }
 
             template <typename V>
@@ -128,8 +132,7 @@ namespace suil {
                 for (auto& part: parts) {
                     V val;
                     String tmp{part};
-                    String trimd = tmp.trim(' ');
-                    setvalue(val, trimd);
+                    setvalue(val, tmp);
                     out.emplace_back(std::move(val));
                 }
             }

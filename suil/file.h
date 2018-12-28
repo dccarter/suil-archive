@@ -176,6 +176,16 @@ namespace suil {
          */
         File& operator<<(const char* str);
 
+        /**
+         * stream operator - write c-style string into file
+         * @param str the string to write
+         * @return
+         */
+        inline File& operator<<(const std::string& str) {
+            String tmp(str);
+            return (Ego << tmp);
+        }
+
         virtual ~File();
 
     protected:

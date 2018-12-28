@@ -42,24 +42,26 @@ set(LIB_SUIL_HTTP_SOURCES
 set(LIB_SUIL_SQL_SOURCES
         sql/pgsql.cpp)
 
+set(LIB_SUIL_RPC_SOURCES
+        rpc/common.cpp
+        rpc/jsonrpc.cpp
+        rpc/suilrpc.cpp)
+
 # only include docker sources when enables
 set(LIB_SUIL_DOCKER_SOURCES)
 
 set(LIB_SUIL_SOURCES
         ${LIB_SUIL_BASE_SOURCES}
         ${LIB_SUIL_HTTP_SOURCES}
+        ${LIB_SUIL_RPC_SOURCES}
         ${LIB_SUIL_SQL_SOURCES})
 
 set_property(GLOBAL PROPERTY prop_SUIL_SOURCES
-        ${LIB_SUIL_BASE_SOURCES}
-        ${LIB_SUIL_HTTP_SOURCES}
-        ${LIB_SUIL_SQL_SOURCES})
+        ${LIB_SUIL_SOURCES})
 
 # add a shared and a static library
 add_library(suil SHARED
-        ${LIB_SUIL_BASE_SOURCES}
-        ${LIB_SUIL_HTTP_SOURCES}
-        ${LIB_SUIL_SQL_SOURCES})
+        ${LIB_SUIL_SOURCES})
 
 target_link_libraries(suil ${SUIL_LIBRARIES}   mill_s snappy lua)
 

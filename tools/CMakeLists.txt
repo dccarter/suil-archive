@@ -5,9 +5,7 @@ set(SUIL_BASE_PATH "${CMAKE_BINARY_DIR}/artifacts")
 set(CMAKE_CXX_STANDARD 17)
 include(Suil)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
-set(tools_VERSION SUIL_PACKAGE_VERSION CACHE STRING "Current application version")
-
+set(tools_VERSION ${SUIL_PACKAGE_VERSION} CACHE STRING "Current application version")
 set(tools_DEFINES
         "-DTOOL_VERSION=${tools_VERSION}")
 
@@ -29,17 +27,15 @@ SuilApp(suiltps
 set(scc_SOURCES
         scc/main.cpp
         scc/mpc.c
-        scc/compiler.cpp
-        scc/meta_builder.cpp)
+        scc/program.cpp
+        scc/parser.cpp)
 
 SuilApp(scc
         SOURCES    ${scc_SOURCES}
         VERSION    ${tools_VERSION}
-        DEFINES    ${tools_DEFINES} "-DBASE_PATH=\"${SUIL_BASE_PATH}\""
+        DEFINES    ${tools_DEFINES} "-DGRAMMAR_DIR=\"${CMAKE_CURRENT_LIST_DIR}\""
         INSTALL    ON
         DEPENDS    suil)
-configure_file(scc/parser.grammar
-        ${CMAKE_CURRENT_BINARY_DIR}/parser.grammar COPYONLY)
 
 set(suilapp_SOURCES
         sapp/cmd_init.cpp

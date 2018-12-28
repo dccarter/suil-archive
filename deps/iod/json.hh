@@ -39,10 +39,16 @@ namespace iod {
         }
 
         value_type& operator*() { return obj; }
+        value_type* operator->() { return &obj; }
         const value_type& operator*() const { return obj; }
         value_type obj{};
         bool isNull{true};
     };
+
+    template <typename T>
+    inline bool isNullable(const Nullable<T>&) { return true; }
+    template <typename T>
+    inline bool isNullable(const T&) { return false; }
 
     template <typename T>
     struct Object : std::map<std::string, T> {
@@ -250,7 +256,10 @@ namespace iod {
 
         template<typename T, typename S>
         inline void json_encode_(const Nullable<T> &t, S &ss) {
-            json_encode_(*t, ss);
+            if (!t.empty())
+                json_encode_(*t, ss);
+            else
+                ss << "null";
         }
 
         template<typename S>
@@ -998,7 +1007,7 @@ namespace iod {
                 T t;
                 p >> p.spaces;
                 iod_from_json_((typename S::value_type *) 0, t, p);
-                array.push_back(t);
+                array.push_back(std::move(t));
                 p >> p.spaces;
                 if (p.peak() == ']')
                     break;
@@ -1059,9 +1068,7 @@ namespace iod {
 
         template<typename S, typename T>
         inline void iod_from_json_(S *, Nullable<T> &t, json_parser &p) {
-            p >> p.spaces >> '{';
-            iod_attr_from_json((T *)0, *t, p);
-            p >> p.spaces >> '}';
+            iod_from_json_((T *)0, *t, p);
             t.isNull = false;
         }
     }

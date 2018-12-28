@@ -126,7 +126,9 @@ inline unsigned operator ""_hr(unsigned long long s) { return (unsigned) (s * 60
 
 #define meta struct
 
-#define rpc  struct
+#define jrpc    struct
+#define srpc    struct
+#define service struct
 
 
 namespace suil {

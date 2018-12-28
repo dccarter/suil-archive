@@ -28,7 +28,7 @@ namespace suil {
                 if (a.check(arg.sf, arg.lf)) {
                     throw Exception::create(
                             "command line '", arg.sf, "' or \"",
-                            arg.lf, "\" argument duplicated");
+                            arg.lf(), "\" argument duplicated");
                 }
             }
 
@@ -95,7 +95,7 @@ namespace suil {
             }
             else {
                 if (lf) {
-                    throw Exception::create("error: command argument '--", lf, "' not recognized");
+                    throw Exception::create("error: command argument '--", lf(), "' not recognized");
                 } else {
                     throw Exception::create("error: command argument '-", sf, "' not recognized");
                 }
@@ -142,7 +142,7 @@ namespace suil {
 
                     if (passed.find(arg.lf) != passed.end()) {
                         throw Exception::create("error: command argument '",
-                                                 arg.lf, "' appearing more than once");
+                                                 arg.lf(), "' appearing more than once");
                     }
                     String val{"1"};
                     if (!arg.option) {
@@ -150,7 +150,7 @@ namespace suil {
                             pos++;
                             if (pos >= argc) {
                                 throw Exception::create("error: command argument '",
-                                                         arg.lf,
+                                                         arg.lf(),
                                                          "' expects a value but none provided");
                             }
                             cval = argv[pos];
@@ -159,7 +159,7 @@ namespace suil {
                     }
                     else if (cval != nullptr) {
                         throw Exception::create("error: command argument '",
-                                                 arg.lf, "' assigned value but is an option");
+                                                 arg.lf(), "' assigned value but is an option");
                     }
                     passed.emplace(std::make_pair(arg.lf.dup(), std::move(val)));
                 }
@@ -179,7 +179,7 @@ namespace suil {
                         if (!arg.option) {
                             if (opos < nopts) {
                                 throw Exception::create("error: command argument '",
-                                                         arg.lf,
+                                                         arg.lf(),
                                                          "' passed as an option but expects value");
                             }
 
@@ -187,7 +187,7 @@ namespace suil {
                                 pos++;
                                 if (pos >= argc) {
                                     throw Exception::create("error: command argument '",
-                                                             arg.lf,
+                                                             arg.lf(),
                                                              "' expects a value but none provided");
                                 }
                                 cval = argv[pos];
@@ -197,7 +197,7 @@ namespace suil {
                         }
                         else if (cval != nullptr) {
                             throw Exception::create("error: command argument '",
-                                            arg.lf, "' assigned value but is an option");
+                                            arg.lf(), "' assigned value but is an option");
                         }
                         passed.emplace(std::make_pair(arg.lf.dup(), std::move(val)));
                     }
@@ -227,7 +227,7 @@ namespace suil {
 
                 if (missing) {
                     if (!Ego.inter) {
-                        throw Exception::create(String(msg));
+                        throw Exception::create(String(msg)());
                     }
                     else {
                         printf("\n");
@@ -331,7 +331,7 @@ namespace suil {
             }
             else {
                 throw Exception::create(
-                        "duplicate global argument '", arg.lf,
+                        "duplicate global argument '", arg.lf(),
                         " already registered");
             }
             return Ego;
@@ -359,7 +359,7 @@ namespace suil {
             }
             else {
                 throw Exception::create(
-                        "command with name '", cmd.name, " already registered");
+                        "command with name '", cmd.name(), " already registered");
             }
         }
 
