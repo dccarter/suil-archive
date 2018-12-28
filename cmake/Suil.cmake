@@ -310,7 +310,7 @@ function(SuilApp name)
         endif()
 
         # install targets
-        message(STATUS "target '${name} install target")
+        message(STATUS "target '${name} install target to  ${${name}_ARTIFACTS_DIR}")
         install(TARGETS ${name}
                 ARCHIVE DESTINATION ${${name}_ARTIFACTS_DIR}/lib
                 LIBRARY DESTINATION ${${name}_ARTIFACTS_DIR}/lib
