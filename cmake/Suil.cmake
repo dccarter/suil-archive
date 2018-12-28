@@ -6,7 +6,7 @@
 option(SUIL_PROJECT_DEBUG "Enable building of debug projects" ON)
 
 if (NOT SUIL_BASE_PATH)
-    set(SUIL_BASE_PATH /usr/local)
+    set(SUIL_BASE_PATH /usr)
 endif()
 message(STATUS "Base path: ${SUIL_BASE_PATH}")
 

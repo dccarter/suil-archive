@@ -302,6 +302,12 @@ namespace iod {
         template<typename S, typename ...Tail>
         inline void json_encode_(const sio<Tail...> &o, S &ss);
 
+        template <typename T, typename S, typename = typename std::enable_if<std::is_base_of<iod::MetaType,T>::value>::type>
+        inline void json_encode_(const T &o, S &ss) {
+            // those that implement meta-type must have the
+            o.toJson(ss);
+        }
+
         template<typename T, typename S>
         inline void json_encode_(const std::vector<T> &array, S &ss) {
             ss << '[';
@@ -884,7 +890,13 @@ namespace iod {
 
         template<typename S, typename T, typename std::enable_if<!std::is_base_of<jsonvalue, T>::value>::type* = nullptr>
         inline void iod_from_json_(S *, T &t, json_parser &p) {
-            p >> fill(t);
+            if constexpr (std::is_base_of<iod::MetaType,T>::value) {
+                // meta types must implement a method fromJson
+                t = T::fromJson(p);
+            }
+            else {
+                p >> fill(t);
+            }
         }
 
         template<typename S, typename T, typename std::enable_if<std::is_base_of<jsonvalue, T>::value>::type* = nullptr>

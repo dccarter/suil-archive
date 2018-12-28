@@ -118,6 +118,8 @@ namespace iod
   constexpr _##NUMBER##_t _##NUMBER;                    \
   }
 
+  /* implemented by meta types */
+  struct MetaType {};
 }
 
 int __compiler_insert_symbols_here__();
