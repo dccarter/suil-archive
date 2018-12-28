@@ -58,14 +58,19 @@ namespace suil::scc {
                 out << "        prop(" << field.Name;
                 if (!field.Attribs.empty()) {
                     // append attributes
+                    Map<bool> included;
                     bool attrFirst{true};
                     out << "(";
                     for (auto& attr : field.Attribs) {
-                        if (!attr.isSimple())
-                            continue;
+                        // add all attributes
                         if (!attrFirst) out << ", ";
-                        out << "var(" << attr.Resolved << ")";
-                        attrFirst = false;
+                        auto attrStr = String{(attr.isSimple()? attr.Resolved : attr.Parts.back())};
+                        if (included.find(attrStr) == included.end()) {
+                            // only include attributes if not already included
+                            out << "var(" << attrStr << ")";
+                            attrFirst = false;
+                            included.emplace(attrStr.peek(), true);
+                        }
                     }
                     out << ")";
                 }

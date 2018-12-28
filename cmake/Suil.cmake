@@ -299,7 +299,7 @@ function(SuilApp name)
         # Get the artifacts directory
         set(${name}_ARTIFACTS_DIR ${SUIL_APP_ARTIFACTS_DIR})
         if (NOT SUIL_APP_ARTIFACTS_DIR)
-            set(${name}_ARTIFACTS_DIR ${name})
+            set(${name}_ARTIFACTS_DIR ${CMAKE_INSTALL_PREFIX})
         endif ()
 
         # install the files

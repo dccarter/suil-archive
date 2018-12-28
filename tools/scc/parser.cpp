@@ -246,7 +246,7 @@ program     : <includes>? <symbols>? <namespace> ;
     void Parser::build_Namespace(suil::scc::ProgramFile &out, mpc_ast_t *ast)
     {
         // get name of the namespace
-        out.Namespace = std::string(ast->children[1]->contents);
+        out.Namespace = std::string(build_Scoped(ast->children[1]));
         // enumerate the and parse the types
         auto tpsAst = ast->children[3];
         for (int i = 0; i < tpsAst->children_num-1; i++) {
