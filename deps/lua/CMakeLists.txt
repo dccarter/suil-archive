@@ -54,12 +54,13 @@ set_target_properties(lua
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-# install the library file
-install(TARGETS lua
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+if (SUIL_BUILD_DEV_PACKAGE)
+    # install the library file
+    install(TARGETS lua
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib)
 
-# install the header files
-install(FILES ${lua_HEADERS} DESTINATION include/lua)
-
+    # install the header files
+    install(FILES ${lua_HEADERS} DESTINATION include/lua)
+endif(SUIL_BUILD_DEV_PACKAGE)

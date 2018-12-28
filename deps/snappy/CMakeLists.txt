@@ -124,7 +124,9 @@ write_basic_package_version_file(
         "${PROJECT_BINARY_DIR}/SnappyConfigVersion.cmake"
         COMPATIBILITY SameMajorVersion)
 
-install(FILES
+if (SUIL_BUILD_DEV_PACKAGE)
+    install(FILES
         "${PROJECT_SOURCE_DIR}/cmake/SnappyConfig.cmake"
         "${PROJECT_BINARY_DIR}/SnappyConfigVersion.cmake"
         DESTINATION share/cmake/Modules)
+endif(SUIL_BUILD_DEV_PACKAGE)
