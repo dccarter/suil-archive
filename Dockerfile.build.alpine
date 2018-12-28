@@ -2,8 +2,8 @@ FROM suilteam/mecury:alpine
 MAINTAINER "Carter Mbotho <carter@suilteam.com>"
 
 # Copy Binaries
-COPY artifacts/ /usr/
-COPY suil/sut        /usr/local/bin/sut
+COPY artifacts/ /usr/local
+COPY suil/sut   /usr/local/bin/sut
 COPY buildapp   /usr/local/bin/
 RUN  chmod +x   /usr/local/bin/buildapp
 
