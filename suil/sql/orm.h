@@ -31,30 +31,33 @@ namespace suil {
             decltype(suil::__internal::remove_members_with_attribute(std::declval<T>(), sym(PRIMARY_KEY)));
         }
 
-        template<typename __C, typename __O>
+        template<typename Connection, typename Type, typename Schema = Type>
         struct Orm {
-            typedef __O object_t;
-            typedef __internal::remove_auto_increment_t<__O> without_auto_inc_type;
-            typedef __internal::extract_primary_keys_t<__O>  primary_keys;
-            template <typename __O2>
-            using without_ignore2 = __internal::remove_ignore_fields_t<__O2>;
-            typedef __internal::remove_ignore_fields_t<__O>  without_ignore;
-            static_assert(!std::is_same<primary_keys, void>::value,
+            typedef Type object_t;
+            typedef __internal::remove_auto_increment_t<Schema> WithoutAutoIncrement;
+            typedef __internal::extract_primary_keys_t<Schema>  PrimaryKeys;
+
+            template <typename O2>
+            using WithoutIgnore2 = __internal::remove_ignore_fields_t<O2>;
+
+            typedef __internal::remove_ignore_fields_t<Schema>  WithoutIgnore;
+
+            static_assert(!std::is_same<PrimaryKeys, void>::value,
                 "ORM requires that at least 1 member of CRUD be a primary key");
 
-            Orm(const suil::String&& tbl, __C& conn)
+            Orm(const suil::String&& tbl, Connection& conn)
                 : conn(conn.get()),
                   table(std::move(tbl))
             {}
 
-            template<typename  __T>
-            bool find(int id, __T& o)
+            template<typename  T>
+            bool find(int id, T& o)
             {
                 OBuffer qb(32);
                 bool first = true;
-
                 qb << "select ";
-                iod::foreach2(without_ignore()) |
+
+                iod::foreach2(WithoutIgnore()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << ", ";
@@ -63,7 +66,7 @@ namespace suil {
                     qb << m.symbol().name();
                 };
                 qb << " from " << table << " where id = ";
-                __C::params(qb, 1);
+                Connection::params(qb, 1);
 
                 // execute query
                 return conn(qb)(id) >> o;
@@ -73,14 +76,14 @@ namespace suil {
             bool has(const char *col, const V& v) {
                 OBuffer qb(32);
                 qb << "SELECT COUNT("<<col << ") FROM " << table << " WHERE " << col << "= ";
-                __C::params(qb, 1);
+                Connection::params(qb, 1);
                 int count{0};
                 conn(qb)(v) >> count;
                 return count != 0;
             }
 
-            template<typename __T>
-            bool insert(const __T& o)
+            template<typename T>
+            bool insert(const T& o)
             {
                 OBuffer qb(32), vb(32);
 
@@ -88,8 +91,8 @@ namespace suil {
 
                 bool first = true;
                 int i = 1;
-                typedef decltype(without_auto_inc_type()) __tmp;
-                auto values = iod::foreach2(without_ignore2<__tmp>()) |
+                typedef decltype(WithoutAutoIncrement()) __tmp;
+                auto values = iod::foreach2(WithoutIgnore2<__tmp>()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << ", ";
@@ -97,7 +100,7 @@ namespace suil {
                     }
                     first = false;
                     qb << m.symbol().name();
-                    __C::params(vb, i++);
+                    Connection::params(vb, i++);
 
                     return m.symbol() = m.symbol().member_access(o);
                 };
@@ -115,14 +118,14 @@ namespace suil {
             bool cifne() {
                 // pass the request to respective connection
                 if (!conn.has_table(table())) {
-                    without_ignore tmp{};
+                    WithoutIgnore tmp{};
                     return conn.create_table(table, tmp);
                 }
                 return false;
             }
 
             // create table if not exist and seed with users
-            bool cifne(std::vector<__O>& seed) {
+            bool cifne(std::vector<Type>& seed) {
                 // create table if does not exist
                 if (Ego.cifne()) {
                     // if created seed with data
@@ -147,18 +150,20 @@ namespace suil {
                 conn(qb)() | f;
             }
 
-            std::vector<__O> getAll() {
-                std::vector<__O> data;
-                Ego.forall([&](__O& o) {
+            std::vector<Type> getAll() {
+                std::vector<Type> data;
+                Ego.forall([&](Type& o) {
                     data.emplace_back(std::move(o));
                 });
 
                 return std::move(data);
             }
 
-            template <typename __T>
-            bool update(const __T& o) {
-                auto pk = iod::intersect(o, primary_keys());
+            template <typename T>
+            bool update(const T& o)
+            {
+                using _Schema = typename std::conditional<std::is_base_of<iod::MetaType, T>::value, typename T::Schema,T>::type;
+                auto pk = iod::intersect(_Schema(), PrimaryKeys());
                 static_assert(decltype(pk)::size() > 0,
                         "primary key required in order to update an object.");
 
@@ -166,15 +171,15 @@ namespace suil {
                 qb << "update " << table << " set ";
                 bool first = true;
                 int i = 1;
-                typedef decltype(without_auto_inc_type()) __tmp;
-                auto values = iod::foreach2(without_ignore2<__tmp>()) |
+                typedef decltype(WithoutAutoIncrement()) __tmp;
+                auto values = iod::foreach2(WithoutIgnore2<__tmp>()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << ", ";
                     }
                     first = false;
                     qb << m.symbol().name() << " = ";
-                    __C::params(qb, i++);
+                    Connection::params(qb, i++);
 
                     return m.symbol() = m.symbol().member_access(o);
                 };
@@ -189,9 +194,9 @@ namespace suil {
                     }
                     first = false;
                     qb << m.symbol().name() << " = ";
-                    __C::params(qb, i++);
+                    Connection::params(qb, i++);
 
-                    return m.symbol() = m.value();
+                    return m.symbol() = m.symbol().member_access(o);
                 };
 
                 // execute query
@@ -201,24 +206,24 @@ namespace suil {
                 return req.status();
             }
 
-            template <typename __T>
-            void remove(__T& o) {
+            template <typename T>
+            void remove(T& o) {
                 OBuffer qb(32);
 
                 qb << "delete from " << table << " where ";
                 bool first = true;
                 int i = 1;
 
-                auto values = iod::foreach(primary_keys()) |
+                auto values = iod::foreach(PrimaryKeys()) |
                 [&](auto& m) {
                     if (!first) {
                         qb << " and ";
                     }
                     first = false;
                     qb << m.symbol().name() << " = ";
-                    __C::params(qb, i++);
+                    Connection::params(qb, i++);
 
-                    return m.symbol() = o[m.symbol()];
+                    return m.symbol() = m.symbol().member_access(o);
                 };
                 // execute query
                 iod::apply(values, conn(qb));
@@ -232,9 +237,12 @@ namespace suil {
 
 
         private:
-            __C& conn;
+            Connection& conn;
             suil::String table{nullptr};
         };
+
+        template<typename Connection, typename Type>
+        using Orm2 = Orm<Connection, Type, typename Type::Schema>;
     }
 }
 #endif //SUIL_ORM_HPP

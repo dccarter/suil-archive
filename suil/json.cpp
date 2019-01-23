@@ -1592,6 +1592,49 @@ namespace suil::json {
 
 using namespace suil;
 
+struct Mt : iod::MetaType
+{
+    typedef decltype(iod::D(
+        tprop(a,     int),
+        tprop(b,     String)
+    )) Schema;
+    static Schema Meta;
+
+    int    a;
+    String b;
+
+    void toJson(iod::json::jstream& ss) const
+	{
+		ss << '{';
+		int i = 0;
+		bool first = true;
+		foreach(Mt::Meta) | [&](auto m) {
+			if (!m.attributes().has(iod::_json_skip)) {
+				/* ignore empty entry */
+				auto val = m.value();
+				if (m.attributes().has(iod::_ignore) && iod::json::json_ignore<decltype(val)>(val)) return;
+
+				if (!first) { ss << ','; }
+				first = false;
+				iod::json::json_encode_symbol(m.attributes().get(iod::_json_key, m.symbol()), ss);
+				ss << ':';
+				iod::json::json_encode_(m.symbol().member_access(Ego), ss);
+			}
+			i++;
+		};
+		ss << '}';
+	}
+
+    static Mt fromJson(iod::json::parser& p)
+	{
+    	Mt tmp;
+    	iod::json::iod_attr_from_json(&Mt::Meta, tmp, p);
+    	return std::move(tmp);
+	}
+};
+
+Mt::Schema Mt::Meta{};
+
 TEST_CASE("suil::json::Object", "[json][Object]")
 {
     SECTION("Constructing a JSON Object") {
@@ -2305,6 +2348,18 @@ TEST_CASE("suil::json::Object", "[json][Object]")
 
             auto s2 = json::encode(obj);
             REQUIRE(String(s2) == s1);
+        }
+
+        WHEN("Using a meta object") {
+            Mt mt;
+            mt.a = 29;
+            mt.b = "Carter";
+            auto str = json::encode(mt);
+            REQUIRE(str == R"({"a":29,"b":"Carter"})");
+            Mt mt1;
+            json::decode(str, mt1);
+            REQUIRE(mt1.a == 29);
+            REQUIRE(mt1.b == "Carter");
         }
     }
 }

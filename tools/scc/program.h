@@ -31,8 +31,18 @@ namespace suil::scc {
         }
     };
 
-    struct Field {
+    struct WithAttributes {
         std::vector<Attribute> Attribs;
+        bool hasAttribute(const std::string &attrib) const {
+            for (auto& a: Attribs) {
+                if (a.Resolved == attrib)
+                    return true;
+            }
+            return false;
+        }
+    };
+
+    struct Field : WithAttributes {
         std::string            FieldType;
         std::string            Name;
     };
@@ -49,21 +59,19 @@ namespace suil::scc {
         bool            IsConst{false};
     };
 
-    struct Method {
-        std::vector<Attribute>  Attribs;
+    struct Method : WithAttributes {
         std::string             ReturnType;
         std::string             Name;
         std::vector<Parameter>  Params;
     };
 
-    struct MetaType {
+    struct MetaType : WithAttributes {
         std::vector<Attribute> Attribs;
         std::string            Name;
         std::vector<Field>     Fields;
     };
 
-    struct RpcType {
-        std::vector<Attribute> Attribs;
+    struct RpcType : WithAttributes {
         std::string            Kind;
         std::string            Name;
         std::vector<Method>    Methods;

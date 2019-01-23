@@ -443,13 +443,20 @@ namespace suil {
             template <typename... O>
             inline bool operator>>(iod::sio<O...>& o) {
                 if (results.empty()) return false;
-                return row_to_sio(o);
+                return rowToSio(o);
             }
 
             template <typename Args>
             bool operator>>(Args& o) {
                 if (results.empty()) return false;
-                return results.read(o, 0);
+                if constexpr (std::is_base_of<iod::MetaType,Args>::value) {
+                    // meta
+                    return Ego.rowToMeta(o);
+                }
+                else {
+                    // just read results out
+                    return results.read(o, 0);
+                }
             }
 
             template <typename Args>
@@ -476,8 +483,8 @@ namespace suil {
                 typedef std::remove_reference_t<std::tuple_element_t<0, __tmp>> Args;
                 do {
                     Args o;
-                    row_to_sio(o);
-                    f(o);
+                    if (Ego >> o)
+                        f(o);
                 } while (results.next());
 
                 // reset the iterator
@@ -536,7 +543,7 @@ namespace suil {
             }
 
             template <typename... O>
-            bool row_to_sio(iod::sio<O...>& o) {
+            bool rowToSio(iod::sio<O...> &o) {
                 if (results.empty()) return false;
 
                 int ncols = PQnfields(results.result());
@@ -548,6 +555,26 @@ namespace suil {
                         if (fnumber != -1) {
                             // column found
                             status = results.read(o[m], fnumber);
+                        }
+                    }
+                };
+
+                return status;
+            }
+
+            template <typename T>
+            bool rowToMeta(T& o) {
+                if (results.empty()) return false;
+
+                int ncols = PQnfields(results.result());
+                bool status{true};
+                iod::foreach(suil::sql::__internal::remove_ignore_fields_t<typename T::Schema>()) |
+                [&] (auto &m) {
+                    if (status) {
+                        int fnumber = PQfnumber(results.result(), m.symbol().name());
+                        if (fnumber != -1) {
+                            // column found
+                            status = results.read(m.symbol().member_access(o), fnumber);
                         }
                     }
                 };
@@ -1027,6 +1054,8 @@ namespace suil {
 
         template <typename T>
         using PgsqlOrm = Orm<PgSqlConnection, T>;
+        template <typename T>
+        using PgsqlMetaOrm = Orm2<PgSqlConnection, T>;
     }
 }
 #endif //SUIL_PGSQL_HPP

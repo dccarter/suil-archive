@@ -11,34 +11,29 @@ namespace suil::scc {
 
 #define spaces(n) suil::String(' ', n)
 
-    static void generateprogramFileSymbols(ProgramFile &pf, File &out)
-    {
+    static void generateprogramFileSymbols(ProgramFile &pf, File &out) {
         std::map<std::string, bool> added;
-        auto addSymbol = [&](const std::string& name) {
+        auto addSymbol = [&](const std::string &name) {
             if (added.find(name) != added.end())
                 return;
 
-            out << "#ifndef IOD_SYMBOL_"    << name   << "\n"
-                << "#define IOD_SYMBOL_"    << name   << "\n"
+            out << "#ifndef IOD_SYMBOL_" << name << "\n"
+                << "#define IOD_SYMBOL_" << name << "\n"
                 << "    iod_define_symbol(" << name << ")\n"
                 << "#endif\n\n";
             added[name] = true;
         };
 
-        for (auto& ft: pf.Symbols)
-        {
+        for (auto &ft: pf.Symbols) {
             // add floating definitions first
             addSymbol(ft);
         }
 
-        for (auto& tp: pf.MetaTypes)
-        {
+        for (auto &tp: pf.MetaTypes) {
             // add field symbols defined for each type
-            for (auto field: tp.Fields)
-            {
+            for (auto field: tp.Fields) {
                 addSymbol(field.Name);
-                for (auto attr: field.Attribs)
-                {
+                for (auto attr: field.Attribs) {
                     if (attr.isSimple())
                         addSymbol(attr.Resolved);
                 }
@@ -46,25 +41,26 @@ namespace suil::scc {
         }
     }
 
-    static void generateMetaTypeHeaders(ProgramFile &pf, File &out)
-    {
-        for (auto& tp: pf.MetaTypes) {
-            // ignoring attributes in header
-            out << "    typedef decltype(iod::D(\n";
+    static void generateMetaTypeHeaders(ProgramFile &pf, File &out) {
+        for (auto &tp: pf.MetaTypes) {
+            // add type
+            out << spaces(4) << "struct " << tp.Name << ": iod::MetaType {\n\n";
+
+            // type schema
+            out << spaces(8) << "typedef decltype(iod::D(\n";
             bool isFirst{true};
-            for (auto& field: tp.Fields)
-            {
+            for (auto &field: tp.Fields) {
                 if (!isFirst) out << ",\n";
-                out << "        prop(" << field.Name;
+                out << spaces(12) << "prop(" << field.Name;
                 if (!field.Attribs.empty()) {
                     // append attributes
                     Map<bool> included;
                     bool attrFirst{true};
                     out << "(";
-                    for (auto& attr : field.Attribs) {
+                    for (auto &attr : field.Attribs) {
                         // add all attributes
                         if (!attrFirst) out << ", ";
-                        auto attrStr = String{(attr.isSimple()? attr.Resolved : attr.Parts.back())};
+                        auto attrStr = String{(attr.isSimple() ? attr.Resolved : attr.Parts.back())};
                         if (included.find(attrStr) == included.end()) {
                             // only include attributes if not already included
                             out << "var(" << attrStr << ")";
@@ -78,17 +74,31 @@ namespace suil::scc {
                 isFirst = false;
             }
             out << "\n"
-                << "    )) " << tp.Name << ";\n\n";
+                << spaces(8) << ")) Schema" << ";\n\n";
+
+            // add type fields
+            for (auto &field: tp.Fields) {
+                out << spaces(8) << field.FieldType << " " << field.Name << ";\n\n";
+            }
+
+            // add serialization methods
+            out << spaces(8) << "static " << tp.Name << " fromJson(iod::json::parser&);\n\n"
+                << spaces(8) << "void toJson(iod::json::jstream&) const;\n\n"
+                << spaces(8) << "static " << tp.Name << " fromWire(suil::Wire&);\n\n"
+                << spaces(8) << "void toWire(suil::Wire&) const;\n\n"
+                << spaces(8) << "friend suil::OBuffer& operator<<(suil::OBuffer& out, const " << tp.Name << "& o);\n\n"
+                << spaces(8) << "static Schema Meta;\n\n";
+
+            out << spaces(4) << "};\n\n";
         }
     }
 
-    static void generateServiceHeaders(ProgramFile &pf, File &out)
-    {
-        auto appendMethods = [&](const std::vector<Method>& methods) {
-            for (auto& m: methods) {
+    static void generateServiceHeaders(ProgramFile &pf, File &out) {
+        auto appendMethods = [&](const std::vector<Method> &methods) {
+            for (auto &m: methods) {
                 out << "        " << m.ReturnType << " " << m.Name << "(";
                 bool first = true;
-                for (auto& p : m.Params) {
+                for (auto &p : m.Params) {
                     if (!first)
                         out << ", ";
                     first = false;
@@ -105,7 +115,7 @@ namespace suil::scc {
             }
         };
 
-        auto generateForJrpc = [&](const RpcType& svc) {
+        auto generateForJrpc = [&](const RpcType &svc) {
             // start with with client
             out << spaces(4) << "struct j" << svc.Name << "Client: suil::rpc::JsonRpcClient {\n\n"
                 << spaces(4) << "public:\n\n";
@@ -113,14 +123,14 @@ namespace suil::scc {
             out << spaces(4) << "};\n\n";
             // add service server handler
             out << spaces(4) << svc.Kind << " j" << svc.Name << "Handler : " << svc.Name
-                             << ", suil::rpc::JsonRpcHandler {\n\n";
+                << ", suil::rpc::JsonRpcHandler {\n\n";
             out << spaces(4) << "protected:\n\n"
                 << spaces(8) << "suil::rpc::ReturnType operator()("
                                 "const suil::String& method, const suil::json::Object& params, int id) override;\n"
                 << spaces(4) << "};\n\n";
         };
 
-        auto generateForSuil = [&](const RpcType& svc) {
+        auto generateForSuil = [&](const RpcType &svc) {
             // start with with client
             out << spaces(4) << "struct s" << svc.Name << "Client: suil::rpc::SuilRpcClient {\n\n"
                 << spaces(4) << "public:\n\n";
@@ -128,7 +138,7 @@ namespace suil::scc {
             out << spaces(4) << "};\n\n";
             // add service server handler
             out << spaces(4) << svc.Kind << " s" << svc.Name << "Handler : " << svc.Name
-                             << ", suil::rpc::SuilRpcHandler {\n\n"
+                << ", suil::rpc::SuilRpcHandler {\n\n"
                 << spaces(8) << "s" << svc.Name << "Handler();\n\n";
             out << spaces(4) << "protected:\n\n"
                 << spaces(8) << "suil::Result operator()("
@@ -136,7 +146,7 @@ namespace suil::scc {
                 << spaces(4) << "};\n\n";
         };
 
-        for (auto& svc: pf.Services) {
+        for (auto &svc: pf.Services) {
             out << spaces(4) << svc.Kind << " " << svc.Name << " {\n\n";
             appendMethods(svc.Methods);
             out << spaces(4) << "};\n\n";
@@ -150,15 +160,14 @@ namespace suil::scc {
         }
     }
 
-    static void generateJsonRpcSources(File& sf, scc::RpcType& svc)
-    {
+    static void generateJsonRpcSources(File &sf, scc::RpcType &svc) {
         // start by implementing handler
         sf << spaces(4) << "ReturnType j" << svc.Name
            << "Handler::operator()(const suil::String& method, const suil::json::Object& params, int id)\n"
            << spaces(4) << "{\n";
-        sf << spaces(8) <<"static const suil::Map<int> scMappings = {\n";
+        sf << spaces(8) << "static const suil::Map<int> scMappings = {\n";
         int id = 0;
-        for (auto& m: svc.Methods) {
+        for (auto &m: svc.Methods) {
             // append method mappings
             if (id != 0)
                 sf << ",\n";
@@ -168,19 +177,19 @@ namespace suil::scc {
         sf << spaces(8) << "auto it = scMappings.find(method);\n"
            << spaces(8) << "if (it == scMappings.end())\n"
            << spaces(8) << "{\n"
-           << spaces(12)<<     "// method not found\n"
-           << spaces(12)<<     "return std::make_pair(JRPC_METHOD_NOT_FOUND,"
-           <<                             " suil::json::Object(\"method does not exists\"));\n"
+           << spaces(12) << "// method not found\n"
+           << spaces(12) << "return std::make_pair(JRPC_METHOD_NOT_FOUND,"
+           << " suil::json::Object(\"method does not exists\"));\n"
            << spaces(8) << "}\n"
            << "\n"
            << spaces(8) << "switch(it->second) {\n";
         id = 0;
-        for(auto& m: svc.Methods) {
+        for (auto &m: svc.Methods) {
             // append method handling cases
             sf << spaces(12) << "case " << utils::tostr(id++) << ": {\n";
             OBuffer ob(32);
             bool first{true};
-            for (auto& p: m.Params) {
+            for (auto &p: m.Params) {
                 sf << spaces(16) << "" << p.ParameterType << " " << p.Name << " = (" << p.ParameterType << ") "
                    << "params[\"" << p.Name << "\"];\n";
                 if (!first)
@@ -197,8 +206,7 @@ namespace suil::scc {
                 // void methods will return nullptr
                 sf << spaces(16) << "return std::make_pair(0, suil::json::Object(Ego."
                    << m.Name << "(" << ob << ")));\n";
-            }
-            else {
+            } else {
                 sf << spaces(16) << "Ego." << m.Name << "(" << ob << ");\n";
                 sf << spaces(16) << "return std::make_pair(0, suil::json::Object(nullptr));\n";
             }
@@ -207,16 +215,16 @@ namespace suil::scc {
         sf << spaces(12) << "default:\n"
            << spaces(16) << "  // method not found\n"
            << spaces(16) << "  return std::make_pair(JRPC_METHOD_NOT_FOUND,"
-           <<                             " suil::json::Object(\"method does not exists\"));\n"
+           << " suil::json::Object(\"method does not exists\"));\n"
            << spaces(12) << "}\n"
-           << spaces(8)  <<"}\n\n";
+           << spaces(8) << "}\n\n";
 
         // implement client
-        for (auto& m: svc.Methods) {
+        for (auto &m: svc.Methods) {
             sf << spaces(4) << m.ReturnType << " j" << svc.Name << "Client::" << m.Name << "(";
             bool first = true;
             OBuffer ob(32);
-            for (auto& p : m.Params) {
+            for (auto &p : m.Params) {
                 if (!first) {
                     sf << ", ";
                     ob << ", ";
@@ -239,23 +247,22 @@ namespace suil::scc {
             else
                 sf << spaces(8) << "suil::json::Object params(json::Obj, " << ob << ");";
             sf << "\n"
-               << spaces(8)  << "auto ret = Ego.call(\"" << m.Name << "\", std::move(params));\n"
-               << spaces(8)  << "if (ret.first)\n"
+               << spaces(8) << "auto ret = Ego.call(\"" << m.Name << "\", std::move(params));\n"
+               << spaces(8) << "if (ret.first)\n"
                << spaces(12) << "// api error\n"
                << spaces(12) << "throw suil::Exception::create((String)ret.second);\n\n";
             if (m.ReturnType != "void")
-                sf << spaces(8)  << "return (" << m.ReturnType << ") ret.second;\n";
-            sf << spaces(4)  << "}\n\n";
+                sf << spaces(8) << "return (" << m.ReturnType << ") ret.second;\n";
+            sf << spaces(4) << "}\n\n";
         }
     }
 
-    static void generateSuilRpcSources(File& sf, scc::RpcType& svc)
-    {
+    static void generateSuilRpcSources(File &sf, scc::RpcType &svc) {
         sf << spaces(4) << "s" << svc.Name << "Handler::s" << svc.Name << "Handler() : "
-                        << svc.Name << "(), suil::rpc::SuilRpcHandler()\n"
+           << svc.Name << "(), suil::rpc::SuilRpcHandler()\n"
            << spaces(4) << "{\n";
         int id = 1;
-        for (auto& m: svc.Methods) {
+        for (auto &m: svc.Methods) {
             sf << spaces(8) << "Ego.methodsMeta.emplace_back(" << utils::tostr(id++) << ", \"" << m.Name << "\");\n";
         }
         sf << spaces(4) << "}\n\n";
@@ -266,12 +273,12 @@ namespace suil::scc {
            << spaces(8) << "switch(method) {\n";
 
         id = 1;
-        for(auto& m: svc.Methods) {
+        for (auto &m: svc.Methods) {
             // append method handling cases
             sf << spaces(12) << "case " << utils::tostr(id++) << ": {\n";
             OBuffer ob(32);
             bool first{true};
-            for (auto& p: m.Params) {
+            for (auto &p: m.Params) {
                 sf << spaces(16) << "" << p.ParameterType << " " << p.Name << "{};\n"
                    << spaces(16) << "params >> " << p.Name << ";\n";
                 if (!first)
@@ -287,8 +294,7 @@ namespace suil::scc {
             if (m.ReturnType == "void") {
                 // void methods will return nullptr
                 sf << spaces(16) << "Ego." << m.Name << "(" << ob << ");\n";
-            }
-            else {
+            } else {
                 sf << spaces(16) << m.ReturnType << " tmp = Ego." << m.Name << "(" << ob << ");\n";
                 sf << spaces(16) << "results << tmp;\n";
             }
@@ -301,14 +307,14 @@ namespace suil::scc {
            << spaces(16) << "res << \"requested method does not exist\";\n"
            << spaces(16) << "return std::move(res);\n"
            << spaces(12) << "}\n"
-           << spaces(8)  <<"}\n\n";
+           << spaces(8) << "}\n\n";
 
         // implement client
-        for (auto& m: svc.Methods) {
+        for (auto &m: svc.Methods) {
             sf << spaces(4) << m.ReturnType << " s" << svc.Name << "Client::" << m.Name << "(";
             bool first = true;
             OBuffer ob(32);
-            for (auto& p : m.Params) {
+            for (auto &p : m.Params) {
                 if (!first) {
                     sf << ", ";
                     ob << ", ";
@@ -324,30 +330,32 @@ namespace suil::scc {
                 sf << " " << p.Name;
                 ob << p.Name;
             }
-            auto ret = (m.ReturnType == "void")? "" : "return ";
+            auto ret = (m.ReturnType == "void") ? "" : "return ";
             sf << ")\n"
                << spaces(4) << "{\n";
             if (m.Params.empty())
                 sf << spaces(8) << ret << "Ego.call<" << m.ReturnType << ">(\"" << m.Name << "\");\n";
             else
                 sf << spaces(8) << ret << "Ego.call<" << m.ReturnType << ">(\"" << m.Name << "\", " << ob << ");\n";
-            sf << spaces(4)  << "}\n\n";
+            sf << spaces(4) << "}\n\n";
         }
     }
 
-    void ProgramFile::generateHeaderFile(const suil::String &path)
-    {
+    void ProgramFile::generateHeaderFile(const suil::String &path) {
         if (utils::fs::exists(path())) {
             // remove current file
             utils::fs::remove(path());
         }
 
-        File hf(path(), O_WRONLY|O_CREAT|O_APPEND, 0666);
+        File hf(path(), O_WRONLY | O_CREAT | O_APPEND, 0666);
         // append guard
         hf << "#pragma once\n\n";
         // append includes
-        hf << "#include <suil/result.h>\n";
-        for(auto& inc: Ego.Includes) {
+        hf << "#include <suil/result.h>\n"
+           << "#include <suil/json.h>\n"
+           << "#include <suil/wire.h>\n";
+
+        for (auto &inc: Ego.Includes) {
             // add all includes
             hf << inc << "\n";
         }
@@ -365,6 +373,43 @@ namespace suil::scc {
         hf.close();
     }
 
+    static void generateMetaTypeSources(File &sf, const MetaType &mt)
+    {
+        /*
+         * */
+        sf << spaces(4) << mt.Name << "::Schema " << mt.Name << "::Meta{};\n\n";
+
+        sf << spaces(4) << mt.Name << " " << mt.Name << "::fromJson(iod::json::parser& p)\n"
+           << spaces(4) << "{\n"
+           << spaces(8) << mt.Name << " tmp{};\n"
+           << spaces(8) << "iod::json::iod_attr_from_json(&" << mt.Name << "::Meta, tmp, p);\n"
+           << spaces(8) << "std::move(tmp);\n"
+           << spaces(4) << "}\n\n";
+
+        sf << spaces(4) << "void " << mt.Name << "::toJson(iod::json::jstream& ss) const\n"
+           << spaces(4) << "{\n"
+           << spaces(8) << "suil::json::metaToJson(Ego, ss);\n"
+           << spaces(4) << "}\n\n";
+
+        sf << spaces(4) << mt.Name << " " << mt.Name << "::fromWire(suil::Wire& w)\n"
+           << spaces(4) << "{\n"
+           << spaces(8) << mt.Name << " tmp{};\n"
+           << spaces(8) << "suil::metaFromWire(tmp, w);\n"
+           << spaces(8) << "return std::move(tmp);\n"
+           << spaces(4) << "}\n\n";
+
+        sf << spaces(4) << "void " << mt.Name << "::toWire(suil::Wire& w) const\n"
+           << spaces(4) << "{\n"
+           << spaces(8) << "suil::metaToWire(Ego, w);\n"
+           << spaces(4) << "}\n\n";
+
+        sf << spaces(4) << "suil::OBuffer& operator<<(suil::OBuffer& o, const " << mt.Name << "& a)\n"
+           << spaces(4) << "{\n"
+           << spaces(8) << "o << suil::json::encode(a);\n"
+           << spaces(4) << "}\n\n";
+
+    }
+
     void ProgramFile::generateSourceFile(const char *filename, const String &spath)
     {
         if (utils::fs::exists(spath())) {
@@ -377,6 +422,11 @@ namespace suil::scc {
            << "#include \"" << filename << ".h\"\n\n"
            << "using namespace suil::rpc;\n\n"
            << "namespace " << Ego.Namespace << " {\n\n";
+
+        for (auto& tp: Ego.MetaTypes) {
+            // generate serialization sources for the types
+            generateMetaTypeSources(sf, tp);
+        }
 
         // implement client methods
         for (auto& svc: Ego.Services) {

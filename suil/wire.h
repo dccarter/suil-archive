@@ -58,21 +58,34 @@ namespace suil {
             return Ego;
         }
 
-        template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-        Wire& operator<<(const T val) {
-            uint64_t tmp{0};
-            memcpy(&tmp, &val, sizeof(T));
-            tmp = htole64((uint64_t) tmp);
-            forward((uint8_t *)&tmp, sizeof(val));
-            return Ego;
+        template <typename T>
+        inline Wire& operator<<(const T val) {
+            if constexpr (std::is_arithmetic<T>::value) {
+                uint64_t tmp{0};
+                memcpy(&tmp, &val, sizeof(T));
+                tmp = htole64((uint64_t) tmp);
+                forward((uint8_t *) &tmp, sizeof(val));
+                return Ego;
+            }
+            else {
+                val.toWire(Ego);
+                return Ego;
+            }
         };
 
-        template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-        Wire& operator>>(T& val) {
-            uint64_t tmp{0};
-            reverse((uint8_t *)&tmp, sizeof(val));
-            tmp = le64toh(tmp); memcpy(&val, &tmp, sizeof(T));
-            return Ego;
+        template <typename T>
+        inline Wire& operator>>(T& val) {
+            if constexpr (std::is_arithmetic<T>::value) {
+                uint64_t tmp{0};
+                reverse((uint8_t *) &tmp, sizeof(val));
+                tmp = le64toh(tmp);
+                memcpy(&val, &tmp, sizeof(T));
+                return Ego;
+            }
+            else {
+                val = T::fromWire(Ego);
+                return Ego;
+            }
         };
 
         template <typename... T>
@@ -177,6 +190,8 @@ namespace suil {
         virtual bool move(size_t size) = 0;
 
         virtual Data raw() const = 0;
+
+        bool isFilterOn() const { return !always; }
 
     protected suil_ut:
         virtual size_t   forward(const uint8_t e[], size_t es) = 0;
@@ -334,6 +349,28 @@ namespace suil {
     private suil_ut:
         uint8_t   data[N];
     };
+
+    template <typename Mt>
+    inline void metaFromWire(Mt& o, suil::Wire& w) {
+        iod::foreach(Mt::Meta) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || w.isFilterOn()) {
+                /* use given metadata to to set options */
+                w >> m.symbol().member_access(o);
+            }
+        };
+    }
+
+    template <typename Mt>
+    inline void metaToWire(const Mt& o, suil::Wire& w) {
+        iod::foreach(Mt::Meta) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || w.isFilterOn()) {
+                /* use given metadata to to set options */
+                w << m.symbol().member_access(o);
+            }
+        };
+    }
 }
 
 #endif //SUIL_WIRE_H

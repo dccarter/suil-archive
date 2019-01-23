@@ -28,8 +28,10 @@ namespace suil {
             void operator|(form_file_it_t f);
             const String operator[](const char*);
             const UploadedFile&operator()(const char*);
-            template <typename O>
-            String operator>>(O& o);
+            template <typename... O>
+            String operator>>(iod::sio<O...>& o);
+            template <typename T, typename  std::enable_if<std::is_base_of<iod::MetaType, T>::value>::type* = nullptr>
+            String operator>>(T& o);
         private:
 
             template <typename T>
@@ -205,8 +207,8 @@ namespace suil {
             request_params_t params;
         };
 
-        template <typename O>
-        String RequestForm::operator>>(O& o) {
+        template <typename... O>
+        String RequestForm::operator>>(iod::sio<O...>& o) {
             OBuffer ob{127};
             iod::foreach2(o) |
             [&](auto& m) {
@@ -223,6 +225,40 @@ namespace suil {
                         /* parse value */
                         try {
                             RequestForm::cast(it->second, m.value());
+                        }
+                        catch (...) {
+                            /* unhandled error, parsing failed */
+                            ob << (ob.empty() ? "" : "\n") << "Field '" << name << "' has unsupported value.";
+                        }
+                    }
+                }
+                else if(isRequired) {
+                    /* required field missing */
+                    ob << (ob.empty() ? "" : "\n") << "Required field '" << name << "' was not provided";
+                }
+            };
+
+            return ob.empty()? nullptr : String(ob);
+        }
+
+        template <typename T, typename  std::enable_if<std::is_base_of<iod::MetaType, T>::value>::type* = nullptr>
+        String RequestForm::operator>>(T& o) {
+            OBuffer ob{127};
+            iod::foreach2(T::Meta) |
+            [&](auto& m) {
+                String name{m.symbol().name()};
+                bool isRequired = std::find(required.begin(), required.end(), name) != required.end();
+                auto it = req.form.find(name);
+                if (it != req.form.end()) {
+                    // for has value
+                    if (isRequired && it->second.empty()) {
+                        /* required field cannot be empty */
+                        ob << (ob.empty()? "" : "\n") << "Required field '" << name << "' cannot be empty";
+                    }
+                    else {
+                        /* parse value */
+                        try {
+                            RequestForm::cast(it->second, m.symbol().member_access(o));
                         }
                         catch (...) {
                             /* unhandled error, parsing failed */

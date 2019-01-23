@@ -672,7 +672,7 @@ namespace suil {
          * @param fmt the formatter instance
          * @return
          */
-        template <typename T, typename  = typename std::enable_if<std::is_base_of<suil::OBuffer::fmter, T>::value>::type>
+        template <typename T, typename std::enable_if<std::is_base_of<suil::OBuffer::fmter, T>::value>::type* = nullptr>
         inline OBuffer&  operator<<(T fmt) {
             reserve(fmt.reqsz);
             size_t tmp = fmt.fmt((char *)&m_data[m_offset]);

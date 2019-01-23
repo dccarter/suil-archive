@@ -133,9 +133,40 @@ namespace suil {
 
 using namespace suil;
 
-using namespace test;
-
 typedef decltype(iod::D(topt(a, int()), topt(b, int()))) A;
+
+struct Mt : iod::MetaType {
+    typedef decltype(iod::D(
+            tprop(a, int),
+            tprop(b, String)
+    )) Schema;
+    static Schema Meta;
+
+    int a;
+    String b;
+
+    static Mt fromWire(suil::Wire& w) {
+        Mt out{};
+        iod::foreach(Mt::Meta) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || w.isFilterOn()) {
+                /* use given metadata to to set options */
+                w >> m.symbol().member_access(out);
+            }
+        };
+        return std::move(out);
+    }
+
+    void toWire(suil::Wire& w) const {
+        iod::foreach(Mt::Meta) |
+        [&](auto &m) {
+            if (!m.attributes().has(var(unwire)) || w.isFilterOn()) {
+                /* use given metadata to to set options */
+                w << m.symbol().member_access(Ego);
+            }
+        };
+    }
+};
 
 TEST_CASE("suil::Wire", "[suil][Wire]")
 {
@@ -260,6 +291,18 @@ TEST_CASE("suil::Wire", "[suil][Wire]")
             REQUIRE(e == ee);
             REQUIRE(f == ff);
             REQUIRE((g.a == gg.a && g.b == gg.b));
+        }
+
+        WHEN("Serializing a meta type") {
+            Mt mt;
+            mt.a = 29;
+            mt.b = "Carter";
+            Stackboard<128> sb;
+            sb << mt;
+            Mt mt1;
+            sb >> mt1;
+            REQUIRE(mt1.a == mt.a);
+            REQUIRE(mt1.b == mt.b);
         }
     }
 }

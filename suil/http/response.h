@@ -107,7 +107,7 @@ namespace suil {
                   status(Status::OK)
             {
                 setContentType("application/json");
-                body << iod::json_encode(data).c_str();
+                body << json::encode(data).c_str();
             }
 
             Response(Response&&);

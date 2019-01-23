@@ -215,10 +215,17 @@ namespace suil {
                 : Object(vs)
             {}
 
-            template<typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
+            template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
             Object(T t)
                 : Object((double) t)
             {}
+
+            template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value>::type* = nullptr>
+            Object(T t)
+                : Object(json::Obj)
+            {
+                    Ego.set(t);
+            }
 
             Object(const Object &o) noexcept
                 : mNode(o.mNode),
@@ -240,6 +247,11 @@ namespace suil {
 
             template <typename ...T>
             void push(const iod::sio<T...>& obj) {
+                Ego.push(json::Obj).set(obj);
+            }
+
+            template <typename T, typename = typename std::enable_if<std::is_base_of<iod::MetaType, T>::value>::type>
+            void push(const T& obj) {
                 Ego.push(json::Obj).set(obj);
             }
 
@@ -271,6 +283,16 @@ namespace suil {
                     if (!m.attributes().has(iod::_json_skip)) {
                         // only set non-skipped values
                         Ego.set(m.symbol().name(), m.value());
+                    }
+                };
+            }
+
+            template <typename T, typename = typename std::enable_if<std::is_base_of<iod::MetaType, T>::value>::type>
+            void set(const T& obj) {
+                iod::foreach(T::Meta)|[&](auto& m) {
+                    if (!m.attributes().has(iod::_json_skip)) {
+                        // only set non-skipped values
+                        Ego.set(m.symbol().name(), m.symbol().member_access(obj));
                     }
                 };
             }
@@ -327,7 +349,7 @@ namespace suil {
 
             void encode(iod::encode_stream &ss) const;
 
-            template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+            template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
             inline operator T() const {
                 return (T) ((double) Ego);
             }
@@ -381,6 +403,32 @@ namespace suil {
                         }
 
                         copyOut<_Tp>(m.value(), obj);
+                    }
+                };
+
+                return std::move(ret);
+            }
+
+            template<typename T, typename std::enable_if<!std::is_arithmetic<T>::value>::type* = nullptr>
+            operator T() const {
+                T ret{};
+                if (Ego.empty())
+                    return std::move(ret);
+                iod::foreach(T::Meta) | [&](auto& m) {
+                    // find all properties
+                    using _Tp = typename std::remove_reference<decltype(m.value())>::type;
+                    if (!m.attributes().has(iod::_json_skip)) {
+                        // find attribute in current object
+                        auto obj = Ego[m.symbol().name()];
+                        if (obj.isNull()) {
+                            if (!iod::isNullable(m.value())  && !m.attributes().has(iod::_optional))
+                                // value cannot be null
+                                throw Exception::create("property '", m.symbol().name(), "' cannot be null");
+                            else
+                                return;
+                        }
+
+                        copyOut<_Tp>(m.symbol().member_access(ret), obj);
                     }
                 };
 
@@ -511,6 +559,11 @@ namespace iod {
         json_decode(o, str);
     }
 
+    template<typename T, typename = typename std::enable_if<std::is_base_of<iod::MetaType,T>::value>::type>
+    inline void json_decode(T& o, const stringview& s) {
+        json_decode<typename T::Schema, T>(o, s);
+    }
+
     template<typename S>
     inline void json_decode(suil::json::Object& o, const S& s) {
         size_t size{s.size()};
@@ -544,6 +597,13 @@ namespace iod {
     }
 
     inline std::string json_encode(const suil::json::Object& o) {
+        encode_stream ss;
+        json_internals::json_encode_(o, ss);
+        return ss.move_str();
+    }
+
+    template <typename T, typename = typename std::enable_if<std::is_base_of<iod::MetaType, T>::value>::type>
+    inline std::string json_encode(const T& o) {
         encode_stream ss;
         json_internals::json_encode_(o, ss);
         return ss.move_str();
@@ -593,6 +653,29 @@ namespace suil {
         inline void decode(const S &s, O &o) {
             iod::stringview sv(s.data(), s.size());
             iod::json_decode(o, sv);
+        }
+
+        template <typename Mt>
+        inline void metaToJson(const Mt& o, iod::json::jstream& ss)
+        {
+            ss << '{';
+            int i = 0;
+            bool first = true;
+            foreach(Mt::Meta) | [&](auto m) {
+                if (!m.attributes().has(iod::_json_skip)) {
+                    /* ignore empty entry */
+                    auto val = m.value();
+                    if (m.attributes().has(iod::_ignore) && iod::json::json_ignore<decltype(val)>(val)) return;
+
+                    if (!first) { ss << ','; }
+                    first = false;
+                    iod::json::json_encode_symbol(m.attributes().get(iod::_json_key, m.symbol()), ss);
+                    ss << ':';
+                    iod::json::json_encode_(m.symbol().member_access(o), ss);
+                }
+                i++;
+            };
+            ss << '}';
         }
     }
 
