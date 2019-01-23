@@ -786,7 +786,7 @@ namespace suil {
                     row = 0;
                 }
 
-                inline bool empty(size_t idx = 0) {
+                inline bool empty(size_t idx = 0) const {
                     return failure || results.empty() || results.size() <= idx;
                 };
 
