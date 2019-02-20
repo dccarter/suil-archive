@@ -497,6 +497,25 @@ namespace suil {
             bool ref{false};
         };
     }
+
+    template <size_t N>
+    void Blob<N>::toJson(iod::json::jstream& ss) const {
+        auto s = suil::utils::hexstr(&Ego.cbin(), Ego.size());
+        iod::stringview sv(s.data(), s.size());
+        json_encode_(sv, ss);
+    }
+
+    template <size_t N>
+    Blob<N> Blob<N>::fromJson(iod::json::parser &p) {
+        String tmp;
+        p.fill(tmp);
+        if (tmp.size() > N)
+            throw Exception::indexOutOfBounds("Source data cannot fit into blob");
+        Blob<N> blob;
+        blob.copy(tmp.data(), tmp.size());
+        return std::move(blob);
+    }
+
 } // namespace suil
 
 namespace iod {
@@ -522,6 +541,36 @@ namespace iod {
                 end++;
         }
         s = suil::String(str.data() + start, (size_t)(end-start), false).dup();
+        pos = end+1;
+        return *this;
+    }
+
+    template<>
+    inline json_internals::json_parser& json_internals::json_parser::fill<suil::Data>(suil::Data& d) {
+        Ego >> '"';
+
+        int start = pos;
+        int end = pos;
+
+        while (true) {
+            while (!eof() and str[end] != '"')
+                end++;
+
+            // Count the prev backslashes.
+            int sb = end - 1;
+            while (sb >= 0 and str[sb] == '\\')
+                sb--;
+
+            if ((end - sb) % 2) break;
+            else
+                end++;
+        }
+        suil::String tmp{};
+        Ego.fill(tmp);
+        auto size = (tmp.size()/2)+2;
+        auto *buf = (uint8_t *) malloc(size);
+        suil::utils::bytes(tmp, buf, size);
+        d = suil::Data(buf, size);
         pos = end+1;
         return *this;
     }
@@ -576,6 +625,13 @@ namespace iod {
 
         template<typename S>
         inline void json_encode_(const suil::String& s, S &ss) {
+            stringview sv(s.data(), s.size());
+            json_encode_(sv, ss);
+        }
+
+        template<typename S>
+        inline void json_encode_(const suil::Data& d, S &ss) {
+            auto s = suil::utils::hexstr(d.cdata(), d.size());
             stringview sv(s.data(), s.size());
             json_encode_(sv, ss);
         }

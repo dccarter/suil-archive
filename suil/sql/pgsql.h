@@ -11,6 +11,7 @@
 #include <deque>
 #include <memory>
 
+#include <suil/blob.h>
 #include <suil/channel.h>
 #include <suil/sql/middleware.h>
 #include <suil/sql/orm.h>

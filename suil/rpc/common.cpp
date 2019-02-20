@@ -15,7 +15,7 @@ namespace suil::rpc {
             size_t _{sizeof(size)};
             if (!sock.receive(&size, _, -1)) {
                 /* failed to receive size */
-                trace("JSON RPC server failed to receive request size: %s", errno_s);
+                trace("RPC server failed to receive request size: %s", errno_s);
                 return false;
             }
 

@@ -25,9 +25,6 @@
 
 namespace suil {
 
-    template <size_t N>
-    struct Blob;
-
     namespace __internal {
         auto remove_members_with_attribute = [](const auto& o, const auto& a)
         {

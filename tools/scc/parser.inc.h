@@ -5,6 +5,8 @@
 #if defined(__PARSER_DECLARE)
 constexpr int __count() const {return __LINE__; }
 __PARSER_DECLARE(Ident);
+__PARSER_DECLARE(Comment);
+__PARSER_DECLARE(Comments);
 __PARSER_DECLARE(Scoped);
 __PARSER_DECLARE(Generic);
 __PARSER_DECLARE(Attribs);
@@ -26,6 +28,8 @@ __PARSER_DECLARE(Program);
 constexpr int count() const { return __LINE__ - __count() - 1; }
 #elif defined(__PARSER_INITIALIZE)
 __PARSER_INITIALIZE(Ident,                  "ident");
+__PARSER_INITIALIZE(Comment,                "comment");
+__PARSER_INITIALIZE(Comments,               "comments");
 __PARSER_INITIALIZE(Scoped,                 "scoped");
 __PARSER_INITIALIZE(Generic,                "generic");
 __PARSER_INITIALIZE(Attribs,                "attribs");
@@ -46,6 +50,8 @@ __PARSER_INITIALIZE(Includes,               "includes");
 __PARSER_INITIALIZE(Program,                "program");
 #elif defined(__PARSER_ASSIGN)
 __USE_PARSER(Ident)     = __PARSER_ASSIGN(Ident);
+__USE_PARSER(Comment)   = __PARSER_ASSIGN(Comment);
+__USE_PARSER(Comments)  = __PARSER_ASSIGN(Comments);
 __USE_PARSER(Scoped)    = __PARSER_ASSIGN(Scoped);
 __USE_PARSER(Generic)   = __PARSER_ASSIGN(Generic);
 __USE_PARSER(Attribs)   = __PARSER_ASSIGN(Attribs);
@@ -66,6 +72,8 @@ __USE_PARSER(Includes)  = __PARSER_ASSIGN(Includes);
 __USE_PARSER(Program)   = __PARSER_ASSIGN(Program);
 #else
 __USE_PARSER(Ident),
+__USE_PARSER(Comment),
+__USE_PARSER(Comments),
 __USE_PARSER(Scoped),
 __USE_PARSER(Generic),
 __USE_PARSER(Attribs),

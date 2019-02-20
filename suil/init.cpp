@@ -31,10 +31,8 @@ namespace suil {
 
     const Version& ver_json = g_version;
 
-    uint8_t g_spid{0};
-    const uint8_t spid = g_spid;
-
-    SignalHandler g_sah{nullptr};
+    extern void Process_sa_handler(int sig, siginfo_t *info, void *context);
+    SignalHandler g_sah{Process_sa_handler};
 
     static void suil_sah(int sig, siginfo_t *info, void *ctx) {
         if (g_sah)

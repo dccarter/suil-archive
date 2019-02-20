@@ -12,21 +12,23 @@ namespace suil::scc {
     static const char *sc_Grammar =
 R"(
 ident       : /[a-zA-Z_][a-zA-Z0-9_]*/ | /[a-zA-Z_]/;
+comment     : /\/\/.*\n/ ;
+comments    : <comment>+ ;
 scoped      : <ident> ("::" <ident>)* ;
 generic     : <scoped> '<' <generic>? (',' <generic>)* '>'
             | <scoped> ;
 attribs     : "[[" <scoped> (',' <scoped>)* "]]" ;
-field       : <attribs>? <generic> <ident> ;
+field       : <comments>? <attribs>? <generic> <ident> ;
 fields      : (<field> ';')+ ;
 param       : "const"? <generic> ("&&"|"&")? <ident> ;
 params      : <param>? (',' <param>)* ;
-method      : <attribs>? <generic> <ident> '(' <params>? ')' ;
+method      : <comments>? <attribs>? <generic> <ident> '(' <params>? ')' ;
 methods     : (<method> ';')+ ;
-meta        : "meta" <attribs>? <ident> '{' <fields> '}' ;
-rpc         : ("srpc"|"jrpc"|"service")  <attribs>? <ident> '{' <methods> '}' ;
+meta        : <comments>? "meta" <attribs>? <ident> '{' <fields> '}' ;
+rpc         : <comments>? ("service"|"srpc"|"jrpc")  <attribs>? <ident> '{' <methods> '}' ;
 types       : ((<meta>|<rpc>) ';')+ ;
 namespace   : "namespace" <scoped> '{' <types> '}' ;
-symbol      : "symbol" '(' <ident> ')' ;
+symbol      : <comments>? "symbol" '(' <ident> ')' ;
 symbols     : <symbol>+ ;
 include     : "#include" (('"' /(\\.|[^"])+/ '"') | ('<' /(\\.|[^>])+/ '>' )) ;
 includes    : <include>+ ;
@@ -234,12 +236,18 @@ program     : <includes>? <symbols>? <namespace> ;
             for (auto i = 0; i < ast->children_num; i++) {
                 // enumerate and parse each included
                 auto child = ast->children[i];
-                out.Symbols.emplace_back(child->children[2]->contents);
+                int offset = 2;
+                if (strstr("comments", child->children[0]->tag))
+                    offset++;
+                out.Symbols.emplace_back(child->children[offset]->contents);
             }
         }
         else {
-            // single include, parse it
-            out.Symbols.emplace_back(ast->children[2]->contents);
+            // single symbol, parse it
+            int offset = 2;
+            if (strstr(ast->children[0]->tag, "comments"))
+                offset++;
+            out.Symbols.emplace_back(ast->children[offset]->contents);
         }
     }
 
@@ -271,6 +279,9 @@ program     : <includes>? <symbols>? <namespace> ;
     void Parser::build_MetaType(ProgramFile &out, mpc_ast_t *ast)
     {
         int offset = 1;
+        if (strstr(ast->children[0]->tag, "comments"))
+            offset++;
+
         MetaType mt{};
         if (strcmp("attribs|>", ast->children[offset]->tag) == 0) {
             // meta-type has attributes, parse them
@@ -295,6 +306,8 @@ program     : <includes>? <symbols>? <namespace> ;
     {
         RpcType rt{};
         int offset = 0;
+        if (strstr(ast->children[0]->tag, "comments"))
+            offset++;
         rt.Kind = std::string(ast->children[offset++]->contents);
 
         if (strcmp("attribs|>", ast->children[offset]->tag) == 0) {
@@ -441,6 +454,9 @@ program     : <includes>? <symbols>? <namespace> ;
     {
         Field fld{};
         int offset = 0;
+        if (strstr(ast->children[0]->tag, "comments"))
+            offset++;
+
         if (strcmp("attribs|>", ast->children[offset]->tag) == 0) {
             // field has attributes
             build_Attribs(fld.Attribs, ast->children[offset++]);
@@ -456,6 +472,9 @@ program     : <includes>? <symbols>? <namespace> ;
     {
         Method m{};
         int offset = 0;
+        if (strstr(ast->children[0]->tag, "comments"))
+            offset++;
+
         if (strcmp("attribs|>", ast->children[offset]->tag) == 0) {
             // field has attributes
             build_Attribs(m.Attribs, ast->children[offset++]);

@@ -10,6 +10,7 @@
 #include <openssl/ec.h>
 
 #include <suil/utils.h>
+#include <suil/blob.h>
 
 #define BASE58_ADDR_MAX_LEN     36
 #define BASE58_KEY_MAX_LEN      53
@@ -157,6 +158,29 @@ namespace suil {
         }
     }
 
+    namespace utils {
+        template <typename V>
+        void hash(Breadboard& bb, const V& v, Hash& out) {
+            crypto::sha256_bin& sha = (crypto::sha256_bin &) out;
+            bb << v;
+            auto d = bb.raw();
+            crypto::doubleSHA256(sha, d.data(), d.size());
+        }
+
+        template <typename V>
+        void hash(const V& v, Hash& out) {
+            Stackboard<1024> sb;
+            utils::hash(sb, v, out);
+        }
+
+        void hashpair(Hash& out, const Hash& h1, const Hash& h2) {
+            Blob<(SHA256_DIGEST_LENGTH<<1)> tmp(false);
+            tmp.copy<0>(h1);
+            tmp.copy<SHA256_DIGEST_LENGTH>(h2);
+            crypto::sha256_bin& sha = (crypto::sha256_bin &) out;
+            crypto::doubleSHA256(sha, &tmp.cbin(), tmp.size());
+        }
+    }
 }
 
 #endif //SUIL_ALGS_HPP

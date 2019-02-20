@@ -5,12 +5,13 @@
 #ifndef SUIL_BLOB_H
 #define SUIL_BLOB_H
 
+#include <iod/json.hh>
 #include <suil/base64.h>
 
 namespace suil {
 
     template <size_t N>
-    struct Blob: std::array<uint8_t, N> {
+    struct Blob: std::array<uint8_t, N>, iod::MetaType {
         Blob()
             : Blob(true)
         {}
@@ -36,20 +37,26 @@ namespace suil {
         }
 
         template <size_t S=0>
-        bool copy(const char* str) {
+        inline void copy(const char* str) {
             size_t len{strlen(str)};
-            if ((S+len) > N)
-                return false;
-            memcpy(&Ego.begin()[S], str, len);
-            return true;
+            Ego.copy<S>(str, len);
         };
 
+        template  <size_t S=0>
+        inline void copy(Data& d) {
+            Ego.copy<S>(d.data(), d.size());
+        }
+
+        template  <size_t S=0>
+        void copy(const void* data, size_t sz) {
+            if ((S+sz)>N)
+                throw Exception::create(Exception::InvalidArguments, "Data cannot fit into blob");
+            memcpy(&Ego.begin()[S], data, sz);
+        }
+
         template <size_t S, size_t NN>
-        bool copy(const Blob<NN> bb) {
-            if ((S+bb.size())>N)
-                return false;
-            memcpy(&Ego.begin()[S], bb.begin(), bb.size());
-            return true;
+        inline void copy(const Blob<NN> bb) {
+            Ego.copy<S>(bb.begin(), bb.size());;
         };
 
         template <size_t S = 0, size_t E = N>
@@ -96,6 +103,9 @@ namespace suil {
             return Ego.begin()[I];
         }
 
+        static Blob<N> fromJson(iod::json::parser& p);
+
+        void toJson(iod::json::jstream& ss) const;
     } __attribute__((aligned(1)));
 
     // overhead is 0 byte

@@ -697,6 +697,6 @@ public:                                     \
     )) Version;
 
     extern const Version& ver_json;
-    extern const uint8_t spid;
+    extern const uint8_t& spid;
 }
 #endif //SUIL_BASE_H

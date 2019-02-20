@@ -26,6 +26,8 @@ namespace suil {
         }
     }
 
+    extern void Worker_sa_handler(int sig, siginfo_t *info, void *context);
+
     void Process_sa_handler(int sig, siginfo_t *info, void *context) {
         if (PROC_Exiting)
             return;
@@ -110,6 +112,7 @@ namespace suil {
         } else {
             // pid not registered
             strace("process with pid=%ld not registered or not waiting for ", pid);
+            Worker_sa_handler(sig, info, context);
         }
     }
 

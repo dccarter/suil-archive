@@ -8,6 +8,7 @@
 
 #include <deque>
 #include <suil/net.h>
+#include <suil/blob.h>
 
 namespace suil {
 

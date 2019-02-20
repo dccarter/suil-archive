@@ -6,6 +6,7 @@
 #define SUIL_WIRE_H
 
 #include <suil/varint.h>
+#include <suil/blob.h>
 
 namespace suil {
 
@@ -54,6 +55,26 @@ namespace suil {
             if (sz) {
                 // get access to serialization buffer
                 d = Data(Ego.reverse(sz), sz, false);
+            }
+            return Ego;
+        }
+
+        template <size_t N>
+        Wire& operator<<(const Blob<N>& b) {
+            VarInt sz(b.size());
+            Ego << sz;
+            push(&b.cbin(), b.size());
+            return Ego;
+        }
+
+        template <size_t N>
+        Wire& operator>>(Blob<N>& b) {
+            VarInt tmp(0);
+            Ego >> tmp;
+            auto sz = tmp.read<uint64_t>();
+            if (sz) {
+                // get access to serialization buffer
+                b.copy(Ego.reverse(sz), sz);
             }
             return Ego;
         }

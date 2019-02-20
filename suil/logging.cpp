@@ -56,6 +56,7 @@ namespace suil {
 
     static log::__Logger SYS_LOGGER;
     log::__Logger& __Log = SYS_LOGGER;
+    extern const uint8_t& spid;
 
     namespace log {
 
@@ -70,9 +71,15 @@ namespace suil {
                     "TRC", "DBG", "INF", "NTC", "WRN", "ERR", "CRT"
             };
 
+            char worker[64];
             size_t sz = SUIL_LOG_BUFFER_SIZE;
             char   *tmp = out;
-            const char *name = __Log.app_name()? __Log.app_name() : "global";
+            const char *name = __Log.app_name() ? __Log.app_name() : "global";
+
+            if (spid) {
+                sprintf(worker, "(wrk-%02hhu) ", spid);
+            }
+
             int     wr = 0;
 
             switch (l)
@@ -81,11 +88,12 @@ namespace suil {
                 case log::ERROR:
                 case log::CRITICAL:
                 case log::WARNING:
-                    wr = snprintf(tmp, sz, "%s/%05d: [%s] [%3s] [%10.10s] ",
-                                  name, getpid(), Datetime()(), LOGLVL_STR[(unsigned char)l], tag);
+                    wr = snprintf(tmp, sz, "%s/%05d: [%s] [%3s] [%10.10s] %s",
+                                  name, getpid(), Datetime()(), LOGLVL_STR[(unsigned char)l],
+                                  tag, (spid? worker: ""));
                     break;
                 default:
-                    wr = snprintf(tmp, sz, "%s: ",name);
+                    wr = snprintf(tmp, sz, "%s: %s",name, (spid? worker: ""));
                     break;
             }
 

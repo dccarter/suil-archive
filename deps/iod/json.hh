@@ -347,7 +347,9 @@ namespace iod {
         template <typename T,
                 typename std::enable_if<!(std::is_same<const char*, T>::value||std::is_same<char*, T>::value)>::type* = nullptr>
         inline bool json_is_empty(const T& v) {
-            return v.empty();
+            if constexpr (!std::is_base_of<MetaType,T>::value)
+                return v.empty();
+            return false;
         }
 
         template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value>::type* = nullptr>

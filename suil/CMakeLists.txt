@@ -23,6 +23,7 @@ set(LIB_SUIL_BASE_SOURCES
         utils.cpp
         wire.cpp
         varint.cpp
+        worker.cpp
         zstring.cpp)
 
 set(LIB_SUIL_HTTP_SOURCES

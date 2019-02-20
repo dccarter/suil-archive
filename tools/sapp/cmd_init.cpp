@@ -118,7 +118,7 @@ namespace suil::tools  {
         auto currdir = utils::fs::currdir();
         if (!utils::fs::isdirempty(currdir())) {
             // suil will not override current directory contents
-            throw Exception::create("current directory '", currdir, "' is not empty");
+            throw Exception::create("current directory '", currdir(), "' is not empty");
         }
 
         auto projectName = name.peek();

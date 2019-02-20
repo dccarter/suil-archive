@@ -317,6 +317,12 @@ namespace suil {
             return Ego.m_cstr;
         }
 
+        inline Data release() {
+            Data tmp{Ego.data(), Ego.size(), Ego.m_own};
+            m_own = false;
+            return std::move(tmp);
+        }
+
         /**
          * get a modifiable pointer to the reference buffer
          * @return
