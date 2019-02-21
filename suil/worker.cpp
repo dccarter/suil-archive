@@ -16,6 +16,13 @@
 #define WORKER_SHM_LOCKS    64
 #endif
 
+/*
+ * On some systems WAIT_ANY is not defined
+ * */
+#ifndef WAIT_ANY
+#define WAIT_ANY (-1)
+#endif
+
 
 namespace suil {
 
