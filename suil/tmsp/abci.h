@@ -21,49 +21,47 @@ namespace suil::tmsp {
     EncodingError
   };
 
-  using namespace types;
-
   struct Application: LOGGER(TMSP) {
 
     virtual void flush() {
       trace("app::flush not implemented");
     }
 
-    virtual void getInfo(ResponseInfo& info) = 0;
+    virtual void getInfo(types::ResponseInfo& info) = 0;
 
-    virtual Result setOption(const String& key, const String& value, ResponseSetOption& resp) {
+    virtual Result setOption(const String& key, const String& value, types::ResponseSetOption& resp) {
       trace("app::setOption not supported");
       return Result{Codes::NotSupported};
     }
 
-    virtual Result deliverTx(const suil::Data& tx, ResponseDeliverTx& resp) {
+    virtual Result deliverTx(const suil::Data& tx, types::ResponseDeliverTx& resp) {
       trace("app::deliverTx not implmented");
       return Result{Codes::Ok};
     }
 
-    virtual Result checkTx(const Data& tx, ResponseCheckTx& resp) {
+    virtual Result checkTx(const Data& tx, types::ResponseCheckTx& resp) {
       trace("app::checkTx not implemented");
       return Result{Codes::Ok};
     }
 
-    virtual void commit(ResponseCommit& resp) {
+    virtual void commit(types::ResponseCommit& resp) {
       trace("app::commit not implemented");
     }
 
-    virtual Result query(const RequestQuery& req, ResponseQuery& resp) {
+    virtual Result query(const types::RequestQuery& req, types::ResponseQuery& resp) {
       trace("app::query not implmented");
       return Result{Codes::Ok};
     }
 
-    virtual void initChain(const RequestInitChain& req, ResponseInitChain& resp) {
+    virtual void initChain(const types::RequestInitChain& req, types::ResponseInitChain& resp) {
       trace("app::initChain not implemented");
     }
 
-    virtual void beginBlock(const RequestBeginBlock& req, ResponseBeginBlock& resp) {
+    virtual void beginBlock(const types::RequestBeginBlock& req, types::ResponseBeginBlock& resp) {
       trace("app::beginBlock not implemented");
     }
 
-    virtual void endBlock(const RequestEndBlock& req, ResponseEndBlock& resp) {
+    virtual void endBlock(const types::RequestEndBlock& req, types::ResponseEndBlock& resp) {
       trace("app::endBlock not implemented");
     }
   };

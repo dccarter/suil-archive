@@ -21,33 +21,33 @@ namespace suil::tmsp {
 
     Result flush();
 
-    Result info(ResponseInfo& rinfo);
+    Result info(types::ResponseInfo& rinfo);
 
     Result setOption(String&& key, String&& value);
 
-    inline Result deliverTx(const Data& data, ResponseDeliverTx& rsdt) {
+    inline Result deliverTx(const Data& data, types::ResponseDeliverTx& rsdt) {
         return deliverTx(data.data(), data.size(), rsdt);
     }
 
-    inline Result checkTx(const Data& data, ResponseCheckTx& rscx) {
+    inline Result checkTx(const Data& data, types::ResponseCheckTx& rscx) {
         return checkTx(data.data(), data.size(), rscx);
     }
 
-    Result query(RequestQuery& , ResponseQuery& rsq);
+    Result query(types::RequestQuery& , types::ResponseQuery& rsq);
 
-    Result commit(ResponseCommit& rc);
+    Result commit(types::ResponseCommit& rc);
 
-    Result initChain(RequestInitChain& ric);
+    Result initChain(types::RequestInitChain& ric);
 
-    Result beginBlock(RequestBeginBlock& rbb);
+    Result beginBlock(types::RequestBeginBlock& rbb);
 
-    Result endBlock(RequestEndBlock& rqeb, ResponseEndBlock& rseb);
+    Result endBlock(types::RequestEndBlock& rqeb, types::ResponseEndBlock& rseb);
 
   private:
-    Result deliverTx(const uint8_t bytes[], size_t nsz, ResponseDeliverTx& rsdt);
-    Result checkTx(const uint8_t bytes[],   size_t nsz, ResponseCheckTx& rscx);
+    Result deliverTx(const uint8_t bytes[], size_t nsz, types::ResponseDeliverTx& rsdt);
+    Result checkTx(const uint8_t bytes[],   size_t nsz, types::ResponseCheckTx& rscx);
 
-    void process(Result& res,  types::Request &req, Response &resp);
+    void process(Result& res,  types::Request &req, types::Response &resp);
     void sendRequest(Result& res,  types::Request& req);
     void receiveResp(Result& res, types::Response& resp);
 
@@ -73,7 +73,7 @@ namespace suil::tmsp {
               return std::move(res);
           }
 
-          ResponseInfo rsif;
+          types::ResponseInfo rsif;
           res = std::move(Ego.info(rsif));
 
           if (res.Ok()) {

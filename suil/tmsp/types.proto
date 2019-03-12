@@ -1,28 +1,56 @@
 syntax = "proto3";
-package types;
+package suil.tmsp.types;
 
-// For more information on gogo.proto, see:
-// https://github.com/gogo/protobuf/blob/master/extensions.md
-import "protob/google/protobuf/timestamp.proto";
-import "protob/github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "protob/github.com/tendermint/tendermint/libs/common/types.proto";
-import "protob/github.com/tendermint/tendermint/crypto/merkle/merkle.proto";
+//-------------------------------------------------------------------------
+// Copied from github.com/tendermint/tendermint/crypto/merkle/proto
+//-------------------------------------------------------------------------
+message ProofOp {
+  string type = 1;
+  bytes key = 2;
+  bytes data = 3;
+}
 
-// This file is copied from http://github.com/tendermint/abci
-// NOTE: When using custom types, mind the warnings.
-// https://github.com/gogo/protobuf/blob/master/custom_types.md#warnings-and-issues
+// Proof is Merkle proof defined by the list of ProofOps
+message Proof {
+  repeated ProofOp ops = 1;
+}
 
-option (gogoproto.marshaler_all) = true;
-option (gogoproto.unmarshaler_all) = true;
-option (gogoproto.sizer_all) = true;
-option (gogoproto.goproto_registration) = true;
-// Generate tests
-option (gogoproto.populate_all) = true;
-option (gogoproto.equal_all) = true;
-option (gogoproto.testgen_all) = true;
+//------------------------------------------------------------------------
+// Copied from github.com/tendermint/tendermint/libs/common/types.proto
+//------------------------------------------------------------------------
+
+// Define these here for compatibility but use tmlibs/KVPair.
+message KVPair {
+  bytes key = 1;
+  bytes value = 2;
+}
+
+// Define these here for compatibility but use tmlibs/KI64Pair.
+message KI64Pair {
+  bytes key = 1;
+  int64 value = 2;
+}
+
+//-----------------------------------------
+// From google/protobuf/timestamp.proto
+//-----------------------------------------
+message Timestamp {
+
+  // Represents seconds of UTC time since Unix epoch
+  // 1970-01-01T00:00:00Z. Must be from 0001-01-01T00:00:00Z to
+  // 9999-12-31T23:59:59Z inclusive.
+  int64 seconds = 1;
+
+  // Non-negative fractions of a second at nanosecond resolution. Negative
+  // second values with fractions must still have non-negative nanos values
+  // that count forward in time. Must be from 0 to 999,999,999
+  // inclusive.
+  int32 nanos = 2;
+}
 
 //----------------------------------------
 // Request types
+//----------------------------------------
 
 message Request {
   oneof value {
@@ -60,10 +88,10 @@ message RequestSetOption {
 }
 
 message RequestInitChain {
-  google.protobuf.Timestamp time = 1  [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
+  Timestamp time = 1;
   string chain_id = 2;
   ConsensusParams consensus_params = 3;
-  repeated ValidatorUpdate validators = 4  [(gogoproto.nullable)=false];
+  repeated ValidatorUpdate validators = 4;
   bytes app_state_bytes = 5;
 }
 
@@ -76,9 +104,9 @@ message RequestQuery {
 
 message RequestBeginBlock {
   bytes hash = 1;
-  Header header = 2 [(gogoproto.nullable)=false];
-  LastCommitInfo last_commit_info = 3 [(gogoproto.nullable)=false];
-  repeated Evidence byzantine_validators = 4 [(gogoproto.nullable)=false];
+  Header header = 2;
+  LastCommitInfo last_commit_info = 3;
+  repeated Evidence byzantine_validators = 4;
 }
 
 message RequestCheckTx {
@@ -148,7 +176,7 @@ message ResponseSetOption {
 
 message ResponseInitChain {
   ConsensusParams consensus_params = 1;
-  repeated ValidatorUpdate validators = 2 [(gogoproto.nullable)=false];
+  repeated ValidatorUpdate validators = 2;
 }
 
 message ResponseQuery {
@@ -159,13 +187,13 @@ message ResponseQuery {
   int64 index = 5;
   bytes key = 6;
   bytes value = 7;
-  merkle.Proof proof = 8;
+  Proof proof = 8;
   int64 height = 9;
   string codespace = 10;
 }
 
 message ResponseBeginBlock {
-  repeated common.KVPair tags = 1 [(gogoproto.nullable)=false, (gogoproto.jsontag)="tags,omitempty"];
+  repeated KVPair tags = 1;
 }
 
 message ResponseCheckTx {
@@ -175,7 +203,7 @@ message ResponseCheckTx {
   string info = 4; // nondeterministic
   int64 gas_wanted  = 5;
   int64 gas_used = 6;
-  repeated common.KVPair tags = 7 [(gogoproto.nullable)=false, (gogoproto.jsontag)="tags,omitempty"];
+  repeated KVPair tags = 7;
   string codespace = 8;
 }
 
@@ -186,14 +214,14 @@ message ResponseDeliverTx {
   string info = 4; // nondeterministic
   int64 gas_wanted = 5;
   int64 gas_used = 6;
-  repeated common.KVPair tags = 7 [(gogoproto.nullable)=false, (gogoproto.jsontag)="tags,omitempty"];
+  repeated KVPair tags = 7;
   string codespace = 8;
 }
 
 message ResponseEndBlock {
-  repeated ValidatorUpdate validator_updates = 1 [(gogoproto.nullable)=false];
+  repeated ValidatorUpdate validator_updates = 1;
   ConsensusParams consensus_param_updates = 2;
-  repeated common.KVPair tags = 3 [(gogoproto.nullable)=false, (gogoproto.jsontag)="tags,omitempty"];
+  repeated KVPair tags = 3;
 }
 
 message ResponseCommit {
@@ -233,7 +261,7 @@ message ValidatorParams {
 
 message LastCommitInfo {
   int32 round = 1;
-  repeated VoteInfo votes = 2 [(gogoproto.nullable)=false];
+  repeated VoteInfo votes = 2;
 }
 
 //----------------------------------------
@@ -241,15 +269,15 @@ message LastCommitInfo {
 
 message Header {
   // basic block info
-  Version version = 1 [(gogoproto.nullable)=false];
-  string chain_id = 2 [(gogoproto.customname)="ChainID"];
+  Version version = 1;
+  string chain_id = 2;
   int64 height = 3;
-  google.protobuf.Timestamp time = 4 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
+  Timestamp time = 4;
   int64 num_txs = 5;
   int64 total_txs = 6;
 
   // prev block info
-  BlockID last_block_id = 7 [(gogoproto.nullable)=false];
+  BlockID last_block_id = 7;
 
   // hashes of block data
   bytes last_commit_hash = 8; // commit from validators from the last block
@@ -275,7 +303,7 @@ message Version {
 
 message BlockID {
   bytes hash = 1;
-  PartSetHeader parts_header = 2 [(gogoproto.nullable)=false];
+  PartSetHeader parts_header = 2;
 }
 
 message PartSetHeader {
@@ -286,19 +314,19 @@ message PartSetHeader {
 // Validator
 message Validator {
   bytes address = 1;
-  //PubKey pub_key = 2 [(gogoproto.nullable)=false];
+  //PubKey pub_key = 2;
   int64 power = 3;
 }
 
 // ValidatorUpdate
 message ValidatorUpdate {
-  PubKey pub_key = 1 [(gogoproto.nullable)=false];
+  PubKey pub_key = 1;
   int64 power = 2;
 }
 
 // VoteInfo
 message VoteInfo {
-  Validator validator = 1 [(gogoproto.nullable)=false];
+  Validator validator = 1;
   bool signed_last_block = 2;
 }
 
@@ -309,25 +337,8 @@ message PubKey {
 
 message Evidence {
   string type = 1;
-  Validator validator = 2 [(gogoproto.nullable)=false];
+  Validator validator = 2;
   int64 height = 3;
-  google.protobuf.Timestamp time = 4 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
+  Timestamp time = 4;
   int64 total_voting_power = 5;
-}
-
-//----------------------------------------
-// Service Definition
-
-service ABCIApplication {
-  rpc Echo(RequestEcho) returns (ResponseEcho) ;
-  rpc Flush(RequestFlush) returns (ResponseFlush);
-  rpc Info(RequestInfo) returns (ResponseInfo);
-  rpc SetOption(RequestSetOption) returns (ResponseSetOption);
-  rpc DeliverTx(RequestDeliverTx) returns (ResponseDeliverTx);
-  rpc CheckTx(RequestCheckTx) returns (ResponseCheckTx);
-  rpc Query(RequestQuery) returns (ResponseQuery);
-  rpc Commit(RequestCommit) returns (ResponseCommit);
-  rpc InitChain(RequestInitChain) returns (ResponseInitChain);
-  rpc BeginBlock(RequestBeginBlock) returns (ResponseBeginBlock);
-  rpc EndBlock(RequestEndBlock) returns (ResponseEndBlock);
 }

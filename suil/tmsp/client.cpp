@@ -9,7 +9,7 @@ namespace suil::tmsp {
 
   Result BaseClient::echo(String&& msg) {
       types::Request req;
-      Response resp;
+      types::Response resp;
       req.mutable_echo()->set_message(msg(), msg.size());
       Result res{};
 
@@ -33,7 +33,7 @@ namespace suil::tmsp {
 
   Result BaseClient::flush() {
       types::Request  req;
-      Response resp;
+      types::Response resp;
       Result res{};
 
       req.mutable_flush();
@@ -47,10 +47,10 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::info(ResponseInfo &out) {
+  Result BaseClient::info(types::ResponseInfo &out) {
       types::Request  req;
       types::Response resp;
-      ResponseInfo& rsif = *resp.mutable_info();
+      types::ResponseInfo& rsif = *resp.mutable_info();
       Result res;
       req.mutable_info();
 
@@ -67,7 +67,7 @@ namespace suil::tmsp {
 
   Result BaseClient::setOption(String &&key, String &&value) {
       types::Request   req;
-      RequestSetOption& rqopt = *req.mutable_set_option();
+      types::RequestSetOption& rqopt = *req.mutable_set_option();
       types::Response   resp;
       Result res;
 
@@ -81,7 +81,7 @@ namespace suil::tmsp {
           res() << "Processing setoption Request failed";
       }
       else {
-          const ResponseSetOption &rsopt = resp.set_option();
+          const auto &rsopt = resp.set_option();
           res((Codes)rsopt.code())
                   << rsopt.log();
       }
@@ -89,9 +89,9 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::deliverTx(const uint8_t *bytes, size_t nsz, ResponseDeliverTx &rsdt) {
+  Result BaseClient::deliverTx(const uint8_t *bytes, size_t nsz, types::ResponseDeliverTx &rsdt) {
       types::Request   req;
-      RequestDeliverTx& rqdt = *req.mutable_deliver_tx();
+      types::RequestDeliverTx& rqdt = *req.mutable_deliver_tx();
       types::Response   resp;
       Result res;
 
@@ -109,9 +109,9 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::checkTx(const uint8_t *bytes, size_t nsz, ResponseCheckTx& rscx) {
+  Result BaseClient::checkTx(const uint8_t *bytes, size_t nsz, types::ResponseCheckTx& rscx) {
       types::Request   req;
-      RequestCheckTx&  rqcx = *req.mutable_check_tx();
+      types::RequestCheckTx&  rqcx = *req.mutable_check_tx();
       types::Response  resp;
       Result res;
 
@@ -130,7 +130,7 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::query(RequestQuery& rq, ResponseQuery &rsq) {
+  Result BaseClient::query(RequestQuery& rq, types::ResponseQuery &rsq) {
 
       types::Request   req;
       types::Response  resp;
@@ -152,7 +152,7 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::commit(ResponseCommit& rscm) {
+  Result BaseClient::commit(types::ResponseCommit& rscm) {
       types::Request   req;
       types::Response  resp;
       Result res;
@@ -172,7 +172,7 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::initChain(RequestInitChain& ric) {
+  Result BaseClient::initChain(types::RequestInitChain& ric) {
       types::Request    req;
       types::Response   resp;
       Result            res;
@@ -188,7 +188,7 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::beginBlock(RequestBeginBlock &rqbb) {
+  Result BaseClient::beginBlock(types::RequestBeginBlock &rqbb) {
       types::Request    req;
       types::Response   resp;
       Result            res;
@@ -204,7 +204,7 @@ namespace suil::tmsp {
       return std::move(res);
   }
 
-  Result BaseClient::endBlock(RequestEndBlock &rqeb, ResponseEndBlock& rseb) {
+  Result BaseClient::endBlock(types::RequestEndBlock &rqeb, types::ResponseEndBlock& rseb) {
       types::Request    req;
       types::Response   resp;
       Result            res;
@@ -320,7 +320,7 @@ namespace suil::tmsp {
       }
   }
 
-  void BaseClient::process(Result& res, types::Request &req, Response &resp) {
+  void BaseClient::process(Result& res, types::Request &req, types::Response &resp) {
       sendRequest(res, req);
       if (!res.Ok()) {
           // failed to send Request
