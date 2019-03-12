@@ -676,6 +676,20 @@ public:                                     \
         uint32_t m_size{0};
     } __attribute__((aligned(1)));
 
+    template <typename Target>
+    struct Ref {
+        Ref(Target& ref)
+                : ref(ref)
+        {}
+
+        Target *operator->() {
+            return &ref;
+        }
+
+    protected:
+        Target& ref;
+    };
+
     namespace version {
         extern const uint8_t  MAJOR;
         extern const uint8_t  MINOR;

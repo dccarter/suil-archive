@@ -132,8 +132,21 @@ namespace suil {
             }
 
             template <typename T>
-            T query(const char *name) const {
-                return qps.get<T>(name);
+            T query(const char *name, bool strict = false) const {
+                return qps.get<T>(name, strict);
+            }
+
+            template <typename T>
+            T query(const char *name, OBuffer& msg) const {
+                try {
+                    return qps.get<T>(name, true);
+                }
+                catch (Exception& e) {
+                    if (!msg.empty())
+                        msg << "\n";
+                    msg << e.what();
+                    return T{};
+                }
             }
 
             template <typename T>

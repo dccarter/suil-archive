@@ -475,12 +475,15 @@ namespace suil {
             std::vector<char*> get_all (const char* name) const;
 
             template <typename __T>
-            __T get(const char* name) const {
+            __T get(const char* name, bool strict = false) const {
                 __T tmp{};
                 strview sv(get(name));
                 if (!sv.empty()) {
                     String str(sv.data(), sv.size(), false);
                     utils::cast(str, tmp);
+                }
+                else if (strict) {
+                    throw Exception::create("required query parameter '", name, "' missing");
                 }
 
                 return tmp;

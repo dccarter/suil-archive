@@ -1,0 +1,180 @@
+#include <suil/json.h>
+
+namespace suil::lxc {
+
+    meta BdevSpecs {
+        // Used internal
+        [[optional, ignore]]
+        bool         Configured;
+        // maps to bdev_specs.fstype
+        String       FsType;
+        // maps to bdev_specs.fssize
+        uint64_t     FsSize;
+        // maps to bdev_specs.zfs.zfsroot
+        String       ZfsRoot;
+        // maps to bdev_specs.llv.vg
+        String       LlvmVg;
+        // maps to bdev_specs.llv.lv
+        String       LlvmLv;
+        // maps to bdev_specs.llv.thinpool
+        String       LlvmThinpool;
+        // maps to bdev_specs.dir
+        String       Dir;
+        // maps to bdev_specs.rbd.rbdname
+        String       RbdName;
+        // maps to bdev_specs.rbd.rdbpool
+        String       RbdPool;
+    };
+
+    meta Create {
+        // The name of the container
+        String      Name;
+        // The template to use to create the container
+        [[optional, ignore]]
+        String      Template;
+        // The backing store device type
+        [[optional, ignore]]
+        String      BdevType;
+        // The flags to use
+        [[optional, ignore]]
+        int         Flags;
+        // The backing store specifications to use
+        [[optional, ignore]]
+        BdevSpecs   Specs;
+        // The image distribution
+        String      Distribution;
+        // The image version/release
+        String      Release;
+        // The image target architecture
+        String      Arch;
+    };
+
+    meta Clone {
+        // The new name of the container
+        String      NewName;
+        // lxcpath in which to create the new container
+        [[optional, ignore]]
+        String      LxcPath;
+        // Optionally force the cloned bdevtype to a specified plugin.
+        //	By default the original is used (subject to snapshot requirements).
+        [[optional, ignore]]
+        String      BdevType;
+        // Additional LXC_CLONE* flags to change the cloning behaviour:
+        [[optional]]
+        int         Flags;
+        // Information about how to create the new storage
+        // (i.e. fstype and fsdata).
+        [[optional, ignore]]
+        String      BdevData;
+        // In case of a block device backing store, an
+        // optional size
+        [[optional]]
+        uint64_t    NewSize;
+    };
+
+    meta MigrateOpts {
+        // maps to migrate_ops.directory
+        String       Directory;
+        // maps to migrate_ops.verbose
+        bool         Verbose;
+        // maps to migrate_ops.stop
+        bool         Stop;
+        // maps to migrate_ops.predump_dir
+        String       PredumpDir;
+        // maps to migrate_ops.pageserver_address
+        String       PageServerAddr;
+        // maps to migrate_ops.pageserver_port
+        String       PageServerPort;
+        // maps to migrate_ops.preserve_inodes
+        bool         PreserveInodes;
+        // maps to migrate_ops.action_script
+        String       ActionScript;
+        // maps to migrate_ops.disable_skip_in_flight
+        bool         DisableSkipInFlight;
+        // maps to migrate_ops.ghost_limit
+        uint64_t     GhostLimit;
+        // maps to migrate_ops.features_to_check
+        uint64_t     FeaturesToCheck;
+    };
+
+    meta AttachOptions {
+        // Any combination of LXC_ATTACH_* flags 
+        int AttachFlags;
+
+        // The namespaces to attach to (CLONE_NEW... flags) 
+        int Namespaces;
+
+        // Initial personality (\c -1 to autodetect).
+        // \warning This may be ignored if lxc is compiled without personality
+        // support)
+        long Personality;
+
+        // Initial current directory, use \c NULL to use cwd.
+        // If the current directory does not exist in the container, the root
+        // directory will be used instead because of kernel defaults.
+         
+        String InitialCwd;
+
+        // The user-id to run as.
+        //
+        // \note Set to \c -1 for default behaviour (init uid for userns
+        // containers or \c 0 (super-user) if detection fails).
+         
+        uid_t Uid;
+
+        // The group-id to run as.
+        //
+        // \note Set to \c -1 for default behaviour (init gid for userns
+        // containers or \c 0 (super-user) if detection fails).
+         
+        gid_t   Gid;
+
+        // Environment policy 
+        int     EnvPolicy;
+
+        // Extra environment variables to set in the container environment 
+        std::vector<String> ExtraEnvVars;
+
+        // Names of environment variables in existing environment to retain
+        // in container environment.
+        std::vector<String> ExtraKeepEnv;
+
+        // File descriptors for stdin, stdout and stderr,
+        // \c dup2() will be used before calling exec_function,
+        // (assuming not \c 0, \c 1 and \c 2 are specified) and the
+        // original fds are closed before passing control
+        // over. Any \c O_CLOEXEC flag will be removed after
+        // that.
+        int     StdinFd;
+        int     StdoutFd;
+        int     StderrFd;
+        // File descriptor to log output. 
+        int     LogFd;
+    };
+
+    meta Snapshot {
+        // The name of the snapshot
+        String Name;
+        // Fullpath to snapshot comment file
+        String CommentPath;
+        // Timestamp snapshot was created
+        String Timestamp;
+        // Fullpath to LXCPATH of snapshot
+        String LxcPath;
+    };
+
+    meta Mount {
+        // Source host folder to mount
+        String Source;
+        // Target/destination folder in container
+        String Target;
+        // Filesystem time
+        String FsType;
+        // Mount flags
+        String Flags;
+        // Mount data
+        Data   MountData;
+        // Mount version
+        int    Version;
+    };
+}

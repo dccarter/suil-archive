@@ -23,6 +23,7 @@ option(SUIL_BUILD_EXAMPLES     "Enable building examples" ON)
 option(SUIL_BUILD_DEV_PACKAGE  "Produce a development package" OFF)
 option(SUIL_DEV_IDE            "Currently using an IDE" OFF)
 option(SUIL_BUILD_DOCKER       "Include docker API build" ON)
+option(SUIL_BUILD_LXC          "Include LXC API build" OFF)
 
 # route used specifically by the file server
 set(SUIL_FILE_SERVER_ROUTE     1511d5908a7811e790ed6f6e6c696e65)
@@ -166,6 +167,7 @@ if (SUIL_DEV_IDE)
         add_subdirectory(suil-examples)
     endif()
     add_subdirectory(apps/utouch)
+    #add_subdirectory(apps/suicret)
 endif()
 
 set(CPACK_PACKAGE_NAME   "suil")

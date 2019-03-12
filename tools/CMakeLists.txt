@@ -9,9 +9,16 @@ set(tools_VERSION ${SUIL_PACKAGE_VERSION} CACHE STRING "Current application vers
 set(tools_DEFINES
         "-DTOOL_VERSION=${tools_VERSION}")
 
+if (SUIL_BUILD_DEV_PACKAGE)
+    set(_SCC_BIN     ${CMAKE_BINARY_DIR}/tools/scc)
+    set(_IOD_BIN     ${CMAKE_BINARY_DIR}/deps/iod/iodsyms)
+    set(_GENTPS_BIN  ${CMAKE_BINARY_DIR}/tools/suiltps)
+endif()
+
 SuilProject(tools
-        IOD_BIN     ${CMAKE_BINARY_DIR}/deps/iod/iodsyms
-        GENTPS_BIN  ${CMAKE_BINARY_DIR}/tools/suiltps
+        SCC_BIN     ${_SCC_BIN}
+        IOD_BIN     ${_IOD_BIN}
+        GENTPS_BIN  ${_GENTPS_BIN}
         SYMBOLS     ${CMAKE_CURRENT_SOURCE_DIR}/tools.sym)
 
 set(suiltps_SOURCES
@@ -48,26 +55,32 @@ SuilApp(suilapp
         INSTALL    ON
         DEPENDS    suil)
 
-if (SUIL_BUILD_DOCKER)
+if (SUIL_BUILD_LXC)
     # Build docker only requested to do so
-    set(sdocker_SOURCES
-            sdocker/docker.cpp
-            sdocker/containers.cpp
-            sdocker/images.cpp
-            sdocker/networks.cpp
-            sdocker/volumes.cpp
-            sdocker/exec.cpp)
+    set(lxc_SOURCES
+            lxc/lxc.cpp
+            lxc/lxc.scc.cpp)
 
-    SuilStatic(sdocker
-            SOURCES    ${sdocker_SOURCES}
-            VERSION    ${tools_VERSION}
-            DEFINES    ${tools_DEFINES}
-            INSTALL    ON
-            TPSCHEMA   ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json
-            DEPENDS    suiltps)
-    set(sdocker_HEADERS
-            ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/types.json.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/sdocker/docker.hpp)
+    SuilStatic(suilxc
+            SOURCES      ${lxc_SOURCES}
+            VERSION      ${tools_VERSION}
+            DEFINES      ${tools_DEFINES}
+            INSTALL      ON
+            LIBRARIES    lxc
+            SCC_SOURCES  ${CMAKE_CURRENT_SOURCE_DIR}/lxc/lxc.scc
+            SCC_OUTDIR   ${CMAKE_CURRENT_SOURCE_DIR}/lxc)
+
+    set(scc_HEADERS
+            ${CMAKE_CURRENT_SOURCE_DIR}/lxc/lxc.scc.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/lxc/lxc.h)
     install(FILES ${sdocker_HEADERS}
-        DESTINATION include/sdocker)
-endif(SUIL_BUILD_DOCKER)
+            DESTINATION include/suil/lxc/)
+
+    SuilApp(suilxc-demo
+            SOURCES    lxc/main.cpp
+            VERSION    ${tools_VERSION}
+            DEFINES    ${tools_DEFINES} "-DBASE_PATH=\"${SUIL_BASE_PATH}\""
+            INSTALL    ON
+            DEPENDS    suil
+            LIBRARIES  lxc suilxc)
+endif(SUIL_BUILD_LXC)
