@@ -41,6 +41,16 @@ A lightweight mordern `C++` micro service development framework
 *  JWT creation and decoding
    *  Simple authentication middleware issuing web tokens (Not tested)
 
+*  `JSON RPC 2.0` Server and Client
+   *  Support for a JSON RPC server and client enabled
+   *  Easy to use JSON RPC API, the API is declared in suil's own custom scc` formart and both the service and client are generated from the `scc`
+
+*  Support for custom code format (`scc`)
+   *  scc` is used to declare data and service types with syntax resembling that of `C++`
+   *  `scc` source's are transpiled to `c++` source's which can then be used in project's
+   *  `scc` can be used to generate reflectable type's (for IOD), suil/JSON RPC server/client's see [scc source](https://github.com/dccarter/suil-examples/blob/master/rpc/rpc.scc), [implementing service](https://github.com/dccarter/suil-examples/blob/master/rpc/src/calculator.cpp) and [using service/client](https://github.com/dccarter/suil-examples/blob/master/rpc/src/main.cc)
+   *  `cmake` macro to generate C++ source's from `scc` sources [see rpc example](https://github.com/dccarter/suil-examples/blob/master/rpc/CMakeLists.txt)
+
 ##### Build Requirements or Development Dependencies on Ubuntu
 When building or developing an application that uses this project on ubuntu, the
 following libraries should be installed.
