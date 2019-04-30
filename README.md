@@ -1,9 +1,7 @@
 # suil
-A lightweight mordern `C++` micro service development framework
-##### [See Suil Examples](https://github.com/dccarter/suil-examples) for examples
+A lightweight mordern `C++` micro service development framework. see Suil Examples](https://github.com/dccarter/suil-examples) for examples
 
 ##### Supported Features
-
 *  Tag based system logger with support for custom log m_sink
 *  Memory pool supporting buffer sizes of up to 8912
 *  Integrates [libmill's](https://github.com/sustrik/libmill) coroutines which is used as the base library for asynchronous calls
